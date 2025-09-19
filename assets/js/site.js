@@ -1,0 +1,1 @@
+console.log('physics-demo v2 loaded');
