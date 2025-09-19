@@ -1,4 +1,189 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-Hant">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>槓桿平衡模擬</title><link rel="stylesheet" href="../../assets/css/style.css"></head>
-<body><div class="wrap"><div class="breadcrumb"><a href="index.html">第一章</a> / 槓桿平衡</div><h1>槓桿平衡模擬 (範例)</h1><p>之後可加入互動槓桿程式。</p><p><a href="index.html">回章節首頁</a></p></div></body></html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>充量與系統總動量示範</title>
+  <link rel="stylesheet" href="../../assets/css/style.css" />
+  <style>
+    body{font-family:system-ui, -apple-system, "Noto Sans TC", "Microsoft JhengHei", sans-serif;margin:0;padding:16px;line-height:1.5;}
+    .grid{display:grid;grid-template-columns:1fr;gap:16px;}
+    .panel{border:1px solid #ddd;border-radius:12px;padding:12px;}
+    .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+    label{font-size:0.9rem}
+    input[type="range"]{width:180px}
+    canvas{max-width:100%}
+    #viz{height:240px;border:1px dashed #ccc;border-radius:8px}
+    .badge{font-size:0.8rem;padding:2px 8px;border:1px solid #ccc;border-radius:999px}
+  </style>
+</head>
+<body>
+  <h1>充量 J(t) 與系統總動量 d𝑝/dt = Σ外力</h1>
+  <div class="grid">
+    <div class="panel">
+      <div class="row">
+        <span class="badge">座標約定：x 向右為正、y 向上為正</span>
+      </div>
+      <div class="row">
+        <label>質量 m (kg)
+          <input id="m" type="range" min="0.1" max="5" step="0.1" value="1.0">
+          <span id="m_v">1.0</span>
+        </label>
+        <label>重力 g (m/s²)
+          <input id="g" type="range" min="1" max="20" step="0.1" value="9.8">
+          <span id="g_v">9.8</span>
+        </label>
+        <label>外力 Fx (N，向右為正)
+          <input id="fx" type="range" min="-50" max="50" step="1" value="10">
+          <span id="fx_v">10</span>
+        </label>
+        <label>時長 T (s)
+          <input id="T" type="range" min="1" max="20" step="1" value="8">
+          <span id="T_v">8</span>
+        </label>
+        <button id="play">▶ 開始</button>
+        <button id="pause">⏸ 暫停</button>
+        <button id="reset">↺ 重置</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div id="viz"></div>
+    </div>
+
+    <div class="panel">
+      <h3>水平充量 Jx(t)（只剩外力）</h3>
+      <canvas id="chartX" height="180"></canvas>
+    </div>
+
+    <div class="panel">
+      <h3>垂直充量 Jy(t)（分開畫出重力與正向力）</h3>
+      <canvas id="chartY" height="220"></canvas>
+    </div>
+  </div>
+
+  <!-- Libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/p5@1.9.3/lib/p5.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+
+  <!-- Module -->
+  <script type="module">
+    // ○ 參數狀態
+    const params = { m:1.0, g:9.8, fx:10, T:8 };
+    const ui = (id)=>document.getElementById(id);
+    const bind = (key, sliderId, textId) => {
+      const s = ui(sliderId), t = ui(textId);
+      const fmt = (v)=>Number(v).toFixed((key==='m'||key==='g')?1:0);
+      const set = (v)=>{ params[key]= (key==='m'||key==='g')? parseFloat(v): parseInt(v,10); t.textContent = fmt(v); refreshStatic(); };
+      s.addEventListener('input', e=> set(e.target.value));
+      set(s.value);
+    };
+
+    bind('m','m','m_v'); bind('g','g','g_v'); bind('fx','fx','fx_v'); bind('T','T','T_v');
+
+    // ○ 數學（光滑水平面，無垂直加速度）
+    //   Jx(t) = Fx * t
+    //   Jy_g(t) = -m g t,  Jy_N(t) = +m g t,  Jy_net ≡ 0
+    function sampleSeries(dt=0.05){
+      const {m,g,fx,T} = params;
+      const n = Math.floor(T/dt)+1;
+      const t = Array.from({length:n},(_,i)=> +(i*dt).toFixed(3));
+      const Jx = t.map(tt => fx*tt);
+      const Jy_g = t.map(tt => -m*g*tt);
+      const Jy_N = t.map(tt =>  m*g*tt);
+      return { t, Jx, Jy_g, Jy_N };
+    }
+
+    // ○ Chart.js 設定（不指定顏色，交給預設配色）
+    const cx = new Chart(ui('chartX'), {
+      type:'line',
+      data:{ labels:[], datasets:[
+        { label:'Jx = ∫Fx dt', data:[], borderWidth:2, tension:0 }
+      ]},
+      options:{ animation:false, responsive:true, scales:{ x:{ title:{text:'t (s)',display:true}}, y:{ title:{text:'充量 Jx (N·s)',display:true}} } }
+    });
+
+    const cy = new Chart(ui('chartY'), {
+      type:'line',
+      data:{ labels:[], datasets:[
+        { label:'Jy(重力) = -m g t', data:[], borderWidth:2, tension:0 },
+        { label:'Jy(正向力) = +m g t', data:[], borderWidth:2, tension:0 }
+      ]},
+      options:{ animation:false, responsive:true, scales:{ x:{ title:{text:'t (s)',display:true}}, y:{ title:{text:'充量 Jy (N·s)',display:true}} } }
+    });
+
+    function refreshStatic(){
+      const {t,Jx,Jy_g,Jy_N} = sampleSeries(0.05);
+      cx.data.labels = t; cx.data.datasets[0].data = Jx; cx.update();
+      cy.data.labels = t; cy.data.datasets[0].data = Jy_g; cy.data.datasets[1].data = Jy_N; cy.update();
+    }
+
+    // ○ p5 視覺（方塊與力箭頭）
+    let running=false, tSim=0, lastMs=0;
+    const sketch = (p)=>{
+      let W=0,H=0;
+      p.setup = ()=>{ const root = document.getElementById('viz'); W=root.clientWidth; H=root.clientHeight; p.createCanvas(W,H); lastMs=p.millis(); };
+      p.windowResized = ()=>{ const root = document.getElementById('viz'); W=root.clientWidth; H=root.clientHeight; p.resizeCanvas(W,H); };
+      p.draw = ()=>{
+        const now = p.millis();
+        const dt = (now-lastMs)/1000; lastMs=now;
+        if (running){ tSim = Math.min(tSim + dt, params.T); }
+
+        p.background(255);
+        // 地面線
+        const groundY = H*0.7;
+        p.stroke(200); p.line(20,groundY, W-20, groundY);
+
+        // 方塊
+        const boxW=60, boxH=40;
+        const boxX=W*0.25, boxY=groundY - boxH/2;
+        p.noStroke(); p.fill(240); p.rectMode(p.CENTER); p.rect(boxX, boxY, boxW, boxH, 6);
+
+        // 力箭頭：Fx→、N↑、mg↓
+        const scaleF = 2.0; // 視覺比例
+        const Fx = params.fx;
+        const N  = params.m*params.g;
+        const mg = params.m*params.g;
+
+        drawArrow(p, boxX, boxY,  boxX + Fx*scaleF, boxY, 'Fx');
+        drawArrow(p, boxX, boxY,  boxX, boxY - N*scaleF*0.2, 'N');
+        drawArrow(p, boxX, boxY,  boxX, boxY + mg*scaleF*0.2, 'mg');
+
+        // 充量累積：Jx, Jy_g, Jy_N（顯示當前 t）
+        const Jx = Fx * tSim;
+        const Jy_g = -mg * tSim;
+        const Jy_N =  N * tSim;
+
+        p.fill(0); p.noStroke(); p.textSize(12);
+        p.text(`t = ${tSim.toFixed(2)} s`, 20, 20);
+        p.text(`Jx = ${Jx.toFixed(2)} N·s`, 20, 38);
+        p.text(`Jy(重力) = ${Jy_g.toFixed(2)} N·s`, 20, 56);
+        p.text(`Jy(正向力) = ${Jy_N.toFixed(2)} N·s`, 20, 74);
+
+        // 若到終點，停表
+        if (tSim >= params.T) running=false;
+      };
+    };
+
+    function drawArrow(p, x1,y1, x2,y2, label){
+      p.stroke(0); p.strokeWeight(2); p.line(x1,y1, x2,y2);
+      const ang = Math.atan2(y2-y1, x2-x1);
+      const ah = 8;
+      p.line(x2,y2, x2 - ah*Math.cos(ang - Math.PI/6), y2 - ah*Math.sin(ang - Math.PI/6));
+      p.line(x2,y2, x2 - ah*Math.cos(ang + Math.PI/6), y2 - ah*Math.sin(ang + Math.PI/6));
+      p.noStroke(); p.fill(0); p.textSize(12);
+      p.text(label, x2 + 6, y2 - 6);
+    }
+
+    new p5(sketch, document.getElementById('viz'));
+
+    // ○ 控制
+    ui('play').onclick = ()=>{ running=true; lastMs=performance.now(); };
+    ui('pause').onclick= ()=>{ running=false; };
+    ui('reset').onclick= ()=>{ running=false; tSim=0; refreshStatic(); };
+
+    // 初始繪圖
+    refreshStatic();
+  </script>
+</body>
+</html>
