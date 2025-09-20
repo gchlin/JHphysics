@@ -1,0 +1,45 @@
+body {
+    margin: 0;
+    font-family: sans-serif;
+    background-color: #f0f0f0; /* 給網頁一個淺灰色背景 */
+}
+
+.container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    cursor: pointer; /* 滑鼠移過去會變成手形 */
+    user-select: none; /* 防止點擊時選取到圖片或文字 */
+}
+
+#rabbit {
+    width: 200px;
+    transition: transform 0.3s ease;
+}
+
+/* 這就是跳躍的動畫 */
+.jump {
+    animation: jump 0.5s ease;
+}
+
+@keyframes jump {
+    0% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-30px); /* 向上跳 30 像素 */
+    }
+    100% {
+        transform: translateY(0);
+    }
+}
+
+#message {
+    font-size: 24px;
+    font-weight: bold;
+    color: #333;
+    margin-top: 20px;
+    visibility: hidden; /* 預設隱藏文字 */
+}
