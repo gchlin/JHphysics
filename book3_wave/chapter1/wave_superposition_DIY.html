@@ -34,8 +34,6 @@
         box-sizing: border-box;
     }
 
-    /* 畫布：寬 800 px；為了讓格子近似正方形，配合 x 範圍 -20~20 共 40 單位
-       取 1 單位 ≈ 20 px，則 y 範圍 -3~3 共 6 單位，高度 ≈ 120 px */
     canvas {
         display: block;
         margin: 0 auto 12px auto;
@@ -68,15 +66,26 @@
         gap: 4px;
     }
 
-    .legend-color {
-        width: 18px;
+    .legend-line {
+        width: 30px;
         height: 4px;
         border-radius: 2px;
     }
 
-    .legend-color.a { background: #00ffff; }           /* cyan */
-    .legend-color.b { background: #ffff00; }           /* yellow */
-    .legend-color.sum { background: rgba(0,180,0,0.7); } /* green, semi-transparent */
+    .legend-line.a { 
+        background: #0066ff;
+        height: 3px;
+    }
+    
+    .legend-line.b { 
+        background: rgba(255, 102, 0, 0.5);
+        height: 5px;
+    }
+    
+    .legend-line.sum { 
+        background: rgba(0,180,0,0.8);
+        height: 4px;
+    }
 
     .controls {
         display: flex;
@@ -101,6 +110,7 @@
         border: none;
         cursor: pointer;
         font-size: 13px;
+        transition: all 0.15s ease;
     }
 
     .primary-btn {
@@ -112,6 +122,11 @@
     .secondary-btn {
         background: #e0e0e0;
         color: #333333;
+    }
+
+    button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 3px 8px rgba(0,0,0,0.24);
     }
 
     button:active {
@@ -136,6 +151,16 @@
     .checkbox-row label {
         margin: 0 4px;
     }
+
+    .usage-hint {
+        background: #e3f2fd;
+        border-left: 4px solid #2196f3;
+        padding: 8px 12px;
+        margin: 8px 0;
+        font-size: 12px;
+        color: #1565c0;
+        border-radius: 4px;
+    }
 </style>
 </head>
 <body>
@@ -143,25 +168,28 @@
     <h1>Two Pulses Superposition / 兩道波疊加</h1>
 
     <div class="info">
-        A wave：left triangle pulse / 左側三角波<br>
-        B wave：right square pulse / 右側方波<br>
+        A wave：left triangle pulse / 左側三角波（<strong>藍色細線</strong>）<br>
+        B wave：right square pulse / 右側方波（<strong>橘色粗線半透明</strong>）<br>
         v<sub>A</sub> = 1 grid/s to the right（向右 1 格/秒），
-        v<sub>B</sub> = 1 grid/s to the left（向左 1 格/秒）<br>
-        Focus on integer time t = 0, 1, 2, 3, 4, 5 s（整數秒可用下方按鈕）
+        v<sub>B</sub> = 1 grid/s to the left（向左 1 格/秒）
+    </div>
+
+    <div class="usage-hint">
+        💡 <strong>使用提示</strong>：點擊 t = 0、1、2... 按鈕可直接切換到該時刻並暫停，方便觀察波形變化
     </div>
 
     <div class="legend">
         <span class="legend-item">
-            <span class="legend-color a"></span>
-            A wave / A 波（三角形，cyan）
+            <span class="legend-line a"></span>
+            A wave / A 波（三角形，藍色細線）
         </span>
         <span class="legend-item">
-            <span class="legend-color b"></span>
-            B wave / B 波（方形，yellow）
+            <span class="legend-line b"></span>
+            B wave / B 波（方形，橘色粗線半透明）
         </span>
         <span class="legend-item">
-            <span class="legend-color sum"></span>
-            A + B / 疊加波（半透明綠色）
+            <span class="legend-line sum"></span>
+            A + B / 疊加波（綠色實線）
         </span>
     </div>
 
@@ -183,6 +211,7 @@
             <button data-t="3" class="secondary-btn">3 s</button>
             <button data-t="4" class="secondary-btn">4 s</button>
             <button data-t="5" class="secondary-btn">5 s</button>
+            <button data-t="6" class="secondary-btn">6 s</button>
             <button id="stepBackBtn" class="secondary-btn">↺ 上一秒 / prev</button>
             <button id="stepForwardBtn" class="secondary-btn">↻ 下一秒 / next</button>
         </div>
@@ -199,11 +228,11 @@
         <!-- 第四列：顯示選項 -->
         <div class="controls-row checkbox-row">
             <label>
-                <input type="checkbox" id="showA" checked>
+                <input type="checkbox" id="showA">
                 顯示 A 波 / show A
             </label>
             <label>
-                <input type="checkbox" id="showB" checked>
+                <input type="checkbox" id="showB">
                 顯示 B 波 / show B
             </label>
             <label>
@@ -217,27 +246,42 @@
 <!-- ================== SCRIPT ================== -->
 <script>
 /* ============================================================
- * CONFIG
+ * CONSTANTS & CONFIG
  * ============================================================ */
 const canvas = document.getElementById("waveCanvas");
 const ctx = canvas.getContext("2d");
 
-/* 空間範圍
- *   x：-20 ~ 20（40 單位）
- *   y：-3  ~ 3 （6 單位）
- * 搭配 canvas 800×120，可讓格線近似正方形。
- */
+// 空間範圍
 const X_MIN = -20;
-const X_MAX =  20;
-const Y_MIN =  -3;
-const Y_MAX =   3;
+const X_MAX = 20;
+const Y_MIN = -3;
+const Y_MAX = 3;
 
-const MAX_T = 10;     // 連續時間上限（滑桿）
-const SPEED_A = 1;    // A 波速度 1 格/秒，向右
-const SPEED_B = 1;    // B 波速度 1 格/秒，向左（在函數中用 x + v t）
+// 時間與速度
+const MAX_T = 10;
+const SPEED_A = 1;  // 向右
+const SPEED_B = 1;  // 向左
 
-const gridSpacingX = 1;
-const gridSpacingY = 1;
+// 格線間距
+const GRID_SPACING_X = 1;
+const GRID_SPACING_Y = 1;
+
+// 繪圖參數
+const SAMPLE_POINTS = 400;  // 優化：從 1000 降到 400，足夠平滑
+const COLORS = {
+    waveA: "#0066ff",
+    waveB: "rgba(255, 102, 0, 0.5)",
+    sum: "rgba(0, 180, 0, 0.8)"
+};
+const LINE_WIDTH = {
+    waveA: 2,
+    waveB: 4,
+    sum: 3.5
+};
+
+// 預先計算座標轉換比例（優化：避免重複計算）
+const SCALE_X = canvas.width / (X_MAX - X_MIN);
+const SCALE_Y = canvas.height / (Y_MAX - Y_MIN);
 
 /* ============================================================
  * STATE
@@ -246,65 +290,36 @@ const state = {
     t: 0,
     playing: false,
     lastTimestamp: null,
-    showA: true,
-    showB: true,
-    showSum: true
+    showA: false,      // 預設不顯示 A 波
+    showB: false,      // 預設不顯示 B 波
+    showSum: true      // 預設只顯示疊加波
 };
 
 /* ============================================================
- * PHYSICS
- *  t = 0 時波形：
- *  A（三角波）：底邊長 4 單位、高 1 單位，整體往右平移 9 單位
- *      底邊 x ∈ [-5, -1]，峰值在 x = -3、振幅 1
- *  B（方波）：原本 [6,8)/[8,10]，整體往左平移 5 單位
- *      x ∈ [1,3)  位移 -1
- *      x ∈ [3,5]  位移 +2
+ * PHYSICS - 波形定義
  * ============================================================ */
 
-/* A wave at t = 0
- * (-5,0) → (-3,1) → (-1,0)
- */
+// A 波初始形狀：三角波，x ∈ [-5, -1]，峰值在 x = -3
 function shapeA0(x) {
-    const amp = 1;
     if (x < -5 || x > -1) return 0;
-
-    if (x <= -3) {
-        // 左半邊：線性上升
-        // x=-5 → 0，x=-3 → 1
-        return amp * ((x + 5) / 2);
-    } else {
-        // 右半邊：線性下降
-        // x=-3 → 1，x=-1 → 0
-        return amp * ((-1 - x) / 2);
-    }
+    return x <= -3 ? (x + 5) * 0.5 : (-1 - x) * 0.5;
 }
 
-/* B wave at t = 0
- * x ∈ [1,3) ：-1
- * x ∈ [3,5]：+2
- */
+// B 波初始形狀：方波
+// x ∈ [1, 3): -1
+// x ∈ [3, 5]: +2
 function shapeB0(x) {
-    if (x >= 1 && x < 3) {
-        return -1;
-    } else if (x >= 3 && x <= 5) {
-        return 2;
-    } else {
-        return 0;
-    }
+    if (x >= 1 && x < 3) return -1;
+    if (x >= 3 && x <= 5) return 2;
+    return 0;
 }
 
-// t 時刻 A 波：右移 f(x - v t)
-function waveA(x, t) {
-    return shapeA0(x - SPEED_A * t);
-}
-
-// t 時刻 B 波：左移 f(x + v t)
-function waveB(x, t) {
-    return shapeB0(x + SPEED_B * t);
-}
+// t 時刻的波形（使用行波方程）
+const waveA = (x, t) => shapeA0(x - SPEED_A * t);
+const waveB = (x, t) => shapeB0(x + SPEED_B * t);
 
 /* ============================================================
- * INTEGRATOR
+ * ANIMATION
  * ============================================================ */
 function updateState(dt) {
     if (!state.playing) return;
@@ -313,26 +328,19 @@ function updateState(dt) {
 }
 
 /* ============================================================
- * RENDER
+ * RENDER - 座標轉換（優化版）
  * ============================================================ */
-function xToPx(x) {
-    const w = canvas.width;
-    return ((x - X_MIN) / (X_MAX - X_MIN)) * w;
-}
+const xToPx = (x) => (x - X_MIN) * SCALE_X;
+const yToPx = (y) => canvas.height - (y - Y_MIN) * SCALE_Y;
 
-function yToPx(y) {
-    const h = canvas.height;
-    return h - ((y - Y_MIN) / (Y_MAX - Y_MIN)) * h;
-}
-
+/* ============================================================
+ * RENDER - 格線與座標軸
+ * ============================================================ */
 function drawGridAndAxes() {
     const w = canvas.width;
     const h = canvas.height;
 
-    ctx.save();
     ctx.clearRect(0, 0, w, h);
-
-    // 背景
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, w, h);
 
@@ -340,13 +348,13 @@ function drawGridAndAxes() {
     ctx.lineWidth = 0.5;
     ctx.strokeStyle = "#e0e0e0";
     ctx.beginPath();
-
-    for (let x = Math.ceil(X_MIN); x <= X_MAX; x += gridSpacingX) {
+    
+    for (let x = Math.ceil(X_MIN); x <= X_MAX; x += GRID_SPACING_X) {
         const px = xToPx(x);
         ctx.moveTo(px, 0);
         ctx.lineTo(px, h);
     }
-    for (let y = Math.ceil(Y_MIN); y <= Y_MAX; y += gridSpacingY) {
+    for (let y = Math.ceil(Y_MIN); y <= Y_MAX; y += GRID_SPACING_Y) {
         const py = yToPx(y);
         ctx.moveTo(0, py);
         ctx.lineTo(w, py);
@@ -362,7 +370,7 @@ function drawGridAndAxes() {
     ctx.lineTo(w, y0);
     ctx.stroke();
 
-    // 垂直參考線 x = 0
+    // 垂直參考線（x = 0）
     const x0 = xToPx(0);
     ctx.lineWidth = 1;
     ctx.strokeStyle = "#888888";
@@ -370,20 +378,21 @@ function drawGridAndAxes() {
     ctx.moveTo(x0, 0);
     ctx.lineTo(x0, h);
     ctx.stroke();
-
-    ctx.restore();
 }
 
+/* ============================================================
+ * RENDER - 波形繪製（優化版）
+ * ============================================================ */
 function drawWave(color, lineWidth, sampleFunc) {
-    const N = 1000;
     ctx.save();
     ctx.lineWidth = lineWidth;
     ctx.strokeStyle = color;
     ctx.beginPath();
 
-    for (let i = 0; i <= N; i++) {
-        const alpha = i / N;
-        const x = X_MIN + alpha * (X_MAX - X_MIN);
+    const dx = (X_MAX - X_MIN) / SAMPLE_POINTS;
+    
+    for (let i = 0; i <= SAMPLE_POINTS; i++) {
+        const x = X_MIN + i * dx;
         const y = sampleFunc(x);
         const px = xToPx(x);
         const py = yToPx(y);
@@ -399,23 +408,24 @@ function drawWave(color, lineWidth, sampleFunc) {
     ctx.restore();
 }
 
+/* ============================================================
+ * RENDER - 主渲染函數
+ * ============================================================ */
 function render() {
     drawGridAndAxes();
     const t = state.t;
 
-    // A 波：cyan
+    // 繪製順序：先畫個別波，再畫疊加波（讓疊加波在最上層）
     if (state.showA) {
-        drawWave("#00ffff", 2, (x) => waveA(x, t));
+        drawWave(COLORS.waveA, LINE_WIDTH.waveA, (x) => waveA(x, t));
     }
 
-    // B 波：yellow（不再 y shift）
     if (state.showB) {
-        drawWave("#ffff00", 2, (x) => waveB(x, t));
+        drawWave(COLORS.waveB, LINE_WIDTH.waveB, (x) => waveB(x, t));
     }
 
-    // 疊加波：半透明綠色
     if (state.showSum) {
-        drawWave("rgba(0,180,0,0.7)", 3, (x) => waveA(x, t) + waveB(x, t));
+        drawWave(COLORS.sum, LINE_WIDTH.sum, (x) => waveA(x, t) + waveB(x, t));
     }
 
     // 時間標籤
@@ -427,17 +437,17 @@ function render() {
 }
 
 /* ============================================================
- * UI
+ * UI CONTROLS
  * ============================================================ */
-const playPauseBtn   = document.getElementById("playPauseBtn");
-const resetBtn       = document.getElementById("resetBtn");
-const stepBackBtn    = document.getElementById("stepBackBtn");
+const playPauseBtn = document.getElementById("playPauseBtn");
+const resetBtn = document.getElementById("resetBtn");
+const stepBackBtn = document.getElementById("stepBackBtn");
 const stepForwardBtn = document.getElementById("stepForwardBtn");
-const timeSlider     = document.getElementById("timeSlider");
-const timeLabel      = document.getElementById("timeLabel");
-const showABox       = document.getElementById("showA");
-const showBBox       = document.getElementById("showB");
-const showSumBox     = document.getElementById("showSum");
+const timeSlider = document.getElementById("timeSlider");
+const timeLabel = document.getElementById("timeLabel");
+const showABox = document.getElementById("showA");
+const showBBox = document.getElementById("showB");
+const showSumBox = document.getElementById("showSum");
 
 // 播放 / 暫停
 playPauseBtn.addEventListener("click", () => {
@@ -453,6 +463,7 @@ playPauseBtn.addEventListener("click", () => {
 // 重設 t = 0
 resetBtn.addEventListener("click", () => {
     setTime(0);
+    pauseAnimation();
 });
 
 // 連續時間滑桿
@@ -477,26 +488,31 @@ showSumBox.addEventListener("change", () => {
     render();
 });
 
-// 整數秒按鈕 0~5
+// 整數秒按鈕（點擊後暫停）
 document.querySelectorAll(".step-buttons button[data-t]").forEach(btn => {
     btn.addEventListener("click", () => {
         const t = parseInt(btn.getAttribute("data-t"), 10);
         setTime(t);
+        pauseAnimation();  // 關鍵：點擊整數秒後暫停
     });
 });
 
-// 上一秒 / 下一秒（限制在 0~5）
+// 上一秒 / 下一秒
 stepBackBtn.addEventListener("click", () => {
     const tInt = Math.round(state.t);
     const tNew = Math.max(0, tInt - 1);
     setTime(tNew);
-});
-stepForwardBtn.addEventListener("click", () => {
-    const tInt = Math.round(state.t);
-    const tNew = Math.min(5, tInt + 1);
-    setTime(tNew);
+    pauseAnimation();
 });
 
+stepForwardBtn.addEventListener("click", () => {
+    const tInt = Math.round(state.t);
+    const tNew = Math.min(6, tInt + 1);
+    setTime(tNew);
+    pauseAnimation();
+});
+
+// 輔助函數
 function setTime(t) {
     state.t = t;
     timeSlider.value = t.toFixed(2);
@@ -508,8 +524,13 @@ function updateTimeLabel() {
     timeLabel.textContent = `t = ${state.t.toFixed(2)} s`;
 }
 
+function pauseAnimation() {
+    state.playing = false;
+    playPauseBtn.textContent = "播放 Play";
+}
+
 /* ============================================================
- * LOOP
+ * ANIMATION LOOP
  * ============================================================ */
 function loop(timestamp) {
     if (state.lastTimestamp == null) {
@@ -518,7 +539,7 @@ function loop(timestamp) {
     const dt_ms = timestamp - state.lastTimestamp;
     state.lastTimestamp = timestamp;
 
-    const dt = dt_ms / 1000;  // 秒
+    const dt = dt_ms / 1000;  // 轉換為秒
 
     updateState(dt);
 
@@ -531,7 +552,9 @@ function loop(timestamp) {
     window.requestAnimationFrame(loop);
 }
 
-// 初始化
+/* ============================================================
+ * INITIALIZATION
+ * ============================================================ */
 updateTimeLabel();
 render();
 window.requestAnimationFrame(loop);
