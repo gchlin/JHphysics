@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>題庫邏輯自動檢測器</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #222; color: #ddd; }
+        table { border-collapse: collapse; width: 100%; background: #333; }
+        th, td { border: 1px solid #555; padding: 8px; text-align: left; }
+        th { background: #444; }
+        .pass { color: #2ecc71; font-weight: bold; }
+        .fail { color: #e74c3c; font-weight: bold; background: #500; }
+        h1 { color: #fff; }
+    </style>
+</head>
+<body>
+
+<h1>🚀 題庫邏輯自動檢測 (模擬 50 題)</h1>
+<div id="result-area">正在測試...</div>
+
+<script>
+    // --- 1. 這是剛才修正後的資料 ---
+    const AnswerBank = {
+        "O_0": { content: "基音", category: "O" },
+        "O_1": { content: "第一泛音", category: "O" },
+        "O_2": { content: "第二泛音", category: "O" },
+        "O_3": { content: "第三泛音", category: "O" },
+        "O_4": { content: "第四泛音", category: "O" },
+        "H_1": { content: "第一諧音", category: "H" },
+        "H_2": { content: "第二諧音", category: "H" },
+        "H_3": { content: "第三諧音", category: "H" },
+        "H_4": { content: "第四諧音", category: "H" },
+        "H_5": { content: "第五諧音", category: "H" },
+        "H_6": { content: "第六諧音", category: "H" },
+        "H_7": { content: "第七諧音", category: "H" }
+    };
+
+    const QuestionList = [
+        { qContent: "ff_1.png", aKey: "O_0" }, { qContent: "ff_1.png", aKey: "H_1" },
+        { qContent: "fo_2.png", aKey: "O_1" }, { qContent: "fo_2.png", aKey: "H_3" }
+    ];
+
+    // --- 2. 這是剛才修正後的邏輯函數 ---
+    function getRandomQuestion() {
+        const qData = QuestionList[Math.floor(Math.random() * QuestionList.length)];
+        const correctAnsData = AnswerBank[qData.aKey];
+        const targetCategory = correctAnsData.category;
+
+        // 關鍵過濾邏輯
+        const allKeys = Object.keys(AnswerBank);
+        const validDistractors = allKeys.filter(key => {
+            const item = AnswerBank[key];
+            return (item.category === targetCategory) && (key !== qData.aKey);
+        });
+
+        // 洗牌選 3 個
+        for (let i = validDistractors.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [validDistractors[i], validDistractors[j]] = [validDistractors[j], validDistractors[i]];
+        }
+        const distractors = validDistractors.slice(0, 3);
+        let options = [qData.aKey].concat(distractors);
+        
+        // 最終洗牌
+        for (let i = options.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [options[i], options[j]] = [options[j], options[i]];
+        }
+
+        return { ...qData, opts: options, category: targetCategory };
+    }
+
+    // --- 3. 執行測試 ---
+    let html = `<table><tr><th>題號</th><th>題目圖</th><th>正確答案</th><th>生成選項</th><th>檢測結果</th></tr>`;
+    
+    for(let i=1; i<=50; i++) {
+        const result = getRandomQuestion();
+        
+        // 檢查四個選項是否都是同一類
+        let isPure = true;
+        let optionTexts = [];
+        
+        result.opts.forEach(optKey => {
+            const item = AnswerBank[optKey];
+            optionTexts.push(item.content);
+            if (item.category !== result.category) {
+                isPure = false; // 發現異類！
+            }
+        });
+
+        const status = isPure ? "<span class='pass'>PASS (純淨)</span>" : "<span class='fail'>FAIL (混雜)</span>";
+        
+        html += `<tr>
+            <td>${i}</td>
+            <td>${result.qContent}</td>
+            <td>${AnswerBank[result.aKey].content} (${result.category})</td>
+            <td>${optionTexts.join(", ")}</td>
+            <td>${status}</td>
+        </tr>`;
+    }
+    html += "</table>";
+    document.getElementById('result-area').innerHTML = html;
+
+</script>
+</body>
+</html>

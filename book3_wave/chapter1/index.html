@@ -1,66 +1,104 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="zh-TW">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>第三冊 第一至四章：波與光學</title>
-  <link rel="stylesheet" href="../../assets/css/style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>波動物理大亂鬥</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="wrap">
-    <div class="breadcrumb"><a href="../../index.html">首頁</a> / 第三冊 / 波與光學</div>
-    <h1>第三冊：波與光學</h1>
-    <p>主題：波的特性、聲波、幾何光學與物理光學；包含模擬、示意圖與基本概念的可視化。</p>
 
-    <table class="table">
-      <tr>
-        <th>示意圖</th>
-        <th>章節名稱／系統名稱</th>
-        <th>簡介</th>
-        <th>連結</th>
-      </tr>
+    <div id="main-menu" class="overlay">
+        <div class="menu-title">波動物理大亂鬥</div>
+        <div class="rule-text">
+            搶答規則：先答對得 <b>2分</b>，後答對得 <b>1分</b>
+        </div>
+        
+        <div class="mode-section">
+            <div class="mode-label">🟡 Level 1: 泛音特訓 (只考泛音)</div>
+            <button class="mode-btn btn-practice" onclick="Game.init('practice', 0, 'level1')">個人練習</button>
+            <button class="mode-btn btn-versus" onclick="Game.init('versus', 10, 'level1')">雙人搶答 (搶10分)</button>
+        </div>
 
-      <!-- 第一章 波的基本性質 -->
-      <tr>
-        <td><img src="../assets/images/wave-basic.svg" alt="波的基本性質"></td>
-        <td>第一章　波的基本性質</td>
-        <td>介紹波的種類、波速、波長、頻率與週期等基本物理量；並可視化正弦波的傳遞。</td>
-        <td><a href="wave-basics.html">開啟模擬</a></td>
-      </tr>
+        <div class="mode-section">
+            <div class="mode-label">🔵 Level 2: 諧音特訓 (只考諧音)</div>
+            <button class="mode-btn btn-practice" onclick="Game.init('practice', 0, 'level2')">個人練習</button>
+            <button class="mode-btn btn-versus" onclick="Game.init('versus', 10, 'level2')">雙人搶答 (搶10分)</button>
+        </div>
 
-      <!-- ★ 新增：波的疊加練習 -->
-      <tr>
-        <td><img src="../assets/images/wave-superposition.svg" alt="波的疊加"></td>
-        <td>波的疊加練習</td>
-        <td>讓學生自行調整兩條正弦波的振幅、波長與相位，觀察疊加後的波形。</td>
-        <td><a href="wave_superposition_DIY.html">開啟模擬</a></td>
-      </tr>
+        <div class="mode-section">
+            <div class="mode-label">🔴 Level 3: 物理大師 (混合題型)</div>
+            <button class="mode-btn btn-practice" onclick="Game.init('practice', 0, 'level3')">個人練習 (混合)</button>
+            <button class="mode-btn btn-speed" onclick="Game.init('speed', 0, 'level3')">30秒競速</button>
+            <button class="mode-btn btn-versus" onclick="Game.init('versus', 20, 'level3')">極限對戰 (搶20分)</button>
+        </div>
 
-      <!-- 第二章 聲波 -->
-      <tr>
-        <td><img src="../assets/images/soundwave.svg" alt="聲波"></td>
-        <td>第二章　聲波</td>
-        <td>聲音的生成、傳播方式、音調與響度的物理基礎；延伸至共鳴與駐波現象。</td>
-        <td><a href="sound-wave.html">開啟模擬</a></td>
-      </tr>
+        <button class="mode-btn btn-table" onclick="Game.toggleTable(true)">📖 駐波對照表</button>
+    </div>
 
-      <!-- 第三章 幾何光學 -->
-      <tr>
-        <td><img src="../assets/images/geometric-optics.svg" alt="幾何光學"></td>
-        <td>第三章　幾何光學</td>
-        <td>包含反射、折射、透鏡成像；提供可調參數的光路與成像模擬。</td>
-        <td><a href="geometric-optics.html">開啟模擬</a></td>
-      </tr>
+    <div id="ref-table-overlay" class="overlay hidden">
+        <button class="close-btn" onclick="Game.toggleTable(false)">✖ 關閉</button>
+        <h2 style="margin-bottom:10px;">駐波名詞對照表</h2>
+        <div id="table-container" style="overflow-y: auto; max-height: 80vh; width:95%; max-width:600px;">
+            <table class="math-table" id="math-table-body"></table>
+        </div>
+    </div>
 
-      <!-- 第四章 物理光學 -->
-      <tr>
-        <td><img src="../assets/images/physical-optics.svg" alt="物理光學"></td>
-        <td>第四章　物理光學</td>
-        <td>從波動觀點解釋干涉、繞射；可視化單縫、雙縫、多縫的強度分布。</td>
-        <td><a href="physical-optics.html">開啟模擬</a></td>
-      </tr>
+    <div id="countdown-overlay" class="overlay hidden">
+        <div class="countdown-wrapper-top">
+            <div id="cd-num-top" class="countdown-number">3</div>
+        </div>
+        <div style="height: 50px;"></div>
+        <div class="countdown-wrapper-bot">
+            <div id="cd-num-bot" class="countdown-number">3</div>
+        </div>
+    </div>
 
-    </table>
-  </div>
+    <div id="game-over" class="overlay hidden">
+        <div class="go-half go-top">
+            <div class="result-title" id="res-title-p1"></div>
+            <div class="result-sub" id="res-score-p1"></div>
+        </div>
+        <div style="z-index:50; padding: 10px;">
+            <button class="menu-btn-small" onclick="Game.showMenu()">主選單</button>
+        </div>
+        <div class="go-half go-bottom">
+            <div class="result-title" id="res-title-p2"></div>
+            <div class="result-sub" id="res-score-p2"></div>
+        </div>
+    </div>
+
+    <div id="p1-area" class="player-area">
+        <div class="score-board" style="color: var(--p1-color)">P1: <span id="score-p1">0</span> <span id="target-p1" style="font-size:0.8rem; color:#999"></span></div>
+        <div class="question-box" id="q-p1"></div>
+        <div class="options-grid" id="opts-p1"></div>
+        <div id="feedback-p1" class="overlay hidden" style="background:rgba(255,255,255,0.9);">
+            <div class="big-circle"></div>
+            <div class="waiting-text" id="wait-text-p1">等待對手...</div>
+        </div>
+    </div>
+
+    <div class="divider">
+        <div class="timer-group">
+            <div class="timer-display timer-p1" id="timer-p1">--</div>
+        </div>
+        <button class="menu-btn-small" onclick="Game.showMenu()">MENU</button>
+        <div class="timer-group">
+            <div class="timer-display" id="timer-p2">--</div>
+        </div>
+    </div>
+
+    <div id="p2-area" class="player-area">
+        <div class="score-board" style="color: var(--p2-color)">P2: <span id="score-p2">0</span> <span id="target-p2" style="font-size:0.8rem; color:#999"></span></div>
+        <div class="question-box" id="q-p2"></div>
+        <div class="options-grid" id="opts-p2"></div>
+        <div id="feedback-p2" class="overlay hidden" style="background:rgba(255,255,255,0.9);">
+            <div class="big-circle"></div>
+            <div class="waiting-text" id="wait-text-p2">等待對手...</div>
+        </div>
+    </div>
+
+    <script src="data.js"></script>
+    <script src="game.js"></script>
 </body>
 </html>
