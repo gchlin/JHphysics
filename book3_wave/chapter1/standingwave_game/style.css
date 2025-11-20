@@ -1,4 +1,3 @@
-/* style.css (修正選單顯示問題版) */
 :root {
     --p1-color: #FF6B6B;
     --p2-color: #4ECDC4;
@@ -10,10 +9,10 @@
 * { box-sizing: border-box; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
 body { margin: 0; padding: 0; width: 100vw; height: 100dvh; overflow: hidden; font-family: "Segoe UI", sans-serif; background: var(--bg-color); display: flex; flex-direction: column; }
 
-/* 物理圖片樣式 (優化高度) */
+/* 物理圖片樣式 */
 .img-content { 
     max-width: 100%; 
-    max-height: 160px; /* 稍微縮小一點點以免題目區太大 */
+    max-height: 160px; 
     width: auto; 
     object-fit: contain; 
     background: white; 
@@ -49,7 +48,7 @@ body { margin: 0; padding: 0; width: 100vw; height: 100dvh; overflow: hidden; fo
 .option-btn { background: white; border: 2px solid #e0e0e0; border-radius: 12px; padding: 5px 0; font-size: 1.6rem; font-weight: bold; cursor: pointer; display: flex; justify-content: center; align-items: center; box-shadow: 0 4px 0 #d0d0d0; transition: all 0.1s; min-height: 70px; overflow: hidden; }
 .option-btn:active { transform: translateY(4px); box-shadow: none; }
 
-/* Overlays */
+/* Overlays (通用遮罩) */
 .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(255,255,255,0.95); z-index: 20; text-align: center; }
 .hidden { display: none !important; }
 
@@ -59,21 +58,59 @@ body { margin: 0; padding: 0; width: 100vw; height: 100dvh; overflow: hidden; fo
 @keyframes popIn { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
 @keyframes blink { 50% { opacity: 0.5; } }
 
-/* --- 主選單修正區 Start --- */
+/* --- 主選單 (終極修正版) --- */
 #main-menu { 
     background: #fff; 
     z-index: 30; 
-    overflow-y: auto; /* 允許上下捲動 */
-    padding: 60px 0 40px 0; /* 上方增加 padding 避免被瀏海遮住 */
-    justify-content: flex-start; /* 【關鍵修正】靠上對齊，確保標題看得到 */
+    
+    /* 【關鍵修正 1】 改用 Block 模式，解決 Samsung 瀏覽器 Flexbox 捲動 bug */
+    display: block !important; 
+    
+    /* 【關鍵修正 2】 使用 Fixed 定位與強制捲動 */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100dvh; /* 使用 dvh 以適應手機網址列縮放 */
+    overflow-y: auto; 
+    -webkit-overflow-scrolling: touch; /* 優化 iOS 滑動手感 */
+    
+    /* 【關鍵修正 3】 加大 Padding，避免標題被遮住 */
+    padding: 80px 0 120px 0; 
+    text-align: center;
 }
-/* --- 主選單修正區 End --- */
 
 .menu-title { font-size: 2rem; margin-bottom: 10px; color: #2c3e50; font-weight: bold; }
-.rule-text { font-size: 0.9rem; color: #7f8c8d; margin-bottom: 20px; background: #f0f2f5; padding: 8px 15px; border-radius: 8px; }
-.mode-section { margin-bottom: 20px; width: 100%; display: flex; flex-direction: column; align-items: center;}
-.mode-label { font-size: 1rem; color: #34495e; margin-bottom: 8px; font-weight: bold; border-left: 4px solid #34495e; padding-left: 10px; width: 80%; max-width: 300px; text-align: left;}
-.mode-btn { width: 80%; max-width: 300px; padding: 14px; margin: 6px; font-size: 1.1rem; border: none; border-radius: 12px; color: white; font-weight: bold; cursor: pointer; box-shadow: 0 4px 0 rgba(0,0,0,0.15); transition: transform 0.1s; position: relative; }
+.rule-text { font-size: 0.9rem; color: #7f8c8d; margin-bottom: 20px; background: #f0f2f5; padding: 8px 15px; border-radius: 8px; display: inline-block; margin-left: auto; margin-right: auto; }
+
+/* 區塊修正：確保在 block 模式下置中 */
+.mode-section { 
+    margin-bottom: 20px; 
+    width: 100%; 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+}
+
+.mode-label { font-size: 1rem; color: #34495e; margin-bottom: 8px; font-weight: bold; border-left: 4px solid #34495e; padding-left: 10px; width: 80%; max-width: 300px; text-align: left; }
+
+/* 按鈕修正：增加 margin auto 確保置中 */
+.mode-btn { 
+    width: 80%; 
+    max-width: 300px; 
+    padding: 14px; 
+    margin: 6px auto; /* 【關鍵】加上 auto 確保水平置中 */
+    font-size: 1.1rem; 
+    border: none; 
+    border-radius: 12px; 
+    color: white; 
+    font-weight: bold; 
+    cursor: pointer; 
+    box-shadow: 0 4px 0 rgba(0,0,0,0.15); 
+    transition: transform 0.1s; 
+    position: relative; 
+    display: block; /* 確保它是區塊元素 */
+}
 .mode-btn:active { transform: translateY(4px); box-shadow: none; }
 .btn-practice { background: #95a5a6; } .btn-speed { background: #e74c3c; } .btn-versus { background: #3498db; } .btn-table { background: #f1c40f; color: #333; margin-top: 20px; }
 
