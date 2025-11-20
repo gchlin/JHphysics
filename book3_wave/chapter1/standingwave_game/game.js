@@ -60,34 +60,27 @@ const Game = (function() {
 
     // --- 初始化 (支援 Level & 練習模式按鈕) ---
     function init(mode, target = 0, levelKey = 'level3') {
+        // 1. 音效初始化
         if (audioCtx.state === 'suspended') audioCtx.resume();
         
+        // 2. 遊戲狀態初始化 (包含新增的鎖定狀態)
         state.mode = mode;
-        // --- 新增這段：練習模式隱藏 P1 (對手) ---
+        state.targetScore = target;
+        state.scores = { p1: 0, p2: 0 };
+        state.status = { p1: false, p2: false };
+        state.firstSolver = null;
+        state.locked = { p1: false, p2: false }; // 【防作弊】重置鎖定狀態
+        state.currentList = QuestionSets[levelKey] || QuestionSets['level3'];
+
+        // 3. 介面顯示設定：練習模式隱藏 P1 (對手)
         const p1Area = document.getElementById('p1-area');
         if (mode === 'practice') {
             p1Area.style.visibility = 'hidden'; // 隱藏上方，但保留空間
         } else {
             p1Area.style.visibility = 'visible'; // 其他模式恢復顯示
         }
-        // -------------------------------------
 
-        state.targetScore = target;
-        // ... (以下保持原本的代碼)
-        state.targetScore = target;
-        state.scores = { p1: 0, p2: 0 };
-        state.status = { p1: false, p2: false };
-        state.firstSolver = null;
-        
-        state.currentList = QuestionSets[levelKey] || QuestionSets['level3'];
-
-        document.getElementById('main-menu').classList.add('hidden');
-        document.getElementById('score-p1').innerText = "0";
-        document.getElementById('score-p2').innerText = "0";
-        document.getElementById('feedback-p1').classList.add('hidden');
-        document.getElementById('feedback-p2').classList.add('hidden');
-
-        // 【關鍵更新】如果是練習模式，顯示「圖表」按鈕；否則隱藏
+        // 4. 介面顯示設定：練習模式顯示「圖表」按鈕
         const tableBtn = document.getElementById('btn-ingame-table');
         if (mode === 'practice') {
             tableBtn.style.display = 'block';
@@ -95,10 +88,19 @@ const Game = (function() {
             tableBtn.style.display = 'none';
         }
 
+        // 5. UI 重置 (清除上一局的分數與回饋)
+        document.getElementById('main-menu').classList.add('hidden');
+        document.getElementById('score-p1').innerText = "0";
+        document.getElementById('score-p2').innerText = "0";
+        document.getElementById('feedback-p1').classList.add('hidden');
+        document.getElementById('feedback-p2').classList.add('hidden');
+
+        // 6. 設定目標分數文字
         const tText = (mode === 'versus') ? `/ ${target}` : "";
         document.getElementById('target-p1').innerText = tText;
         document.getElementById('target-p2').innerText = tText;
 
+        // 7. 啟動倒數 -> 開始遊戲
         startCountdown(() => { realStartGame(); });
     }
 
@@ -235,28 +237,68 @@ function renderSide(player, qObj) {
     }
 
     function handleAnswer(player, answerKey, btnElement) {
-        if (state.status[player]) return;
-        if (state.timerVal <= 0 && state.mode === 'speed') return;
-        const currentQ = state.questions[player];
-        if (answerKey === currentQ.aKey) {
-            btnElement.classList.add('correct-mark'); 
-            state.status[player] = true; 
-            showFeedback(player);
-            if (state.mode === 'versus') {
-                if (state.firstSolver === null) { state.firstSolver = player; state.scores[player] += 2; } 
-                else { state.scores[player] += 1; }
-                updateScore();
-                if (state.scores[player] >= state.targetScore) setTimeout(determineWinner, 500);
-                else if (state.status.p1 && state.status.p2) setTimeout(generateVersusQuestion, 1000);
-            } else {
-                state.scores[player]++; 
-                updateScore();
-                setTimeout(() => { if(state.mode !== 'versus') generateIndependentQuestion(player); }, 500);
+            // 1. 檢查是否已經答對(本題結束) 或 正在處罰冷卻中(locked)
+            if (state.status[player]) return;
+            if (state.locked && state.locked[player]) return; // 如果被鎖定，直接無視
+            
+            if (state.timerVal <= 0 && state.mode === 'speed') return;
+            
+            const currentQ = state.questions[player];
+            
+            if (answerKey === currentQ.aKey) {
+                // --- 答對邏輯 (保持不變) ---
+                btnElement.classList.add('correct-mark'); 
+                state.status[player] = true; 
+                showFeedback(player);
+                
+                if (state.mode === 'versus') {
+                    if (state.firstSolver === null) { 
+                        state.firstSolver = player; 
+                        state.scores[player] += 2; 
+                    } else { 
+                        state.scores[player] += 1; 
+                    }
+                    updateScore();
+                    if (state.scores[player] >= state.targetScore) setTimeout(determineWinner, 500);
+                    else if (state.status.p1 && state.status.p2) setTimeout(generateVersusQuestion, 1000);
+                } else {
+                    state.scores[player]++; 
+                    updateScore();
+                    setTimeout(() => { if(state.mode !== 'versus') generateIndependentQuestion(player); }, 500);
+                }
+    
+            } else { 
+                // --- 答錯邏輯 (新增防作弊機制) ---
+                
+                // 1. 播放錯誤動畫
+                btnElement.classList.add('shake'); 
+                setTimeout(() => { btnElement.classList.remove('shake'); }, 400); 
+                
+                // 2. 扣分機制 (防止亂猜)
+                // 如果分數大於 0 才扣分，避免負分打擊太大 (或者你可以狠一點直接扣)
+                if (state.scores[player] > 0) {
+                    state.scores[player] -= 1; 
+                    updateScore();
+                }
+    
+                // 3. 冷卻懲罰 (Lockout) - 關鍵防作弊
+                // 初始化鎖定狀態 (如果不存在)
+                if (!state.locked) state.locked = { p1: false, p2: false };
+                
+                state.locked[player] = true;
+                
+                // 視覺回饋：讓該玩家的選項區變半透明
+                const grid = document.getElementById(`opts-${player}`);
+                grid.style.opacity = "0.4";
+                grid.style.pointerEvents = "none"; // 物理上禁止點擊
+    
+                // 0.8秒後解鎖
+                setTimeout(() => {
+                    state.locked[player] = false;
+                    grid.style.opacity = "1";
+                    grid.style.pointerEvents = "auto";
+                }, 800); 
             }
-        } else { 
-            btnElement.classList.add('shake'); 
-            setTimeout(() => { btnElement.classList.remove('shake'); }, 400); 
-        }
     }
 
     function showFeedback(player) {
@@ -345,4 +387,5 @@ function renderSide(player, qObj) {
     return { init, showMenu, toggleTable };
 
 })();
+
 
