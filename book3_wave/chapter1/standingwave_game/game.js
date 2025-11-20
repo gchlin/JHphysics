@@ -63,6 +63,17 @@ const Game = (function() {
         if (audioCtx.state === 'suspended') audioCtx.resume();
         
         state.mode = mode;
+        // --- 新增這段：練習模式隱藏 P1 (對手) ---
+        const p1Area = document.getElementById('p1-area');
+        if (mode === 'practice') {
+            p1Area.style.visibility = 'hidden'; // 隱藏上方，但保留空間
+        } else {
+            p1Area.style.visibility = 'visible'; // 其他模式恢復顯示
+        }
+        // -------------------------------------
+
+        state.targetScore = target;
+        // ... (以下保持原本的代碼)
         state.targetScore = target;
         state.scores = { p1: 0, p2: 0 };
         state.status = { p1: false, p2: false };
@@ -111,17 +122,25 @@ const Game = (function() {
     }
 
     function realStartGame() {
-        const t1 = document.getElementById('timer-p1'), t2 = document.getElementById('timer-p2');
-        if (state.mode === 'speed') { 
-            state.timerVal = 30; 
-            t1.innerText = "30"; t2.innerText = "30"; 
-            startTimer(); 
-        } else { 
-            t1.innerText = "--"; t2.innerText = "--"; 
+            const t1 = document.getElementById('timer-p1'), t2 = document.getElementById('timer-p2');
+            if (state.mode === 'speed') { 
+                state.timerVal = 30; 
+                t1.innerText = "30"; t2.innerText = "30"; 
+                startTimer(); 
+            } else { 
+                t1.innerText = "--"; t2.innerText = "--"; 
+            }
+            
+            if (state.mode === 'versus') {
+                generateVersusQuestion();
+            } else { 
+                // --- 修改這段：練習模式不產生 P1 題目 ---
+                if (state.mode !== 'practice') {
+                    generateIndependentQuestion('p1'); 
+                }
+                generateIndependentQuestion('p2'); 
+            }
         }
-        if (state.mode === 'versus') generateVersusQuestion();
-        else { generateIndependentQuestion('p1'); generateIndependentQuestion('p2'); }
-    }
 
     function startTimer() {
         clearInterval(state.timerInterval);
@@ -326,3 +345,4 @@ function renderSide(player, qObj) {
     return { init, showMenu, toggleTable };
 
 })();
+
