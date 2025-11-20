@@ -1,4 +1,4 @@
-// data.js (表格修正版)
+// data.js (完整物理版 - 修正表格欄位)
 
 // 1. 選項資料庫
 const AnswerBank = {
@@ -23,7 +23,6 @@ const AnswerBank = {
 };
 
 // 2. 題目分堆
-// Level 1: 泛音
 const Level1_List = [
     { qType: "image", qContent: "assets/images/ff_1.png", aKey: "O_0" },
     { qType: "image", qContent: "assets/images/ff_2.png", aKey: "O_1" },
@@ -35,7 +34,6 @@ const Level1_List = [
     { qType: "image", qContent: "assets/images/fo_4.png", aKey: "O_3" }
 ];
 
-// Level 2: 諧音
 const Level2_List = [
     { qType: "image", qContent: "assets/images/ff_1.png", aKey: "H_1" },
     { qType: "image", qContent: "assets/images/ff_2.png", aKey: "H_2" },
@@ -47,27 +45,27 @@ const Level2_List = [
     { qType: "image", qContent: "assets/images/fo_4.png", aKey: "H_7" }
 ];
 
-// Level 3: 綜合
 const Level3_List = [...Level1_List, ...Level2_List];
 
-// 匯出給 game.js 使用
 const QuestionSets = {
     "level1": Level1_List,
     "level2": Level2_List,
     "level3": Level3_List
 };
 
-// 3. 對照表資料 (更新代號 m)
+// 3. 對照表資料 (更新：代號獨立一欄)
 const ReferenceTable = [
-    { type: "header", title: "兩端固定 (弦 / 開管) —— 代號 n" },
-    { type: "row", img: "assets/images/ff_1.png", o: "基音", h: "第一諧音 (n=1)" },
-    { type: "row", img: "assets/images/ff_2.png", o: "第一泛音", h: "第二諧音 (n=2)" },
-    { type: "row", img: "assets/images/ff_3.png", o: "第二泛音", h: "第三諧音 (n=3)" },
-    { type: "row", img: "assets/images/ff_4.png", o: "第三泛音", h: "第四諧音 (n=4)" },
+    // 兩端固定
+    { type: "header", title: "兩端固定" },
+    { type: "row", img: "assets/images/ff_1.png", val: "n=1", o: "基音", h: "第一諧音" },
+    { type: "row", img: "assets/images/ff_2.png", val: "n=2", o: "第一泛音", h: "第二諧音" },
+    { type: "row", img: "assets/images/ff_3.png", val: "n=3", o: "第二泛音", h: "第三諧音" },
+    { type: "row", img: "assets/images/ff_4.png", val: "n=4", o: "第三泛音", h: "第四諧音" },
 
-    { type: "header", title: "一端固定 (閉管) —— 代號 m" },
-    { type: "row", img: "assets/images/fo_1.png", o: "基音", h: "第一諧音 (m=1)" },
-    { type: "row", img: "assets/images/fo_2.png", o: "第一泛音", h: "第三諧音 (m=3)" },
-    { type: "row", img: "assets/images/fo_3.png", o: "第二泛音", h: "第五諧音 (m=5)" },
-    { type: "row", img: "assets/images/fo_4.png", o: "第三泛音", h: "第七諧音 (m=7)" }
+    // 一端固定
+    { type: "header", title: "一端固定" },
+    { type: "row", img: "assets/images/fo_1.png", val: "m=1", o: "基音", h: "第一諧音" },
+    { type: "row", img: "assets/images/fo_2.png", val: "m=3", o: "第一泛音", h: "第三諧音" },
+    { type: "row", img: "assets/images/fo_3.png", val: "m=5", o: "第二泛音", h: "第五諧音" },
+    { type: "row", img: "assets/images/fo_4.png", val: "m=7", o: "第三泛音", h: "第七諧音" }
 ];

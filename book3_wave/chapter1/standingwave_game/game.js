@@ -55,10 +55,10 @@ const Game = (function() {
         firstSolver: null,
         timerVal: 0,
         timerInterval: null,
-        currentList: [] // 當前題庫
+        currentList: [] 
     };
 
-    // --- 初始化 (支援 Level) ---
+    // --- 初始化 (支援 Level & 練習模式按鈕) ---
     function init(mode, target = 0, levelKey = 'level3') {
         if (audioCtx.state === 'suspended') audioCtx.resume();
         
@@ -68,7 +68,6 @@ const Game = (function() {
         state.status = { p1: false, p2: false };
         state.firstSolver = null;
         
-        // 設定題庫
         state.currentList = QuestionSets[levelKey] || QuestionSets['level3'];
 
         document.getElementById('main-menu').classList.add('hidden');
@@ -76,6 +75,14 @@ const Game = (function() {
         document.getElementById('score-p2').innerText = "0";
         document.getElementById('feedback-p1').classList.add('hidden');
         document.getElementById('feedback-p2').classList.add('hidden');
+
+        // 【關鍵更新】如果是練習模式，顯示「圖表」按鈕；否則隱藏
+        const tableBtn = document.getElementById('btn-ingame-table');
+        if (mode === 'practice') {
+            tableBtn.style.display = 'block';
+        } else {
+            tableBtn.style.display = 'none';
+        }
 
         const tText = (mode === 'versus') ? `/ ${target}` : "";
         document.getElementById('target-p1').innerText = tText;
@@ -252,7 +259,7 @@ const Game = (function() {
         document.getElementById('countdown-overlay').classList.add('hidden'); 
     }
 
-    // --- 表格渲染 (新版) ---
+    // --- 表格渲染 (更新版：支援代號欄位) ---
     function toggleTable(show) {
         const el = document.getElementById('ref-table-overlay');
         const tbody = document.getElementById('math-table-body');
@@ -260,7 +267,8 @@ const Game = (function() {
         if(show) {
             tbody.innerHTML = ''; 
             const headerRow = document.createElement('tr');
-            headerRow.innerHTML = '<th style="width:40%">波形圖</th><th style="width:30%">泛音</th><th style="width:30%">諧音</th>';
+            // 調整欄位寬度：圖, 代號, 泛音, 諧音
+            headerRow.innerHTML = '<th style="width:35%">圖</th><th style="width:15%">代號</th><th style="width:25%">泛音</th><th style="width:25%">諧音</th>';
             tbody.appendChild(headerRow);
 
             if(typeof ReferenceTable !== 'undefined') {
@@ -269,15 +277,28 @@ const Game = (function() {
                     if (item.type === "header") {
                         tr.style.background = "#eee";
                         const td = document.createElement('td');
-                        td.colSpan = 3; td.style.fontWeight = "bold"; td.style.padding = "10px"; td.style.color = "#333";
+                        td.colSpan = 4; // 跨 4 欄
+                        td.style.fontWeight = "bold"; td.style.padding = "10px"; td.style.color = "#333";
                         td.textContent = item.title;
                         tr.appendChild(td);
                     } else {
+                        // 1. 圖
                         const tdImg = document.createElement('td');
                         const img = document.createElement('img');
                         img.src = item.img; img.style.maxHeight = "50px"; img.style.maxWidth = "100%"; img.style.display = "block"; img.style.margin = "0 auto";
                         tdImg.appendChild(img); tr.appendChild(tdImg);
+                        
+                        // 2. 代號 (n/m)
+                        const tdVal = document.createElement('td'); 
+                        tdVal.textContent = item.val; 
+                        tdVal.style.fontWeight = "bold"; 
+                        tdVal.style.color = "#e67e22"; // 橘色強調
+                        tr.appendChild(tdVal);
+
+                        // 3. 泛音
                         const tdO = document.createElement('td'); tdO.textContent = item.o; tr.appendChild(tdO);
+                        
+                        // 4. 諧音
                         const tdH = document.createElement('td'); tdH.textContent = item.h; tr.appendChild(tdH);
                     }
                     tbody.appendChild(tr);
