@@ -185,7 +185,7 @@ const Game = (function() {
         return { ...qData, opts: options };
     }
 
-    function renderSide(player, qObj) {
+function renderSide(player, qObj) {
         const qEl = document.getElementById(`q-${player}`); 
         renderContentTo(qEl, qObj, false); 
         const grid = document.getElementById(`opts-${player}`); 
@@ -194,7 +194,23 @@ const Game = (function() {
             const btn = document.createElement('div'); 
             btn.className = 'option-btn';
             renderContentTo(btn, optKey, true);
-            btn.onclick = () => handleAnswer(player, optKey, btn); 
+            
+            // --- 修正開始：解決多點觸控衝突 ---
+            const handleInput = (e) => {
+                // 關鍵：阻止瀏覽器預設行為 (如雙指縮放)，確保邏輯被執行
+                // 加上 if (e.cancelable) 是為了避免某些瀏覽器報錯
+                if (e.cancelable) e.preventDefault(); 
+                handleAnswer(player, optKey, btn);
+            };
+
+            // 使用 addEventListener 綁定
+            // { passive: false } 是必須的，允許我們使用 preventDefault
+            btn.addEventListener('touchstart', handleInput, { passive: false });
+            
+            // 保留 mousedown 以支援電腦版測試 (避免 onclick 的延遲)
+            btn.addEventListener('mousedown', handleInput);
+            // --- 修正結束 ---
+
             grid.appendChild(btn);
         });
     }
@@ -308,4 +324,5 @@ const Game = (function() {
     }
 
     return { init, showMenu, toggleTable };
+
 })();
