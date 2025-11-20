@@ -10,31 +10,69 @@
 
     <div id="main-menu" class="overlay">
         <div class="menu-title">波動物理大亂鬥</div>
+        
+        <div style="margin-top: 30px; font-size: 0.85rem; color: #999;">
+            設計製作：Chaher (AI 輔助)<br>
+            <a href="mailto:chaher@dysh.tyc.edu.tw" style="color: #777; text-decoration: none; border-bottom: 1px dashed #ccc;">
+                Chaher@dysh.tyc.edu.tw
+            </a>
+        </div>
+
         <div class="rule-text">
-            搶答規則：先答對得 <b>2分</b>，後答對得 <b>1分</b>
+            搶答規則：先答對得 <b>2分</b>，後答對得 <b>1分</b><br>
+            率先獲得 <b>20分</b> 者獲勝
+        </div>
+        <button class="mode-btn btn-table" onclick="Game.toggleTable(true)" style="margin-bottom: 20px;">📖 駐波對照表</button>
+        
+
+	<div style="width:100%; border-bottom: 2px solid #eee; margin-bottom:15px; padding-bottom:5px; font-weight:bold; color:#333;">
+            Part 1: 看圖選字
+        </div>
+
+        <div class="mode-section">
+            <div class="mode-label">🟡 兩端固定</div>
+            <button class="mode-btn btn-practice" onclick="Game.init('practice', 0, 'level1')">個人練習</button>
+            <button class="mode-btn btn-versus" onclick="Game.init('versus', 20, 'level1')">雙人搶答</button>
+        </div>
+
+        <div class="mode-section">
+            <div class="mode-label">🔵 一端固定</div>
+            <button class="mode-btn btn-practice" onclick="Game.init('practice', 0, 'level2')">個人練習</button>
+            <button class="mode-btn btn-versus" onclick="Game.init('versus', 20, 'level2')">雙人搶答</button>
+        </div>
+
+        <div class="mode-section">
+            <div class="mode-label">🔴 物理大師 (混合)</div>
+            <button class="mode-btn btn-practice" onclick="Game.init('practice', 0, 'level3')">個人練習</button>
+            <button class="mode-btn btn-speed" onclick="Game.init('speed', 0, 'level3')">雙人競速</button>
+            <button class="mode-btn btn-versus" onclick="Game.init('versus', 20, 'level3')">雙人搶答</button>
+        </div>
+
+
+        <div style="width:100%; border-bottom: 2px solid #eee; margin:20px 0 15px 0; padding-bottom:5px; font-weight:bold; color:#333;">
+            Part 2: 看字選圖 (逆向)
+        </div>
+
+        <div class="mode-section">
+            <div class="mode-label" style="border-left-color: #27ae60;">🟢 兩端固定</div>
+            <button class="mode-btn btn-practice" onclick="Game.init('practice', 0, 'level4')">個人練習</button>
+            <button class="mode-btn btn-versus" onclick="Game.init('versus', 20, 'level4')">雙人搶答</button>
+        </div>
+
+        <div class="mode-section">
+            <div class="mode-label" style="border-left-color: #27ae60;">🟢 一端固定</div>
+            <button class="mode-btn btn-practice" onclick="Game.init('practice', 0, 'level5')">個人練習</button>
+            <button class="mode-btn btn-versus" onclick="Game.init('versus', 20, 'level5')">雙人搶答</button>
+        </div>
+
+        <div class="mode-section">
+            <div class="mode-label" style="border-left-color: #27ae60;">🟢 物理大師 (混合)</div>
+            <button class="mode-btn btn-practice" onclick="Game.init('practice', 0, 'level6')">個人練習</button>
+            <button class="mode-btn btn-speed" onclick="Game.init('speed', 0, 'level6')">雙人競速</button>
+            <button class="mode-btn btn-versus" onclick="Game.init('versus', 20, 'level6')">雙人搶答</button>
         </div>
         
-        <div class="mode-section">
-            <div class="mode-label">🟡 Level 1: 泛音特訓 (只考泛音)</div>
-            <button class="mode-btn btn-practice" onclick="Game.init('practice', 0, 'level1')">個人練習</button>
-            <button class="mode-btn btn-versus" onclick="Game.init('versus', 10, 'level1')">雙人搶答 (搶10分)</button>
-        </div>
-
-        <div class="mode-section">
-            <div class="mode-label">🔵 Level 2: 諧音特訓 (只考諧音)</div>
-            <button class="mode-btn btn-practice" onclick="Game.init('practice', 0, 'level2')">個人練習</button>
-            <button class="mode-btn btn-versus" onclick="Game.init('versus', 10, 'level2')">雙人搶答 (搶10分)</button>
-        </div>
-
-        <div class="mode-section">
-            <div class="mode-label">🔴 Level 3: 物理大師 (混合題型)</div>
-            <button class="mode-btn btn-practice" onclick="Game.init('practice', 0, 'level3')">個人練習 (混合)</button>
-            <button class="mode-btn btn-speed" onclick="Game.init('speed', 0, 'level3')">30秒競速</button>
-            <button class="mode-btn btn-versus" onclick="Game.init('versus', 20, 'level3')">極限對戰 (搶20分)</button>
-        </div>
-
-        <button class="mode-btn btn-table" onclick="Game.toggleTable(true)">📖 駐波對照表</button>
-    </div>
+        <div style="height: 50px;"></div> </div>
 
     <div id="ref-table-overlay" class="overlay hidden">
         <button class="close-btn" onclick="Game.toggleTable(false)">✖ 關閉</button>
@@ -82,11 +120,8 @@
         <div class="timer-group">
             <div class="timer-display timer-p1" id="timer-p1">--</div>
         </div>
-        
         <button class="menu-btn-small" onclick="Game.showMenu()">MENU</button>
-        
         <button id="btn-ingame-table" class="menu-btn-small" style="margin-left:8px; background:#f1c40f; color:#333; display:none;" onclick="Game.toggleTable(true)">圖表</button>
-
         <div class="timer-group">
             <div class="timer-display" id="timer-p2">--</div>
         </div>
