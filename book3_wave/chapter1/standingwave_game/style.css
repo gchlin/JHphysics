@@ -50,7 +50,9 @@ body { margin: 0; padding: 0; width: 100vw; height: 100dvh; overflow: hidden; fo
 
 /* Overlays (通用遮罩) */
 .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(255,255,255,0.95); z-index: 20; text-align: center; }
-.hidden { display: none !important; }
+
+/* 【關鍵修正】這裡原本只有 .hidden，現在加上 ID 選擇器以提高權重，確保能蓋過 #main-menu 的設定 */
+#main-menu.hidden, .hidden { display: none !important; }
 
 /* Animations */
 .big-circle { width: 90px; height: 90px; border: 8px solid var(--correct-color); border-radius: 50%; display: flex; justify-content: center; align-items: center; margin-bottom: 15px; animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
@@ -58,24 +60,24 @@ body { margin: 0; padding: 0; width: 100vw; height: 100dvh; overflow: hidden; fo
 @keyframes popIn { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
 @keyframes blink { 50% { opacity: 0.5; } }
 
-/* --- 主選單 (終極修正版) --- */
+/* --- 主選單 (修正版) --- */
 #main-menu { 
     background: #fff; 
     z-index: 30; 
     
-    /* 【關鍵修正 1】 改用 Block 模式，解決 Samsung 瀏覽器 Flexbox 捲動 bug */
-    display: block !important; 
+    /* Block 模式解決捲動問題 */
+    display: block; 
     
-    /* 【關鍵修正 2】 使用 Fixed 定位與強制捲動 */
+    /* Fixed 定位 */
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
-    height: 100dvh; /* 使用 dvh 以適應手機網址列縮放 */
+    height: 100dvh; 
     overflow-y: auto; 
-    -webkit-overflow-scrolling: touch; /* 優化 iOS 滑動手感 */
+    -webkit-overflow-scrolling: touch; 
     
-    /* 【關鍵修正 3】 加大 Padding，避免標題被遮住 */
+    /* Padding */
     padding: 80px 0 120px 0; 
     text-align: center;
 }
@@ -83,7 +85,7 @@ body { margin: 0; padding: 0; width: 100vw; height: 100dvh; overflow: hidden; fo
 .menu-title { font-size: 2rem; margin-bottom: 10px; color: #2c3e50; font-weight: bold; }
 .rule-text { font-size: 0.9rem; color: #7f8c8d; margin-bottom: 20px; background: #f0f2f5; padding: 8px 15px; border-radius: 8px; display: inline-block; margin-left: auto; margin-right: auto; }
 
-/* 區塊修正：確保在 block 模式下置中 */
+/* 區塊修正 */
 .mode-section { 
     margin-bottom: 20px; 
     width: 100%; 
@@ -94,12 +96,12 @@ body { margin: 0; padding: 0; width: 100vw; height: 100dvh; overflow: hidden; fo
 
 .mode-label { font-size: 1rem; color: #34495e; margin-bottom: 8px; font-weight: bold; border-left: 4px solid #34495e; padding-left: 10px; width: 80%; max-width: 300px; text-align: left; }
 
-/* 按鈕修正：增加 margin auto 確保置中 */
+/* 按鈕修正 */
 .mode-btn { 
     width: 80%; 
     max-width: 300px; 
     padding: 14px; 
-    margin: 6px auto; /* 【關鍵】加上 auto 確保水平置中 */
+    margin: 6px auto; 
     font-size: 1.1rem; 
     border: none; 
     border-radius: 12px; 
@@ -109,7 +111,7 @@ body { margin: 0; padding: 0; width: 100vw; height: 100dvh; overflow: hidden; fo
     box-shadow: 0 4px 0 rgba(0,0,0,0.15); 
     transition: transform 0.1s; 
     position: relative; 
-    display: block; /* 確保它是區塊元素 */
+    display: block; 
 }
 .mode-btn:active { transform: translateY(4px); box-shadow: none; }
 .btn-practice { background: #95a5a6; } .btn-speed { background: #e74c3c; } .btn-versus { background: #3498db; } .btn-table { background: #f1c40f; color: #333; margin-top: 20px; }
@@ -123,21 +125,4 @@ body { margin: 0; padding: 0; width: 100vw; height: 100dvh; overflow: hidden; fo
 .math-table tr:nth-child(even) { background: #fcfcfc; }
 
 /* Countdown */
-#countdown-overlay { background: rgba(255,255,255,0.98); z-index: 100; }
-.countdown-wrapper-top { transform: rotate(180deg); width: 100%; display: flex; justify-content: center; }
-.countdown-wrapper-bot { width: 100%; display: flex; justify-content: center; }
-.countdown-number { font-size: 8rem; font-weight: 900; color: #2c3e50; }
-@keyframes countPop { 0% { transform: scale(0.5); opacity: 0; } 50% { transform: scale(1.2); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
-
-/* Game Over */
-#game-over { z-index: 40; background: white; flex-direction: column; padding: 0; }
-.go-half { flex: 1; width: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; }
-.go-top { background: #fff; transform: rotate(180deg); border-bottom: 2px solid #eee; }
-.go-bottom { background: #fff; }
-.result-title { font-size: 2.5rem; font-weight: bold; margin-bottom: 10px; }
-.result-sub { font-size: 1.2rem; color: #666; }
-.win-msg { color: #f1c40f; text-shadow: 0 2px 0 rgba(0,0,0,0.1); }
-.lose-msg { color: #95a5a6; }
-.shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; background: var(--wrong-color) !important; color: white !important; border-color: var(--wrong-color) !important; }
-.correct-mark { background: var(--correct-color) !important; color: white !important; border-color: var(--correct-color) !important; }
-@keyframes shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } 40%, 60% { transform: translate3d(4px, 0, 0); } }
+#countdown-overlay { background: rgba(255,
