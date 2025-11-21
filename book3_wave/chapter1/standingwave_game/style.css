@@ -91,7 +91,7 @@ body { margin: 0; padding: 0; width: 100vw; height: 100dvh; overflow: hidden; fo
 /* General UI */
 .menu-btn-small { background: #7f8c8d; color: #fff; border: none; padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; cursor: pointer; font-weight: bold; white-space: nowrap; }
 .menu-btn-small:active { transform: translateY(2px); }
-.question-box { font-size: 2.8rem; font-weight: bold; margin-bottom: 15px; font-family: 'Times New Roman', serif; display: flex; justify-content: center; align-items: center; width: 100%; }
+.question-box { font-size: 1.8rem; font-weight: bold; margin-bottom: 15px; font-family: 'Times New Roman', serif; display: flex; justify-content: center; align-items: center; width: 100%; }
 .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 95%; max-width: 400px; }
 .option-btn { background: white; border: 2px solid #e0e0e0; border-radius: 12px; padding: 5px 0; font-size: 1.6rem; font-weight: bold; cursor: pointer; display: flex; justify-content: center; align-items: center; box-shadow: 0 4px 0 #d0d0d0; transition: all 0.1s; min-height: 70px; overflow: hidden; position: relative; }
 .option-btn:active { transform: translateY(4px); box-shadow: none; }
@@ -161,4 +161,5 @@ body { margin: 0; padding: 0; width: 100vw; height: 100dvh; overflow: hidden; fo
 .lose-msg { color: #95a5a6; }
 .shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; background: var(--wrong-color) !important; color: white !important; border-color: var(--wrong-color) !important; }
 .correct-mark { background: var(--correct-color) !important; color: white !important; border-color: var(--correct-color) !important; }
+
 @keyframes shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } 40%, 60% { transform: translate3d(4px, 0, 0); } }
