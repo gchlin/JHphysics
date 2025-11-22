@@ -32,16 +32,29 @@ body { margin: 0; padding: 0; width: 100vw; height: 100dvh; overflow: hidden; fo
     font-size: 3.5rem;
     font-weight: 900;
     text-shadow: 2px 2px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff;
+    /* P2 繼續使用原本的通用動畫 */
     animation: warnPulse 0.5s infinite alternate;
 }
-@keyframes warnPulse { from { transform: scale(1); opacity: 0.8; } to { transform: scale(1.1); opacity: 1; } }
 
-/* P1 的警告文字要倒過來，且要考慮到他原本的區域已經 rotate 180，
-   但這個 overlay 是在 body 層級，沒被 rotate。
-   所以我們手動 rotate 180 給 P1 看 */
-.warn-p1 { transform: rotate(180deg); }
-.warn-p2 { } /* P2 正常顯示 */
+/* 原本的動畫 (給 P2 用) */
+@keyframes warnPulse { 
+    from { transform: scale(1); opacity: 0.8; } 
+    to { transform: scale(1.1); opacity: 1; } 
+}
 
+/* 新增：P1 專用動畫 (包含旋轉) */
+@keyframes warnPulseP1 { 
+    from { transform: rotate(180deg) scale(1); opacity: 0.8; } 
+    to { transform: rotate(180deg) scale(1.1); opacity: 1; } 
+}
+
+/* 設定 P1 使用專用動畫 */
+.warn-p1 { 
+    transform: rotate(180deg); 
+    animation: warnPulseP1 0.5s infinite alternate;
+}
+
+.warn-p2 { } /* P2 正常顯示，沿用 warn-text 的設定 */
 
 .img-content { max-width: 100%; max-height: 160px; width: auto; object-fit: contain; background: white; padding: 5px; border-radius: 8px; }
 .sp-img-content { max-height: 250px; }
