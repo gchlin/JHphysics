@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>期末考下載進度</title>
+  <style>
+    :root {
+      --primary: #234c7f;
+      --primary-dark: #19263a;
+      --primary-soft: #e7f0fb;
+
+      --phy-color: #3498db;
+      --chem-color: #27ae60;
+      --bio-color: #e67e22;
+
+      --bg-color: #f4f7f6;
+      --card-bg: #ffffff;
+      --text-color: #333;
+      --gray-light: #ecf0f1;
+      --gray-dark: #7f8c8d;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .page {
+      max-width: 1200px;
+      margin: 0 auto;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* --- Header: title + class buttons --- */
+    header {
+      background: #fff;
+      padding: 10px 24px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+      border-bottom: 3px solid var(--primary-soft);
+    }
+
+    .header-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 1.4rem;
+      color: #2c3e50;
+      white-space: nowrap;
+    }
+
+    .class-nav {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .class-btn {
+      padding: 7px 22px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      background: var(--gray-light);
+      cursor: pointer;
+      font-weight: 600;
+      color: var(--gray-dark);
+      transition: all 0.2s;
+      font-size: 0.9rem;
+    }
+
+    .class-btn.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+      transform: translateY(-1px);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
+
+    /* --- Subject tabs --- */
+    .subject-tabs {
+      background: #fff;
+      padding: 8px 24px 6px;
+      border-bottom: 1px solid #e4e8ee;
+      display: flex;
+      gap: 16px;
+    }
+
+    .subject-tab {
+      border: none;
+      background: transparent;
+      padding: 8px 4px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      color: var(--gray-dark);
+      border-bottom: 3px solid transparent;
+      margin-bottom: -1px;
+      transition: color 0.2s, border-color 0.2s;
+    }
+
+    .subject-tab.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+      font-weight: 600;
+    }
+
+    /* --- Main two-column layout --- */
+    .main-layout {
+      display: flex;
+      flex: 1;
+      padding: 24px;
+      gap: 20px;
+    }
+
+    .left-panel {
+      flex: 0 0 55%;
+      max-width: 55%;
+      display: flex;
+      align-items: stretch;
+    }
+
+    .right-panel {
+      flex: 0 0 45%;
+      max-width: 45%;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    /* Countdown card */
+    .timer-card {
+      background: #fff;
+      border-radius: 18px;
+      padding: 28px 30px 26px;
+      text-align: center;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .timer-header {
+      font-size: 1.1rem;
+      color: var(--gray-dark);
+      margin-bottom: 14px;
+      letter-spacing: 1px;
+    }
+
+    .timer-main {
+      font-size: 5rem;      /* 大字，維持你示意圖感覺 */
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+      margin: 6px 0 4px;
+      color: var(--phy-color);   /* 會用程式改成科目顏色 */
+    }
+
+    .timer-unit {
+      font-size: 1.4rem;
+      margin-left: 6px;
+    }
+
+    .timer-sub {
+      font-size: 1.4rem;
+      color: var(--gray-dark);
+      margin-top: 10px;
+    }
+
+    .empty-state {
+      color: #bdc3c7;
+      font-style: italic;
+      margin-top: 10px;
+    }
+
+    /* Calendar card */
+    .calendar-card {
+      background: #fff;
+      padding: 18px 20px 18px;
+      border-radius: 18px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    }
+
+    .calendar-title {
+      text-align: center;
+      margin: 0 0 10px;
+      color:#44566b;
+      font-weight: 600;
+      font-size: 1rem;
+    }
+
+    .cal-header-row {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      text-align: center;
+      font-weight: bold;
+      color: var(--gray-dark);
+      margin-bottom: 6px;
+      font-size: 0.85rem;
+    }
+
+    .cal-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+    }
+
+    .cal-day {
+      aspect-ratio: 1;
+      border: 1px solid #eee;
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      background: #fff;
+      font-size: 0.85rem;
+    }
+
+    .cal-day.today {
+      border: 2px solid #f1c40f;
+      background: #fffcf0;
+    }
+    
+    .cal-day.past {
+      background: #f9f9f9;
+      opacity: 0.6;
+    }
+
+    .date-num {
+      font-size: 0.75rem;
+      color: #aaa;
+      position: absolute;
+      top: 4px;
+      left: 5px;
+    }
+
+    .badge {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 0.9rem;
+    }
+
+    .badge-x {
+      color: #e74c3c;
+      font-size: 1.3rem;
+      font-weight: bold;
+    }
+
+    /* Key date cards (right panel, compressed height) */
+    .key-dates {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .key-card {
+      background: #1f2736;
+      border-radius: 14px;
+      padding: 10px 12px 11px;
+      color: #ecf0f1;
+      border: 1px solid rgba(255,255,255,0.12);
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      font-size: 0.9rem;
+    }
+
+    .key-title {
+      font-size: 0.9rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 2px;
+    }
+
+    .key-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #f1c40f;
+    }
+
+    .key-card.mock .key-dot {
+      background: #e67e22;
+    }
+
+    .key-card.exam .key-dot {
+      background: #2ecc71;
+    }
+
+    .key-date {
+      font-size: 0.88rem;
+    }
+
+    .key-tag {
+      font-size: 0.8rem;
+      opacity: 0.85;
+      margin-top: 1px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 1px 7px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.4);
+      font-size: 0.75rem;
+    }
+
+    footer {
+      padding: 8px 20px 14px;
+      text-align: center;
+      color: #999;
+      font-size: 0.8rem;
+    }
+
+    /* Responsive for small screens */
+    @media (max-width: 900px) {
+      .main-layout {
+        flex-direction: column;
+      }
+      .left-panel,
+      .right-panel {
+        flex: 0 0 100%;
+        max-width: 100%;
+      }
+    }
+
+    @media (max-width: 600px) {
+      header {
+        padding: 10px 16px;
+      }
+      .subject-tabs {
+        padding: 8px 16px 6px;
+      }
+      .main-layout {
+        padding: 18px 12px;
+      }
+      .timer-main {
+        font-size: 3.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+  <!-- Header: title + class buttons -->
+  <header>
+    <div class="header-bar">
+      <h1>期末考下載進度</h1>
+      <div class="class-nav">
+        <button class="class-btn active" onclick="setClass('308', event)">308</button>
+        <button class="class-btn" onclick="setClass('309', event)">309</button>
+        <button class="class-btn" onclick="setClass('310', event)">310</button>
+        <button class="class-btn" onclick="setClass('311', event)">311</button>
+        <button class="class-btn" onclick="setClass('312', event)">312</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Subject tabs -->
+  <div class="subject-tabs">
+    <button class="subject-tab active" data-subject="Phy" onclick="setSubject('Phy')">選修物理</button>
+    <button class="subject-tab" data-subject="Chem" onclick="setSubject('Chem')">選修化學</button>
+    <button class="subject-tab" data-subject="Bio" onclick="setSubject('Bio')">選修生物</button>
+  </div>
+
+  <!-- Main layout -->
+  <main class="main-layout">
+    <!-- Left: countdown card -->
+    <section class="left-panel">
+      <div class="timer-card" id="timerCard">
+        <div class="timer-header" id="timerTitle">下載 物理 還剩下...</div>
+        <div id="timerContent">
+          <div class="timer-main">
+            <span id="minDisplay">0</span><span class="timer-unit">分鐘</span>
+          </div>
+          <div class="timer-sub"><span id="periodDisplay">0</span> 節課</div>
+        </div>
+        <div id="emptyMessage" class="empty-state" style="display:none;">本班級無此選修課程</div>
+      </div>
+    </section>
+
+    <!-- Right: calendar + key dates -->
+    <section class="right-panel">
+      <div class="calendar-card">
+        <h3 class="calendar-title" id="calendarTitle">選修物理（2025年 12月）</h3>
+        <div class="cal-header-row">
+          <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
+        </div>
+        <div class="cal-grid" id="calendarGrid"></div>
+      </div>
+
+      <div class="key-dates">
+        <div class="key-card holiday">
+          <div class="key-title">
+            <span class="key-dot"></span>
+            假日
+          </div>
+          <div class="key-date">12月25日（週四）</div>
+          <div class="key-tag">
+            聖誕節
+            <span class="pill">放假</span>
+          </div>
+        </div>
+
+        <div class="key-card mock">
+          <div class="key-title">
+            <span class="key-dot"></span>
+            模擬考
+          </div>
+          <div class="key-date">12月20日（週六）、12月21日（週日）</div>
+          <div class="key-tag">
+            高三模擬考
+            <span class="pill">不上課</span>
+          </div>
+        </div>
+
+        <div class="key-card exam">
+          <div class="key-title">
+            <span class="key-dot"></span>
+            段考
+          </div>
+          <div class="key-date">12月30日（週二）、12月31日（週三）</div>
+          <div class="key-tag">
+            期末段考
+            <span class="pill">最後上課日 12/29</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    最後上課日：12/29（段考前）　｜　假日：12/25　｜　模考：12/20、12/21
+  </footer>
+</div>
+
+<script>
+  // ---- Data ----
+  const year = 2025;
+  const monthIndex = 11; // December
+
+  const specialDates = {
+    20: { type: 'mock', label: '✕' },
+    21: { type: 'mock', label: '✕' },
+    25: { type: 'holiday', label: '✕' },
+    30: { type: 'exam', label: 'End' },
+    31: { type: 'exam', label: 'End' }
+  };
+
+  const periods = {
+    1: { s: "08:10", e: "09:00" },
+    2: { s: "09:10", e: "10:00" },
+    3: { s: "10:10", e: "11:00" },
+    4: { s: "11:10", e: "12:00" },
+    5: { s: "13:10", e: "14:00" },
+    6: { s: "14:10", e: "15:00" },
+    7: { s: "15:10", e: "16:00" }
+  };
+
+  const data = {
+    '308': {
+      'Phy': [ {d:1,p:[1,2]}, {d:2,p:[1]}, {d:4,p:[4]} ],
+      'Chem': [ {d:2,p:[6,7]}, {d:4,p:[1]} ],
+      'Bio': [] 
+    },
+    '309': {
+      'Phy': [ {d:2,p:[6,7]}, {d:4,p:[4]}, {d:5,p:[5]} ],
+      'Chem': [ {d:1,p:[3,4]}, {d:2,p:[2]}, {d:4,p:[3]} ],
+      'Bio': []
+    },
+    '310': {
+      'Phy': [ {d:2,p:[3,4]}, {d:3,p:[6]}, {d:4,p:[3]} ],
+      'Chem': [ {d:1,p:[5,6]}, {d:3,p:[7]}, {d:4,p:[4,7]} ],
+      'Bio': [ {d:2,p:[5,6]}, {d:3,p:[5]}, {d:4,p:[1]} ]
+    },
+    '311': {
+      'Phy': [ {d:1,p:[2,3]}, {d:3,p:[7]}, {d:4,p:[3]} ],
+      'Chem': [ {d:2,p:[3]}, {d:3,p:[5,6]}, {d:5,p:[5]} ],
+      'Bio': [ {d:1,p:[5,6]}, {d:2,p:[4]}, {d:3,p:[1]} ]
+    },
+    '312': {
+      'Phy': [],
+      'Chem': [ {d:2,p:[4]}, {d:3,p:[3]}, {d:5,p:[1,2]} ],
+      'Bio': [ {d:2,p:[3]}, {d:3,p:[5]}, {d:4,p:[2,3]} ]
+    }
+  };
+
+  const colors = {
+    'Phy': 'var(--phy-color)',
+    'Chem': 'var(--chem-color)',
+    'Bio': 'var(--bio-color)'
+  };
+
+  const subjectsFull = {
+    'Phy': '選修物理',
+    'Chem': '選修化學',
+    'Bio': '選修生物'
+  };
+
+  const subjectsShort = {
+    'Phy': '物理',
+    'Chem': '化學',
+    'Bio': '生物'
+  };
+
+  let currClass = '308';
+  let currSubject = 'Phy';
+  let timerInterval = null;
+
+  // ---- UI switching ----
+  function setClass(cls, ev) {
+    currClass = cls;
+    document.querySelectorAll('.class-btn').forEach(b => b.classList.remove('active'));
+    if (ev && ev.target) ev.target.classList.add('active');
+    updateUI();
+  }
+
+  function setSubject(subj) {
+    currSubject = subj;
+    document.querySelectorAll('.subject-tab').forEach(b => b.classList.remove('active'));
+    const tab = document.querySelector(`.subject-tab[data-subject="${subj}"]`);
+    if (tab) tab.classList.add('active');
+    updateUI();
+  }
+
+  function updateUI() {
+    renderCalendar();
+    updateTimer();
+
+    const color = colors[currSubject];
+    document.querySelector('.timer-main').style.color = color;
+    document.getElementById('timerTitle').innerText = `下載 ${subjectsShort[currSubject]} 還剩下...`;
+    document.getElementById('calendarTitle').innerText = `${subjectsFull[currSubject]}（2025年 12月）`;
+  }
+
+  // ---- Calendar ----
+  function getDailyLessons(dayOfMonth) {
+    const date = new Date(year, monthIndex, dayOfMonth);
+    const dayOfWeek = date.getDay(); // 0-6
+
+    if (specialDates[dayOfMonth]) return 'X';
+    if (dayOfWeek === 0 || dayOfWeek === 6) return '';
+
+    const sched = data[currClass][currSubject];
+    if (!sched) return 0;
+
+    const daySched = sched.find(s => s.d === dayOfWeek);
+    return daySched ? daySched.p.length : 0;
+  }
+
+  function renderCalendar() {
+    const grid = document.getElementById('calendarGrid');
+    grid.innerHTML = '';
+
+    const firstDay = new Date(year, monthIndex, 1).getDay();
+    for(let i=0; i<firstDay; i++) {
+      grid.innerHTML += `<div></div>`;
+    }
+
+    const today = new Date();
+    const isTargetMonth = today.getFullYear() === year && today.getMonth() === monthIndex;
+    const currentDay = today.getDate();
+
+    const daysInMonth = 31;
+
+    for(let d=1; d<=daysInMonth; d++) {
+      const lessons = getDailyLessons(d);
+      const el = document.createElement('div');
+      el.className = 'cal-day';
+      
+      if (isTargetMonth && d === currentDay) el.classList.add('today');
+      if (isTargetMonth && d < currentDay) el.classList.add('past');
+      if (d >= 30) el.classList.add('past');  // 段考期間不再上課
+
+      let content = `<span class="date-num">${d}</span>`;
+      
+      if (lessons === 'X') {
+        content += `<div class="badge-x">✕</div>`;
+      } else if (lessons > 0) {
+        const color = colors[currSubject];
+        content += `<div class="badge" style="background:${color}">${lessons}</div>`;
+      }
+
+      el.innerHTML = content;
+      grid.appendChild(el);
+    }
+  }
+
+  // ---- Countdown ----
+  function calculateTime() {
+    const now = new Date();
+
+    const schedList = data[currClass][currSubject];
+    if (!schedList || schedList.length === 0) return null;
+
+    let totalMins = 0;
+    let totalPeriods = 0;
+
+    for(let d=1; d<=29; d++) {
+      if (specialDates[d]) continue;
+      
+      const dateCheck = new Date(year, monthIndex, d);
+      const dw = dateCheck.getDay();
+      if (dw === 0 || dw === 6) continue;
+
+      const daySched = schedList.find(s => s.d === dw);
+      if (!daySched) continue;
+
+      daySched.p.forEach(pIdx => {
+        const pTime = periods[pIdx];
+        const startParts = pTime.s.split(':').map(Number);
+        const endParts = pTime.e.split(':').map(Number);
+
+        const startT = new Date(year, monthIndex, d, startParts[0], startParts[1]);
+        const endT = new Date(year, monthIndex, d, endParts[0], endParts[1]);
+
+        if (now < startT) {
+          totalMins += 50;
+          totalPeriods += 1;
+        } else if (now >= startT && now < endT) {
+          const rem = (endT - now) / 60000;
+          totalMins += rem;
+          totalPeriods += (rem / 50);
+        }
+      });
+    }
+    return { 
+      m: Math.floor(totalMins), 
+      p: Math.round(totalPeriods)  // 取整數顯示
+    };
+  }
+
+  function updateTimer() {
+    const res = calculateTime();
+    
+    const timerContent = document.getElementById('timerContent');
+    const emptyMsg = document.getElementById('emptyMessage');
+
+    if (res === null) {
+      timerContent.style.display = 'none';
+      emptyMsg.style.display = 'block';
+    } else {
+      timerContent.style.display = 'block';
+      emptyMsg.style.display = 'none';
+      
+      document.getElementById('minDisplay').innerText = res.m.toLocaleString();
+      document.getElementById('periodDisplay').innerText = res.p;
+    }
+  }
+
+  // ---- Init ----
+  timerInterval = setInterval(updateTimer, 1000);
+  updateUI();
+</script>
+</body>
+</html>
