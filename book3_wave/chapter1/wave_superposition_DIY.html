@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8" />
-<title>Two Pulses Superposition / 兩道波疊加</title>
+<title>Two Pulses Superposition / 兩脈衝疊加</title>
 
 <!-- ================== STYLE ================== -->
 <style>
@@ -140,6 +140,14 @@
         gap: 4px;
     }
 
+    select {
+        padding: 4px 8px;
+        border-radius: 8px;
+        border: 1px solid #cccccc;
+        font-size: 13px;
+        background: #ffffff;
+    }
+
     input[type="range"] {
         width: 260px;
     }
@@ -165,11 +173,10 @@
 </head>
 <body>
 <div class="container">
-    <h1>Two Pulses Superposition / 兩道波疊加</h1>
+    <h1>Two Pulses Superposition / 兩脈衝疊加</h1>
 
     <div class="info">
-        A wave：left triangle pulse / 左側三角波（<strong>藍色細線</strong>）<br>
-        B wave：right square pulse / 右側方波（<strong>橘色粗線半透明</strong>）<br>
+        選擇波形組合後播放或拖曳時間。預設：A 波左移三角波、B 波右移方波。<br>
         v<sub>A</sub> = 1 grid/s to the right（向右 1 格/秒），
         v<sub>B</sub> = 1 grid/s to the left（向左 1 格/秒）
     </div>
@@ -181,11 +188,11 @@
     <div class="legend">
         <span class="legend-item">
             <span class="legend-line a"></span>
-            A wave / A 波（三角形，藍色細線）
+            A wave / A 波（左移，藍色細線）
         </span>
         <span class="legend-item">
             <span class="legend-line b"></span>
-            B wave / B 波（方形，橘色粗線半透明）
+            B wave / B 波（右移，橘色粗線半透明）
         </span>
         <span class="legend-item">
             <span class="legend-line sum"></span>
@@ -196,6 +203,16 @@
     <canvas id="waveCanvas" width="800" height="120"></canvas>
 
     <div class="controls">
+        <!-- 波形組合選擇 -->
+        <div class="controls-row">
+            <label for="presetSelect">Wave preset / 波形組合:</label>
+            <select id="presetSelect">
+                <option value="square-triangle">Square + Triangle</option>
+                <option value="triangle-triangle">Triangle + Triangle</option>
+                <option value="triangle-triangle-2">Triangle + Triangle 2</option>
+            </select>
+        </div>
+
         <!-- 第一列：播放控制 -->
         <div class="controls-row">
             <button id="playPauseBtn" class="primary-btn">播放 Play</button>
@@ -282,6 +299,7 @@ const LINE_WIDTH = {
 // 預先計算座標轉換比例（優化：避免重複計算）
 const SCALE_X = canvas.width / (X_MAX - X_MIN);
 const SCALE_Y = canvas.height / (Y_MAX - Y_MIN);
+const DEFAULT_PRESET = "square-triangle";
 
 /* ============================================================
  * STATE
@@ -290,6 +308,7 @@ const state = {
     t: 0,
     playing: false,
     lastTimestamp: null,
+    presetId: DEFAULT_PRESET,
     showA: false,      // 預設不顯示 A 波
     showB: false,      // 預設不顯示 B 波
     showSum: true      // 預設只顯示疊加波
@@ -299,20 +318,46 @@ const state = {
  * PHYSICS - 波形定義
  * ============================================================ */
 
-// A 波初始形狀：三角波，x ∈ [-5, -1]，峰值在 x = -3
-function shapeA0(x) {
-    if (x < -5 || x > -1) return 0;
-    return x <= -3 ? (x + 5) * 0.5 : (-1 - x) * 0.5;
+// 產生三角波，height 可正（尖朝上）或負（尖朝下）
+function makeTriangle(start, peak, end, height) {
+    return function (x) {
+        if (x < start || x > end) return 0;
+        if (x <= peak) {
+            return ((x - start) / (peak - start)) * height;
+        }
+        return ((end - x) / (end - peak)) * height;
+    };
 }
 
-// B 波初始形狀：方波
-// x ∈ [1, 3): -1
-// x ∈ [3, 5]: +2
-function shapeB0(x) {
-    if (x >= 1 && x < 3) return -1;
-    if (x >= 3 && x <= 5) return 2;
-    return 0;
-}
+const wavePresets = {
+    "square-triangle": {
+        // A 往右平移 1 格：原本 [-5,-3,-1] → [-4,-2,0]
+        shapeA0: makeTriangle(-4, -2, 0, 1),
+        shapeB0: function (x) {
+            if (x >= 1 && x < 3) return -1;
+            if (x >= 3 && x <= 5) return 2;
+            return 0;
+        }
+    },
+    "triangle-triangle": {
+        shapeA0: makeTriangle(-7, -5, -3, 1.2),
+        shapeB0: makeTriangle(2, 4, 6, -2)
+    },
+    "triangle-triangle-2": {
+        // A：三段折線（起點 0 → 谷底 -1 → 頂點 1.2 → 回到 0）
+        shapeA0: function (x) {
+            const x0 = -10, x1 = -8, x2 = -2, x3 = 1;
+            if (x < x0 || x > x3) return 0;
+            if (x <= x1) return ((x - x0) / (x1 - x0)) * (-1);          // 0 → -1
+            if (x <= x2) return ((x - x1) / (x2 - x1)) * (1.2 + 1) - 1; // -1 → 1.2
+            return ((x3 - x) / (x3 - x2)) * 1.2;                       // 1.2 → 0
+        },
+        shapeB0: makeTriangle(4, 7, 9, -3)
+    }
+};
+
+let shapeA0 = wavePresets[DEFAULT_PRESET].shapeA0;
+let shapeB0 = wavePresets[DEFAULT_PRESET].shapeB0;
 
 // t 時刻的波形（使用行波方程）
 const waveA = (x, t) => shapeA0(x - SPEED_A * t);
@@ -439,6 +484,7 @@ function render() {
 /* ============================================================
  * UI CONTROLS
  * ============================================================ */
+const presetSelect = document.getElementById("presetSelect");
 const playPauseBtn = document.getElementById("playPauseBtn");
 const resetBtn = document.getElementById("resetBtn");
 const stepBackBtn = document.getElementById("stepBackBtn");
@@ -448,6 +494,11 @@ const timeLabel = document.getElementById("timeLabel");
 const showABox = document.getElementById("showA");
 const showBBox = document.getElementById("showB");
 const showSumBox = document.getElementById("showSum");
+
+presetSelect.value = state.presetId;
+presetSelect.addEventListener("change", () => {
+    applyPreset(presetSelect.value);
+});
 
 // 播放 / 暫停
 playPauseBtn.addEventListener("click", () => {
@@ -513,6 +564,16 @@ stepForwardBtn.addEventListener("click", () => {
 });
 
 // 輔助函數
+function applyPreset(presetId) {
+    const preset = wavePresets[presetId];
+    if (!preset) return;
+    state.presetId = presetId;
+    shapeA0 = preset.shapeA0;
+    shapeB0 = preset.shapeB0;
+    setTime(0);
+    pauseAnimation();
+}
+
 function setTime(t) {
     state.t = t;
     timeSlider.value = t.toFixed(2);
