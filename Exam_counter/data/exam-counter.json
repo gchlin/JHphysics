@@ -1,14 +1,14 @@
-﻿{
+{
   "meta": {
-    "year": 2025,
-    "monthIndex": 11,
-    "month": 12,
+    "year": 2026,
+    "monthIndex": 0,
+    "month": 1,
     "daysInMonth": 31,
-    "countdownLastDay": 29,
-    "examStartDay": 30
+    "countdownLastDay": 31,
+    "examStartDay": 32
   },
   "defaults": {
-    "classId": "308",
+    "classId": "105",
     "subject": "Phy"
   },
   "ui": {
@@ -33,47 +33,55 @@
       {
         "type": "holiday",
         "title": "假日",
-        "dateText": "12月25日（週四）",
-        "tagText": "聖誕節",
+        "dateText": "2月15日–2月21日",
+        "tagText": "農曆春節",
         "pillText": "放假"
       },
       {
         "type": "mock",
         "title": "模擬考",
-        "dateText": "12月9日（週二）、12月10日（週三）",
-        "tagText": "高三模擬考",
+        "dateText": "2月24日、4月9日、5月6日",
+        "tagText": "高三分科模擬考",
         "pillText": "不上課"
       },
       {
         "type": "exam",
         "title": "段考",
-        "dateText": "12月30日（週二）、12月31日（週三）",
-        "tagText": "期末段考",
-        "pillText": "最後上課日 12/29"
+        "dateText": "3月24日–3月26日",
+        "tagText": "期中考（高一＋高三）",
+        "pillText": "停止上課"
       }
     ],
-    "footer": "最後上課日：12/29（段考前）　｜　假日：12/25　｜　模考：12/9、12/10"
+    "footer": "期中考：3/24–3/26　｜　畢業考：4/23–4/24　｜　期末考：6/26–6/30"
   },
   "classes": [
     {
-      "id": "308",
-      "label": "308"
+      "id": "105",
+      "label": "105"
+    },
+    {
+      "id": "107",
+      "label": "107"
+    },
+    {
+      "id": "108",
+      "label": "108"
+    },
+    {
+      "id": "109",
+      "label": "109"
+    },
+    {
+      "id": "115",
+      "label": "115"
     },
     {
       "id": "309",
       "label": "309"
     },
     {
-      "id": "310",
-      "label": "310"
-    },
-    {
       "id": "311",
       "label": "311"
-    },
-    {
-      "id": "312",
-      "label": "312"
     }
   ],
   "subjectOrder": [
@@ -83,18 +91,18 @@
   ],
   "subjects": {
     "Phy": {
-      "labelFull": "選修物理",
-      "labelShort": "物理",
+      "labelFull": "高一物理",
+      "labelShort": "高一物理",
       "color": "var(--phy-color)"
     },
     "Chem": {
-      "labelFull": "選修化學",
-      "labelShort": "化學",
+      "labelFull": "IB實驗課",
+      "labelShort": "IB實驗",
       "color": "var(--chem-color)"
     },
     "Bio": {
-      "labelFull": "選修生物",
-      "labelShort": "生物",
+      "labelFull": "選修物理",
+      "labelShort": "選修物理",
       "color": "var(--bio-color)"
     }
   },
@@ -129,8 +137,81 @@
     }
   },
   "schedule": {
-    "308": {
+    "105": {
       "Phy": [
+        {
+          "d": 2,
+          "p": [
+            5
+          ]
+        },
+        {
+          "d": 5,
+          "p": [
+            4
+          ]
+        }
+      ],
+      "Chem": [],
+      "Bio": []
+    },
+    "107": {
+      "Phy": [
+        {
+          "d": 2,
+          "p": [
+            4
+          ]
+        },
+        {
+          "d": 5,
+          "p": [
+            3
+          ]
+        }
+      ],
+      "Chem": [],
+      "Bio": []
+    },
+    "108": {
+      "Phy": [
+        {
+          "d": 1,
+          "p": [
+            7
+          ]
+        },
+        {
+          "d": 5,
+          "p": [
+            1
+          ]
+        }
+      ],
+      "Chem": [],
+      "Bio": []
+    },
+    "109": {
+      "Phy": [
+        {
+          "d": 2,
+          "p": [
+            7
+          ]
+        },
+        {
+          "d": 5,
+          "p": [
+            2
+          ]
+        }
+      ],
+      "Chem": [],
+      "Bio": []
+    },
+    "115": {
+      "Phy": [],
+      "Chem": [
         {
           "d": 1,
           "p": [
@@ -139,140 +220,34 @@
           ]
         },
         {
-          "d": 2,
+          "d": 3,
           "p": [
-            1
-          ]
-        },
-        {
-          "d": 4,
-          "p": [
+            3,
             4
-          ]
-        }
-      ],
-      "Chem": [
-        {
-          "d": 2,
-          "p": [
-            6,
-            7
-          ]
-        },
-        {
-          "d": 4,
-          "p": [
-            1
           ]
         }
       ],
       "Bio": []
     },
     "309": {
-      "Phy": [
-        {
-          "d": 2,
-          "p": [
-            6,
-            7
-          ]
-        },
-        {
-          "d": 4,
-          "p": [
-            4
-          ]
-        },
-        {
-          "d": 5,
-          "p": [
-            5
-          ]
-        }
-      ],
-      "Chem": [
-        {
-          "d": 1,
-          "p": [
-            3,
-            4
-          ]
-        },
-        {
-          "d": 2,
-          "p": [
-            2
-          ]
-        },
-        {
-          "d": 4,
-          "p": [
-            3
-          ]
-        }
-      ],
-      "Bio": []
-    },
-    "310": {
-      "Phy": [
-        {
-          "d": 2,
-          "p": [
-            3,
-            4
-          ]
-        },
-        {
-          "d": 3,
-          "p": [
-            6
-          ]
-        },
-        {
-          "d": 4,
-          "p": [
-            3
-          ]
-        }
-      ],
-      "Chem": [
-        {
-          "d": 1,
-          "p": [
-            5,
-            6
-          ]
-        },
-        {
-          "d": 3,
-          "p": [
-            7
-          ]
-        },
-        {
-          "d": 4,
-          "p": [
-            4,
-            7
-          ]
-        }
-      ],
+      "Phy": [],
+      "Chem": [],
       "Bio": [
         {
-          "d": 2,
-          "p": [
-            5,
-            6
-          ]
-        },
-        {
-          "d": 3,
+          "d": 1,
           "p": [
             5
           ]
         },
         {
-          "d": 4,
+          "d": 2,
+          "p": [
+            2,
+            3
+          ]
+        },
+        {
+          "d": 3,
           "p": [
             1
           ]
@@ -280,75 +255,11 @@
       ]
     },
     "311": {
-      "Phy": [
-        {
-          "d": 1,
-          "p": [
-            2,
-            3
-          ]
-        },
-        {
-          "d": 3,
-          "p": [
-            7
-          ]
-        },
-        {
-          "d": 4,
-          "p": [
-            3
-          ]
-        }
-      ],
-      "Chem": [
-        {
-          "d": 2,
-          "p": [
-            3
-          ]
-        },
-        {
-          "d": 3,
-          "p": [
-            5,
-            6
-          ]
-        },
-        {
-          "d": 5,
-          "p": [
-            5
-          ]
-        }
-      ],
-      "Bio": [
-        {
-          "d": 1,
-          "p": [
-            5,
-            6
-          ]
-        },
-        {
-          "d": 2,
-          "p": [
-            4
-          ]
-        },
-        {
-          "d": 3,
-          "p": [
-            1
-          ]
-        }
-      ]
-    },
-    "312": {
       "Phy": [],
-      "Chem": [
+      "Chem": [],
+      "Bio": [
         {
-          "d": 2,
+          "d": 1,
           "p": [
             4
           ]
@@ -356,34 +267,13 @@
         {
           "d": 3,
           "p": [
-            3
-          ]
-        },
-        {
-          "d": 5,
-          "p": [
-            1,
-            2
-          ]
-        }
-      ],
-      "Bio": [
-        {
-          "d": 2,
-          "p": [
-            3
-          ]
-        },
-        {
-          "d": 3,
-          "p": [
-            5
+            5,
+            6
           ]
         },
         {
           "d": 4,
           "p": [
-            2,
             3
           ]
         }
@@ -397,63 +287,266 @@
     },
     "events": [
       {
-        "date": "2025-12-09",
-        "type": "mock",
-        "label": "X",
-        "scope": "all"
-      },
-      {
-        "date": "2025-12-10",
-        "type": "mock",
-        "label": "X",
-        "scope": "all"
-      },
-      {
-        "date": "2025-12-25",
+        "date": "2026-02-08",
         "type": "holiday",
-        "label": "X",
+        "label": "??",
         "scope": "all"
       },
       {
-        "date": "2025-12-30",
-        "type": "exam",
-        "label": "End",
+        "date": "2026-02-09",
+        "type": "holiday",
+        "label": "??",
         "scope": "all"
       },
       {
-        "date": "2025-12-31",
-        "type": "exam",
-        "label": "End",
+        "date": "2026-02-10",
+        "type": "holiday",
+        "label": "??",
         "scope": "all"
+      },
+      {
+        "date": "2026-02-11",
+        "type": "holiday",
+        "label": "????",
+        "scope": "all"
+      },
+      {
+        "date": "2026-02-12",
+        "type": "holiday",
+        "label": "????",
+        "scope": "all"
+      },
+      {
+        "date": "2026-02-13",
+        "type": "holiday",
+        "label": "????",
+        "scope": "all"
+      },
+      {
+        "date": "2026-02-15",
+        "type": "holiday",
+        "label": "????",
+        "scope": "all"
+      },
+      {
+        "date": "2026-02-16",
+        "type": "holiday",
+        "label": "????",
+        "scope": "all"
+      },
+      {
+        "date": "2026-02-17",
+        "type": "holiday",
+        "label": "????",
+        "scope": "all"
+      },
+      {
+        "date": "2026-02-18",
+        "type": "holiday",
+        "label": "????",
+        "scope": "all"
+      },
+      {
+        "date": "2026-02-19",
+        "type": "holiday",
+        "label": "????",
+        "scope": "all"
+      },
+      {
+        "date": "2026-02-20",
+        "type": "holiday",
+        "label": "????",
+        "scope": "all"
+      },
+      {
+        "date": "2026-02-21",
+        "type": "holiday",
+        "label": "????",
+        "scope": "all"
+      },
+      {
+        "date": "2026-02-27",
+        "type": "holiday",
+        "label": "?????????",
+        "scope": "all"
+      },
+      {
+        "date": "2026-04-02",
+        "type": "holiday",
+        "label": "????????",
+        "scope": "all"
+      },
+      {
+        "date": "2026-04-03",
+        "type": "holiday",
+        "label": "???????",
+        "scope": "all"
+      },
+      {
+        "date": "2026-04-05",
+        "type": "holiday",
+        "label": "??????",
+        "scope": "all"
+      },
+      {
+        "date": "2026-04-06",
+        "type": "holiday",
+        "label": "??????",
+        "scope": "all"
+      },
+      {
+        "date": "2026-05-01",
+        "type": "holiday",
+        "label": "?????",
+        "scope": "all"
+      },
+      {
+        "date": "2026-06-19",
+        "type": "holiday",
+        "label": "?????",
+        "scope": "all"
+      },
+      {
+        "date": "2026-02-24",
+        "type": "mock",
+        "label": "??????????",
+        "scope": "custom",
+        "includeClasses": [
+          "309",
+          "311"
+        ]
+      },
+      {
+        "date": "2026-04-09",
+        "type": "mock",
+        "label": "??????????",
+        "scope": "custom",
+        "includeClasses": [
+          "309",
+          "311"
+        ]
+      },
+      {
+        "date": "2026-05-06",
+        "type": "mock",
+        "label": "??????????",
+        "scope": "custom",
+        "includeClasses": [
+          "309",
+          "311"
+        ]
+      },
+      {
+        "date": "2026-03-24",
+        "type": "exam",
+        "label": "???",
+        "scope": "custom",
+        "includeClasses": [
+          "105",
+          "107",
+          "108",
+          "109",
+          "309",
+          "311"
+        ]
+      },
+      {
+        "date": "2026-03-25",
+        "type": "exam",
+        "label": "???",
+        "scope": "custom",
+        "includeClasses": [
+          "105",
+          "107",
+          "108",
+          "109",
+          "309",
+          "311"
+        ]
+      },
+      {
+        "date": "2026-03-26",
+        "type": "exam",
+        "label": "???",
+        "scope": "custom",
+        "includeClasses": [
+          "105",
+          "107",
+          "108",
+          "109",
+          "309",
+          "311"
+        ]
+      },
+      {
+        "date": "2026-04-23",
+        "type": "graduation_exam",
+        "label": "?????",
+        "scope": "custom",
+        "includeClasses": [
+          "309",
+          "311"
+        ]
+      },
+      {
+        "date": "2026-04-24",
+        "type": "graduation_exam",
+        "label": "?????",
+        "scope": "custom",
+        "includeClasses": [
+          "309",
+          "311"
+        ]
+      },
+      {
+        "date": "2026-05-13",
+        "type": "exam",
+        "label": "???",
+        "scope": "high1"
+      },
+      {
+        "date": "2026-05-14",
+        "type": "exam",
+        "label": "???",
+        "scope": "high1"
+      },
+      {
+        "date": "2026-05-15",
+        "type": "exam",
+        "label": "???",
+        "scope": "high1"
+      },
+      {
+        "date": "2026-06-26",
+        "type": "exam",
+        "label": "???",
+        "scope": "high1"
+      },
+      {
+        "date": "2026-06-27",
+        "type": "exam",
+        "label": "???",
+        "scope": "high1"
+      },
+      {
+        "date": "2026-06-28",
+        "type": "exam",
+        "label": "???",
+        "scope": "high1"
+      },
+      {
+        "date": "2026-06-29",
+        "type": "exam",
+        "label": "???",
+        "scope": "high1"
+      },
+      {
+        "date": "2026-06-30",
+        "type": "exam",
+        "label": "???",
+        "scope": "high1"
       }
     ],
-    "specialDates": [
-      {
-        "day": 9,
-        "type": "mock",
-        "label": "X"
-      },
-      {
-        "day": 10,
-        "type": "mock",
-        "label": "X"
-      },
-      {
-        "day": 25,
-        "type": "holiday",
-        "label": "X"
-      },
-      {
-        "day": 30,
-        "type": "exam",
-        "label": "End"
-      },
-      {
-        "day": 31,
-        "type": "exam",
-        "label": "End"
-      }
-    ]
+    "specialDates": []
   }
 }
-
