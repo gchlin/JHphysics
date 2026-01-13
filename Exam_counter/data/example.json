@@ -1,0 +1,159 @@
+{
+  "meta": {
+    "year": 2026,
+    "monthIndex": 0,
+    "month": 1,
+    "daysInMonth": 31,
+    "countdownLastDay": 31,
+    "examStartDay": 32
+  },
+  "defaults": {
+    "classId": "105",
+    "subject": "Phy"
+  },
+  "ui": {
+    "title": "Example Title",
+    "timerPrefix": "Remaining ",
+    "timerSuffix": " ...",
+    "timerUnit": "minutes",
+    "periodUnit": "periods",
+    "emptyMessage": "No schedule for this class",
+    "calendarTitleTemplate": "{subject} ({year}-{month})",
+    "weekdays": [
+      "Sun",
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri",
+      "Sat"
+    ],
+    "badgeX": "X",
+    "keyCards": [
+      {
+        "type": "holiday",
+        "title": "Holiday",
+        "dateText": "01/02",
+        "tagText": "New Year Break",
+        "pillText": "No class"
+      }
+    ],
+    "footer": "Example footer note"
+  },
+  "classes": [
+    {
+      "id": "105",
+      "label": "105"
+    },
+    {
+      "id": "115",
+      "label": "115"
+    },
+    {
+      "id": "309",
+      "label": "309"
+    }
+  ],
+  "subjectOrder": [
+    "Phy",
+    "Chem",
+    "Bio"
+  ],
+  "subjects": {
+    "Phy": {
+      "labelFull": "High1 Physics",
+      "labelShort": "High1",
+      "color": "var(--phy-color)"
+    },
+    "Chem": {
+      "labelFull": "IB Lab",
+      "labelShort": "IB",
+      "color": "var(--chem-color)"
+    },
+    "Bio": {
+      "labelFull": "Elective Physics",
+      "labelShort": "Elective",
+      "color": "var(--bio-color)"
+    }
+  },
+  "periods": {
+    "1": {
+      "s": "08:10",
+      "e": "09:00"
+    }
+  },
+  "schedule": {
+    "105": {
+      "Phy": [
+        {
+          "d": 1,
+          "p": [
+            1
+          ]
+        }
+      ],
+      "Chem": [],
+      "Bio": []
+    },
+    "115": {
+      "Phy": [],
+      "Chem": [
+        {
+          "d": 3,
+          "p": [
+            1
+          ]
+        }
+      ],
+      "Bio": []
+    },
+    "309": {
+      "Phy": [],
+      "Chem": [],
+      "Bio": [
+        {
+          "d": 2,
+          "p": [
+            1
+          ]
+        }
+      ]
+    }
+  },
+  "calendar": {
+    "monthRange": {
+      "start": 1,
+      "end": 7
+    },
+    "events": [
+      {
+        "date": "2026-01-02",
+        "type": "holiday",
+        "label": "X",
+        "scope": "all"
+      },
+      {
+        "date": "2026-01-15",
+        "type": "exam",
+        "label": "X",
+        "scope": "high1"
+      },
+      {
+        "date": "2026-01-20",
+        "type": "mock",
+        "label": "X",
+        "scope": "custom",
+        "includeClasses": [
+          "309"
+        ]
+      }
+    ],
+    "specialDates": [
+      {
+        "day": 2,
+        "type": "holiday",
+        "label": "X"
+      }
+    ]
+  }
+}

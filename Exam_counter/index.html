@@ -205,6 +205,34 @@
       font-size: 1rem;
     }
 
+    .calendar-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .month-btn {
+      border: 1px solid #e4e8ee;
+      background: #fff;
+      color: #44566b;
+      border-radius: 8px;
+      width: 30px;
+      height: 30px;
+      cursor: pointer;
+      font-size: 1.1rem;
+      line-height: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    .month-btn:hover {
+      background: var(--primary-soft);
+      border-color: var(--primary);
+    }
+
     .cal-header-row {
       display: grid;
       grid-template-columns: repeat(7, 1fr);
@@ -401,7 +429,11 @@
     <!-- Right: calendar + key dates -->
     <section class="right-panel">
       <div class="calendar-card">
-        <h3 class="calendar-title" id="calendarTitle"></h3>
+        <div class="calendar-nav">
+          <button class="month-btn" id="prevMonthBtn" type="button">‹</button>
+          <h3 class="calendar-title" id="calendarTitle"></h3>
+          <button class="month-btn" id="nextMonthBtn" type="button">›</button>
+        </div>
         <div class="cal-header-row" id="calendarHeaderRow"></div>
         <div class="cal-grid" id="calendarGrid"></div>
       </div>
@@ -420,12 +452,77 @@
   let currClass = null;
   let currSubject = null;
   let timerInterval = null;
+  let viewYear = null;
+  let viewMonthIndex = null;
+  let isAutoMonth = true;
+
+  const fallbackScopeMap = {
+    high1: ['105', '107', '108', '109'],
+    ib: ['115'],
+    el: ['309', '311']
+  };
 
   function buildSpecialDateMap(dates) {
     const map = {};
     dates.forEach(entry => {
       map[entry.day] = entry;
     });
+    return map;
+  }
+
+  function getMonthRange() {
+    const calendar = appData.calendar || {};
+    if (!calendar.monthRange) return { start: 0, end: 11 };
+    const start = Math.max(1, Math.min(12, calendar.monthRange.start));
+    const end = Math.max(1, Math.min(12, calendar.monthRange.end));
+    return {
+      start: Math.min(start, end) - 1,
+      end: Math.max(start, end) - 1
+    };
+  }
+
+  function clampMonthToRange(year, monthIndex) {
+    const range = getMonthRange();
+    if (monthIndex < range.start) return { year, monthIndex: range.start };
+    if (monthIndex > range.end) return { year, monthIndex: range.end };
+    return { year, monthIndex };
+  }
+
+  function eventAppliesToClass(event, classId) {
+    const scope = event.scope || 'all';
+    if (scope === 'all') return true;
+    if (scope === 'custom') {
+      return Array.isArray(event.includeClasses) && event.includeClasses.includes(classId);
+    }
+    const scopeMap = appData.scopeClassMap || fallbackScopeMap;
+    const classes = scopeMap[scope];
+    if (!classes) return true;
+    return classes.includes(classId);
+  }
+
+  function buildSpecialDateMapForMonth(year, monthIndex) {
+    const calendar = appData.calendar || {};
+    const map = {};
+
+    if (Array.isArray(calendar.events) && calendar.events.length > 0) {
+      calendar.events.forEach(event => {
+        if (!event.date) return;
+        const parts = event.date.split('-').map(Number);
+        if (parts.length !== 3) return;
+        const [evtYear, evtMonth, evtDay] = parts;
+        if (evtYear !== year || evtMonth !== monthIndex + 1) return;
+        if (!eventAppliesToClass(event, currClass)) return;
+        map[evtDay] = event;
+      });
+      return map;
+    }
+
+    if (Array.isArray(calendar.specialDates)) {
+      if (year === appData.meta.year && monthIndex === appData.meta.monthIndex) {
+        return buildSpecialDateMap(calendar.specialDates);
+      }
+    }
+
     return map;
   }
 
@@ -518,6 +615,7 @@
   }
 
   function updateUI() {
+    specialDateMap = buildSpecialDateMapForMonth(viewYear, viewMonthIndex);
     renderCalendar();
     updateTimer();
 
@@ -526,13 +624,13 @@
     document.getElementById('timerTitle').innerText = `${appData.ui.timerPrefix}${subject.labelShort}${appData.ui.timerSuffix}`;
     document.getElementById('calendarTitle').innerText = appData.ui.calendarTitleTemplate
       .replace('{subject}', subject.labelFull)
-      .replace('{year}', appData.meta.year)
-      .replace('{month}', appData.meta.month);
+      .replace('{year}', viewYear)
+      .replace('{month}', viewMonthIndex + 1);
   }
 
   // ---- Calendar ----
   function getDailyLessons(dayOfMonth) {
-    const date = new Date(appData.meta.year, appData.meta.monthIndex, dayOfMonth);
+    const date = new Date(viewYear, viewMonthIndex, dayOfMonth);
     const dayOfWeek = date.getDay(); // 0-6
 
     if (specialDateMap[dayOfMonth]) return 'X';
@@ -549,16 +647,17 @@
     const grid = document.getElementById('calendarGrid');
     grid.innerHTML = '';
 
-    const firstDay = new Date(appData.meta.year, appData.meta.monthIndex, 1).getDay();
+    const firstDay = new Date(viewYear, viewMonthIndex, 1).getDay();
     for(let i=0; i<firstDay; i++) {
       grid.innerHTML += `<div></div>`;
     }
 
     const today = new Date();
-    const isTargetMonth = today.getFullYear() === appData.meta.year && today.getMonth() === appData.meta.monthIndex;
+    const isTargetMonth = today.getFullYear() === viewYear && today.getMonth() === viewMonthIndex;
     const currentDay = today.getDate();
 
-    const daysInMonth = appData.meta.daysInMonth;
+    const daysInMonth = new Date(viewYear, viewMonthIndex + 1, 0).getDate();
+    const isExamMonth = viewYear === appData.meta.year && viewMonthIndex === appData.meta.monthIndex;
 
     for(let d=1; d<=daysInMonth; d++) {
       const lessons = getDailyLessons(d);
@@ -567,7 +666,7 @@
       
       if (isTargetMonth && d === currentDay) el.classList.add('today');
       if (isTargetMonth && d < currentDay) el.classList.add('past');
-      if (d >= appData.meta.examStartDay) el.classList.add('past');  // 段考期間不再上課
+      if (isExamMonth && d >= appData.meta.examStartDay) el.classList.add('past');  // 段考期間不再上課
 
       let content = `<span class="date-num">${d}</span>`;
       
@@ -643,19 +742,49 @@
       document.getElementById('minDisplay').innerText = res.m.toLocaleString();
       document.getElementById('periodDisplay').innerText = res.p;
     }
+
+    if (isAutoMonth) {
+      const now = new Date();
+      const clamped = clampMonthToRange(now.getFullYear(), now.getMonth());
+      if (clamped.year !== viewYear || clamped.monthIndex !== viewMonthIndex) {
+        viewYear = clamped.year;
+        viewMonthIndex = clamped.monthIndex;
+        updateUI();
+      }
+    }
   }
 
   // ---- Init ----
+  function setViewMonth(year, monthIndex, isAutoUpdate = false) {
+    const clamped = clampMonthToRange(year, monthIndex);
+    viewYear = clamped.year;
+    viewMonthIndex = clamped.monthIndex;
+    if (!isAutoUpdate) isAutoMonth = false;
+    updateUI();
+  }
+
+  function shiftMonth(delta) {
+    const newDate = new Date(viewYear, viewMonthIndex + delta, 1);
+    const clamped = clampMonthToRange(newDate.getFullYear(), newDate.getMonth());
+    if (clamped.year === viewYear && clamped.monthIndex === viewMonthIndex) return;
+    setViewMonth(clamped.year, clamped.monthIndex);
+  }
+
   async function init() {
     const response = await fetch(dataUrl);
     appData = await response.json();
-    specialDateMap = buildSpecialDateMap(appData.calendar.specialDates);
     currClass = appData.defaults.classId;
     currSubject = appData.defaults.subject;
+    const now = new Date();
+    const clamped = clampMonthToRange(now.getFullYear(), now.getMonth());
+    viewYear = clamped.year;
+    viewMonthIndex = clamped.monthIndex;
     renderClassButtons();
     renderSubjectTabs();
     applyStaticText();
     updateActiveButtons();
+    document.getElementById('prevMonthBtn').addEventListener('click', () => shiftMonth(-1));
+    document.getElementById('nextMonthBtn').addEventListener('click', () => shiftMonth(1));
     timerInterval = setInterval(updateTimer, 1000);
     updateUI();
   }

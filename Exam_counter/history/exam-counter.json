@@ -391,42 +391,6 @@
     }
   },
   "calendar": {
-    "monthRange": {
-      "start": 1,
-      "end": 7
-    },
-    "events": [
-      {
-        "date": "2025-12-09",
-        "type": "mock",
-        "label": "X",
-        "scope": "all"
-      },
-      {
-        "date": "2025-12-10",
-        "type": "mock",
-        "label": "X",
-        "scope": "all"
-      },
-      {
-        "date": "2025-12-25",
-        "type": "holiday",
-        "label": "X",
-        "scope": "all"
-      },
-      {
-        "date": "2025-12-30",
-        "type": "exam",
-        "label": "End",
-        "scope": "all"
-      },
-      {
-        "date": "2025-12-31",
-        "type": "exam",
-        "label": "End",
-        "scope": "all"
-      }
-    ],
     "specialDates": [
       {
         "day": 9,
