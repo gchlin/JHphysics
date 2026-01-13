@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>期末考下載進度</title>
+  <title></title>
   <style>
     :root {
       --primary: #234c7f;
@@ -374,181 +374,146 @@
   <!-- Header: title + class buttons -->
   <header>
     <div class="header-bar">
-      <h1>期末考下載進度</h1>
-      <div class="class-nav">
-        <button class="class-btn active" onclick="setClass('308', event)">308</button>
-        <button class="class-btn" onclick="setClass('309', event)">309</button>
-        <button class="class-btn" onclick="setClass('310', event)">310</button>
-        <button class="class-btn" onclick="setClass('311', event)">311</button>
-        <button class="class-btn" onclick="setClass('312', event)">312</button>
-      </div>
+      <h1 id="pageTitle"></h1>
+      <div class="class-nav"></div>
     </div>
   </header>
 
   <!-- Subject tabs -->
-  <div class="subject-tabs">
-    <button class="subject-tab active" data-subject="Phy" onclick="setSubject('Phy')">選修物理</button>
-    <button class="subject-tab" data-subject="Chem" onclick="setSubject('Chem')">選修化學</button>
-    <button class="subject-tab" data-subject="Bio" onclick="setSubject('Bio')">選修生物</button>
-  </div>
+  <div class="subject-tabs"></div>
 
   <!-- Main layout -->
   <main class="main-layout">
     <!-- Left: countdown card -->
     <section class="left-panel">
       <div class="timer-card" id="timerCard">
-        <div class="timer-header" id="timerTitle">下載 物理 還剩下...</div>
+        <div class="timer-header" id="timerTitle"></div>
         <div id="timerContent">
           <div class="timer-main">
-            <span id="minDisplay">0</span><span class="timer-unit">分鐘</span>
+            <span id="minDisplay">0</span><span class="timer-unit" id="timerUnit"></span>
           </div>
-          <div class="timer-sub"><span id="periodDisplay">0</span> 節課</div>
+          <div class="timer-sub"><span id="periodDisplay">0</span> <span id="periodUnit"></span></div>
         </div>
-        <div id="emptyMessage" class="empty-state" style="display:none;">本班級無此選修課程</div>
+        <div id="emptyMessage" class="empty-state" style="display:none;"></div>
       </div>
     </section>
 
     <!-- Right: calendar + key dates -->
     <section class="right-panel">
       <div class="calendar-card">
-        <h3 class="calendar-title" id="calendarTitle">選修物理（2025年 12月）</h3>
-        <div class="cal-header-row">
-          <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
-        </div>
+        <h3 class="calendar-title" id="calendarTitle"></h3>
+        <div class="cal-header-row" id="calendarHeaderRow"></div>
         <div class="cal-grid" id="calendarGrid"></div>
       </div>
 
-      <div class="key-dates">
-        <div class="key-card holiday">
-          <div class="key-title">
-            <span class="key-dot"></span>
-            假日
-          </div>
-          <div class="key-date">12月25日（週四）</div>
-          <div class="key-tag">
-            聖誕節
-            <span class="pill">放假</span>
-          </div>
-        </div>
-
-        <div class="key-card mock">
-          <div class="key-title">
-            <span class="key-dot"></span>
-            模擬考
-          </div>
-          <div class="key-date">12月9日（週二）、12月10日（週三）</div>
-          <div class="key-tag">
-            高三模擬考
-            <span class="pill">不上課</span>
-          </div>
-        </div>
-
-        <div class="key-card exam">
-          <div class="key-title">
-            <span class="key-dot"></span>
-            段考
-          </div>
-          <div class="key-date">12月30日（週二）、12月31日（週三）</div>
-          <div class="key-tag">
-            期末段考
-            <span class="pill">最後上課日 12/29</span>
-          </div>
-        </div>
-      </div>
+      <div class="key-dates" id="keyDates"></div>
     </section>
   </main>
 
-  <footer>
-    最後上課日：12/29（段考前）　｜　假日：12/25　｜　模考：12/9、12/10
-  </footer>
+  <footer id="pageFooter"></footer>
 </div>
 
 <script>
-  // ---- Data ----
-  const year = 2025;
-  const monthIndex = 11; // December
-
-  const specialDates = {
-    9: { type: 'mock', label: '✕' },// 12/9 模擬考
-    10: { type: 'mock', label: '✕' },// 12/10 模擬考
-    25: { type: 'holiday', label: '✕' },
-    30: { type: 'exam', label: 'End' },
-    31: { type: 'exam', label: 'End' }
-  };
-
-  const periods = {
-    1: { s: "08:10", e: "09:00" },
-    2: { s: "09:10", e: "10:00" },
-    3: { s: "10:10", e: "11:00" },
-    4: { s: "11:10", e: "12:00" },
-    5: { s: "13:10", e: "14:00" },
-    6: { s: "14:10", e: "15:00" },
-    7: { s: "15:10", e: "16:00" }
-  };
-
-  const data = {
-    '308': {
-      'Phy': [ {d:1,p:[1,2]}, {d:2,p:[1]}, {d:4,p:[4]} ],
-      'Chem': [ {d:2,p:[6,7]}, {d:4,p:[1]} ],
-      'Bio': [] 
-    },
-    '309': {
-      'Phy': [ {d:2,p:[6,7]}, {d:4,p:[4]}, {d:5,p:[5]} ],
-      'Chem': [ {d:1,p:[3,4]}, {d:2,p:[2]}, {d:4,p:[3]} ],
-      'Bio': []
-    },
-    '310': {
-      'Phy': [ {d:2,p:[3,4]}, {d:3,p:[6]}, {d:4,p:[3]} ],
-      'Chem': [ {d:1,p:[5,6]}, {d:3,p:[7]}, {d:4,p:[4,7]} ],
-      'Bio': [ {d:2,p:[5,6]}, {d:3,p:[5]}, {d:4,p:[1]} ]
-    },
-    '311': {
-      'Phy': [ {d:1,p:[2,3]}, {d:3,p:[7]}, {d:4,p:[3]} ],
-      'Chem': [ {d:2,p:[3]}, {d:3,p:[5,6]}, {d:5,p:[5]} ],
-      'Bio': [ {d:1,p:[5,6]}, {d:2,p:[4]}, {d:3,p:[1]} ]
-    },
-    '312': {
-      'Phy': [],
-      'Chem': [ {d:2,p:[4]}, {d:3,p:[3]}, {d:5,p:[1,2]} ],
-      'Bio': [ {d:2,p:[3]}, {d:3,p:[5]}, {d:4,p:[2,3]} ]
-    }
-  };
-
-  const colors = {
-    'Phy': 'var(--phy-color)',
-    'Chem': 'var(--chem-color)',
-    'Bio': 'var(--bio-color)'
-  };
-
-  const subjectsFull = {
-    'Phy': '選修物理',
-    'Chem': '選修化學',
-    'Bio': '選修生物'
-  };
-
-  const subjectsShort = {
-    'Phy': '物理',
-    'Chem': '化學',
-    'Bio': '生物'
-  };
-
-  let currClass = '308';
-  let currSubject = 'Phy';
+  const dataUrl = './data/exam-counter.json';
+  let appData = null;
+  let specialDateMap = null;
+  let currClass = null;
+  let currSubject = null;
   let timerInterval = null;
 
-  // ---- UI switching ----
-  function setClass(cls, ev) {
-    currClass = cls;
+  function buildSpecialDateMap(dates) {
+    const map = {};
+    dates.forEach(entry => {
+      map[entry.day] = entry;
+    });
+    return map;
+  }
+
+  function applyStaticText() {
+    document.title = appData.ui.title;
+    document.getElementById('pageTitle').innerText = appData.ui.title;
+    document.getElementById('timerUnit').innerText = appData.ui.timerUnit;
+    document.getElementById('periodUnit').innerText = appData.ui.periodUnit;
+    document.getElementById('emptyMessage').innerText = appData.ui.emptyMessage;
+    document.getElementById('pageFooter').innerText = appData.ui.footer;
+
+    const headerRow = document.getElementById('calendarHeaderRow');
+    headerRow.innerHTML = '';
+    appData.ui.weekdays.forEach(label => {
+      const cell = document.createElement('div');
+      cell.innerText = label;
+      headerRow.appendChild(cell);
+    });
+
+    const keyDates = document.getElementById('keyDates');
+    keyDates.innerHTML = '';
+    appData.ui.keyCards.forEach(card => {
+      const cardEl = document.createElement('div');
+      cardEl.className = `key-card ${card.type}`;
+      cardEl.innerHTML = `
+        <div class="key-title">
+          <span class="key-dot"></span>
+          ${card.title}
+        </div>
+        <div class="key-date">${card.dateText}</div>
+        <div class="key-tag">
+          ${card.tagText}
+          <span class="pill">${card.pillText}</span>
+        </div>
+      `;
+      keyDates.appendChild(cardEl);
+    });
+  }
+
+  function renderClassButtons() {
+    const nav = document.querySelector('.class-nav');
+    nav.innerHTML = '';
+    appData.classes.forEach(cls => {
+      const btn = document.createElement('button');
+      btn.className = 'class-btn';
+      btn.type = 'button';
+      btn.dataset.classId = cls.id;
+      btn.innerText = cls.label;
+      btn.addEventListener('click', () => setClass(cls.id));
+      nav.appendChild(btn);
+    });
+  }
+
+  function renderSubjectTabs() {
+    const tabs = document.querySelector('.subject-tabs');
+    tabs.innerHTML = '';
+    appData.subjectOrder.forEach(subjectKey => {
+      const subject = appData.subjects[subjectKey];
+      const btn = document.createElement('button');
+      btn.className = 'subject-tab';
+      btn.type = 'button';
+      btn.dataset.subject = subjectKey;
+      btn.innerText = subject.labelFull;
+      btn.addEventListener('click', () => setSubject(subjectKey));
+      tabs.appendChild(btn);
+    });
+  }
+
+  function updateActiveButtons() {
     document.querySelectorAll('.class-btn').forEach(b => b.classList.remove('active'));
-    if (ev && ev.target) ev.target.classList.add('active');
+    const activeClass = document.querySelector(`.class-btn[data-class-id="${currClass}"]`);
+    if (activeClass) activeClass.classList.add('active');
+
+    document.querySelectorAll('.subject-tab').forEach(b => b.classList.remove('active'));
+    const activeSubject = document.querySelector(`.subject-tab[data-subject="${currSubject}"]`);
+    if (activeSubject) activeSubject.classList.add('active');
+  }
+
+  // ---- UI switching ----
+  function setClass(cls) {
+    currClass = cls;
+    updateActiveButtons();
     updateUI();
   }
 
   function setSubject(subj) {
     currSubject = subj;
-    document.querySelectorAll('.subject-tab').forEach(b => b.classList.remove('active'));
-    const tab = document.querySelector(`.subject-tab[data-subject="${subj}"]`);
-    if (tab) tab.classList.add('active');
+    updateActiveButtons();
     updateUI();
   }
 
@@ -556,21 +521,24 @@
     renderCalendar();
     updateTimer();
 
-    const color = colors[currSubject];
-    document.querySelector('.timer-main').style.color = color;
-    document.getElementById('timerTitle').innerText = `下載 ${subjectsShort[currSubject]} 還剩下...`;
-    document.getElementById('calendarTitle').innerText = `${subjectsFull[currSubject]}（2025年 12月）`;
+    const subject = appData.subjects[currSubject];
+    document.querySelector('.timer-main').style.color = subject.color;
+    document.getElementById('timerTitle').innerText = `${appData.ui.timerPrefix}${subject.labelShort}${appData.ui.timerSuffix}`;
+    document.getElementById('calendarTitle').innerText = appData.ui.calendarTitleTemplate
+      .replace('{subject}', subject.labelFull)
+      .replace('{year}', appData.meta.year)
+      .replace('{month}', appData.meta.month);
   }
 
   // ---- Calendar ----
   function getDailyLessons(dayOfMonth) {
-    const date = new Date(year, monthIndex, dayOfMonth);
+    const date = new Date(appData.meta.year, appData.meta.monthIndex, dayOfMonth);
     const dayOfWeek = date.getDay(); // 0-6
 
-    if (specialDates[dayOfMonth]) return 'X';
+    if (specialDateMap[dayOfMonth]) return 'X';
     if (dayOfWeek === 0 || dayOfWeek === 6) return '';
 
-    const sched = data[currClass][currSubject];
+    const sched = appData.schedule[currClass][currSubject];
     if (!sched) return 0;
 
     const daySched = sched.find(s => s.d === dayOfWeek);
@@ -581,16 +549,16 @@
     const grid = document.getElementById('calendarGrid');
     grid.innerHTML = '';
 
-    const firstDay = new Date(year, monthIndex, 1).getDay();
+    const firstDay = new Date(appData.meta.year, appData.meta.monthIndex, 1).getDay();
     for(let i=0; i<firstDay; i++) {
       grid.innerHTML += `<div></div>`;
     }
 
     const today = new Date();
-    const isTargetMonth = today.getFullYear() === year && today.getMonth() === monthIndex;
+    const isTargetMonth = today.getFullYear() === appData.meta.year && today.getMonth() === appData.meta.monthIndex;
     const currentDay = today.getDate();
 
-    const daysInMonth = 31;
+    const daysInMonth = appData.meta.daysInMonth;
 
     for(let d=1; d<=daysInMonth; d++) {
       const lessons = getDailyLessons(d);
@@ -599,14 +567,14 @@
       
       if (isTargetMonth && d === currentDay) el.classList.add('today');
       if (isTargetMonth && d < currentDay) el.classList.add('past');
-      if (d >= 30) el.classList.add('past');  // 段考期間不再上課
+      if (d >= appData.meta.examStartDay) el.classList.add('past');  // 段考期間不再上課
 
       let content = `<span class="date-num">${d}</span>`;
       
       if (lessons === 'X') {
-        content += `<div class="badge-x">✕</div>`;
+        content += `<div class="badge-x">${appData.ui.badgeX}</div>`;
       } else if (lessons > 0) {
-        const color = colors[currSubject];
+        const color = appData.subjects[currSubject].color;
         content += `<div class="badge" style="background:${color}">${lessons}</div>`;
       }
 
@@ -619,16 +587,16 @@
   function calculateTime() {
     const now = new Date();
 
-    const schedList = data[currClass][currSubject];
+    const schedList = appData.schedule[currClass][currSubject];
     if (!schedList || schedList.length === 0) return null;
 
     let totalMins = 0;
     let totalPeriods = 0;
 
-    for(let d=1; d<=29; d++) {
-      if (specialDates[d]) continue;
+    for(let d=1; d<=appData.meta.countdownLastDay; d++) {
+      if (specialDateMap[d]) continue;
       
-      const dateCheck = new Date(year, monthIndex, d);
+      const dateCheck = new Date(appData.meta.year, appData.meta.monthIndex, d);
       const dw = dateCheck.getDay();
       if (dw === 0 || dw === 6) continue;
 
@@ -636,12 +604,12 @@
       if (!daySched) continue;
 
       daySched.p.forEach(pIdx => {
-        const pTime = periods[pIdx];
+        const pTime = appData.periods[pIdx];
         const startParts = pTime.s.split(':').map(Number);
         const endParts = pTime.e.split(':').map(Number);
 
-        const startT = new Date(year, monthIndex, d, startParts[0], startParts[1]);
-        const endT = new Date(year, monthIndex, d, endParts[0], endParts[1]);
+        const startT = new Date(appData.meta.year, appData.meta.monthIndex, d, startParts[0], startParts[1]);
+        const endT = new Date(appData.meta.year, appData.meta.monthIndex, d, endParts[0], endParts[1]);
 
         if (now < startT) {
           totalMins += 50;
@@ -678,9 +646,23 @@
   }
 
   // ---- Init ----
-  timerInterval = setInterval(updateTimer, 1000);
-  updateUI();
+  async function init() {
+    const response = await fetch(dataUrl);
+    appData = await response.json();
+    specialDateMap = buildSpecialDateMap(appData.calendar.specialDates);
+    currClass = appData.defaults.classId;
+    currSubject = appData.defaults.subject;
+    renderClassButtons();
+    renderSubjectTabs();
+    applyStaticText();
+    updateActiveButtons();
+    timerInterval = setInterval(updateTimer, 1000);
+    updateUI();
+  }
+
+  init();
 </script>
 </body>
 </html>
+
 

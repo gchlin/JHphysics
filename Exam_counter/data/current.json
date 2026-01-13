@@ -1,0 +1,499 @@
+{
+  "meta": {
+    "schoolYear": "114-2",
+    "termStart": "2025-02-23",
+    "termEnd": "2025-06-30"
+  },
+  "periods": {
+    "1": {
+      "s": "08:10",
+      "e": "09:00"
+    },
+    "2": {
+      "s": "09:10",
+      "e": "10:00"
+    },
+    "3": {
+      "s": "10:10",
+      "e": "11:00"
+    },
+    "4": {
+      "s": "11:10",
+      "e": "12:00"
+    },
+    "5": {
+      "s": "13:10",
+      "e": "14:00"
+    },
+    "6": {
+      "s": "14:10",
+      "e": "15:00"
+    },
+    "7": {
+      "s": "15:10",
+      "e": "16:00"
+    }
+  },
+  "subjects": {
+    "G1": {
+      "labelFull": "????",
+      "labelShort": "????",
+      "color": "#3498db"
+    },
+    "IB": {
+      "labelFull": "IB???",
+      "labelShort": "IB",
+      "color": "#9b59b6"
+    },
+    "EL": {
+      "labelFull": "????",
+      "labelShort": "??",
+      "color": "#27ae60"
+    }
+  },
+  "groups": [
+    {
+      "id": "g1",
+      "label": "????",
+      "classes": [
+        "105",
+        "107",
+        "108",
+        "109"
+      ]
+    },
+    {
+      "id": "ib",
+      "label": "IB???",
+      "classes": [
+        "115"
+      ]
+    },
+    {
+      "id": "el",
+      "label": "????",
+      "classes": [
+        "309",
+        "311"
+      ]
+    }
+  ],
+  "classes": {
+    "105": {
+      "label": "105",
+      "group": "g1",
+      "subject": "G1",
+      "grade": 1
+    },
+    "107": {
+      "label": "107",
+      "group": "g1",
+      "subject": "G1",
+      "grade": 1
+    },
+    "108": {
+      "label": "108",
+      "group": "g1",
+      "subject": "G1",
+      "grade": 1
+    },
+    "109": {
+      "label": "109",
+      "group": "g1",
+      "subject": "G1",
+      "grade": 1
+    },
+    "115": {
+      "label": "115",
+      "group": "ib",
+      "subject": "IB",
+      "grade": 1
+    },
+    "309": {
+      "label": "309",
+      "group": "el",
+      "subject": "EL",
+      "grade": 3
+    },
+    "311": {
+      "label": "311",
+      "group": "el",
+      "subject": "EL",
+      "grade": 3
+    }
+  },
+  "schedule": {
+    "115": [
+      {
+        "d": 1,
+        "p": [
+          1,
+          2
+        ]
+      },
+      {
+        "d": 3,
+        "p": [
+          3,
+          4
+        ]
+      }
+    ],
+    "309": [
+      {
+        "d": 1,
+        "p": [
+          5
+        ]
+      },
+      {
+        "d": 2,
+        "p": [
+          2,
+          3
+        ]
+      },
+      {
+        "d": 3,
+        "p": [
+          1
+        ]
+      }
+    ],
+    "108": [
+      {
+        "d": 1,
+        "p": [
+          7
+        ]
+      },
+      {
+        "d": 5,
+        "p": [
+          1
+        ]
+      }
+    ],
+    "109": [
+      {
+        "d": 2,
+        "p": [
+          7
+        ]
+      },
+      {
+        "d": 5,
+        "p": [
+          2
+        ]
+      }
+    ],
+    "311": [
+      {
+        "d": 1,
+        "p": [
+          4
+        ]
+      },
+      {
+        "d": 3,
+        "p": [
+          5,
+          6
+        ]
+      },
+      {
+        "d": 4,
+        "p": [
+          3
+        ]
+      }
+    ],
+    "107": [
+      {
+        "d": 2,
+        "p": [
+          4
+        ]
+      },
+      {
+        "d": 5,
+        "p": [
+          3
+        ]
+      }
+    ],
+    "105": [
+      {
+        "d": 2,
+        "p": [
+          5
+        ]
+      },
+      {
+        "d": 5,
+        "p": [
+          4
+        ]
+      }
+    ]
+  },
+  "calendar": {
+    "events": [
+      {
+        "date": "2025-02-08",
+        "type": "holiday",
+        "label": "??",
+        "scope": "all"
+      },
+      {
+        "date": "2025-02-09",
+        "type": "holiday",
+        "label": "??",
+        "scope": "all"
+      },
+      {
+        "date": "2025-02-10",
+        "type": "holiday",
+        "label": "??",
+        "scope": "all"
+      },
+      {
+        "date": "2025-02-11",
+        "type": "holiday",
+        "label": "????",
+        "scope": "all"
+      },
+      {
+        "date": "2025-02-12",
+        "type": "holiday",
+        "label": "????",
+        "scope": "all"
+      },
+      {
+        "date": "2025-02-13",
+        "type": "holiday",
+        "label": "????",
+        "scope": "all"
+      },
+      {
+        "date": "2025-02-15",
+        "type": "holiday",
+        "label": "????",
+        "scope": "all"
+      },
+      {
+        "date": "2025-02-16",
+        "type": "holiday",
+        "label": "????",
+        "scope": "all"
+      },
+      {
+        "date": "2025-02-17",
+        "type": "holiday",
+        "label": "????",
+        "scope": "all"
+      },
+      {
+        "date": "2025-02-18",
+        "type": "holiday",
+        "label": "????",
+        "scope": "all"
+      },
+      {
+        "date": "2025-02-19",
+        "type": "holiday",
+        "label": "????",
+        "scope": "all"
+      },
+      {
+        "date": "2025-02-20",
+        "type": "holiday",
+        "label": "????",
+        "scope": "all"
+      },
+      {
+        "date": "2025-02-21",
+        "type": "holiday",
+        "label": "????",
+        "scope": "all"
+      },
+      {
+        "date": "2025-02-24",
+        "type": "mock",
+        "label": "???5??????",
+        "scope": "custom",
+        "includeClasses": [
+          "309",
+          "311"
+        ]
+      },
+      {
+        "date": "2025-02-27",
+        "type": "holiday",
+        "label": "?????????",
+        "scope": "all"
+      },
+      {
+        "date": "2025-03-24",
+        "type": "exam",
+        "label": "???",
+        "scope": "custom",
+        "includeClasses": [
+          "105",
+          "107",
+          "108",
+          "109",
+          "309",
+          "311"
+        ]
+      },
+      {
+        "date": "2025-03-25",
+        "type": "exam",
+        "label": "???",
+        "scope": "custom",
+        "includeClasses": [
+          "105",
+          "107",
+          "108",
+          "109",
+          "309",
+          "311"
+        ]
+      },
+      {
+        "date": "2025-03-26",
+        "type": "exam",
+        "label": "???",
+        "scope": "custom",
+        "includeClasses": [
+          "105",
+          "107",
+          "108",
+          "109",
+          "309",
+          "311"
+        ]
+      },
+      {
+        "date": "2025-04-03",
+        "type": "holiday",
+        "label": "???????",
+        "scope": "all"
+      },
+      {
+        "date": "2025-04-05",
+        "type": "holiday",
+        "label": "???",
+        "scope": "all"
+      },
+      {
+        "date": "2025-04-06",
+        "type": "holiday",
+        "label": "?????",
+        "scope": "all"
+      },
+      {
+        "date": "2025-04-09",
+        "type": "mock",
+        "label": "???6??????",
+        "scope": "custom",
+        "includeClasses": [
+          "309",
+          "311"
+        ]
+      },
+      {
+        "date": "2025-04-23",
+        "type": "exam",
+        "label": "?????",
+        "scope": "custom",
+        "includeClasses": [
+          "309",
+          "311"
+        ]
+      },
+      {
+        "date": "2025-04-24",
+        "type": "exam",
+        "label": "?????",
+        "scope": "custom",
+        "includeClasses": [
+          "309",
+          "311"
+        ]
+      },
+      {
+        "date": "2025-05-01",
+        "type": "holiday",
+        "label": "???",
+        "scope": "all"
+      },
+      {
+        "date": "2025-05-06",
+        "type": "mock",
+        "label": "???7??????",
+        "scope": "custom",
+        "includeClasses": [
+          "309",
+          "311"
+        ]
+      },
+      {
+        "date": "2025-05-13",
+        "type": "exam",
+        "label": "???",
+        "scope": "high1"
+      },
+      {
+        "date": "2025-05-14",
+        "type": "exam",
+        "label": "???",
+        "scope": "high1"
+      },
+      {
+        "date": "2025-05-15",
+        "type": "exam",
+        "label": "???",
+        "scope": "high1"
+      },
+      {
+        "date": "2025-06-19",
+        "type": "holiday",
+        "label": "???",
+        "scope": "all"
+      },
+      {
+        "date": "2025-06-26",
+        "type": "exam",
+        "label": "???",
+        "scope": "high1"
+      },
+      {
+        "date": "2025-06-27",
+        "type": "exam",
+        "label": "???",
+        "scope": "high1"
+      },
+      {
+        "date": "2025-06-28",
+        "type": "exam",
+        "label": "???",
+        "scope": "high1"
+      },
+      {
+        "date": "2025-06-29",
+        "type": "exam",
+        "label": "???",
+        "scope": "high1"
+      },
+      {
+        "date": "2025-06-30",
+        "type": "exam",
+        "label": "???",
+        "scope": "high1"
+      }
+    ]
+  }
+}
