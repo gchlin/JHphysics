@@ -43,15 +43,18 @@
   "classes": [
     {
       "id": "105",
-      "label": "105"
+      "label": "105",
+      "defaultSubject": "Phy"
     },
     {
       "id": "115",
-      "label": "115"
+      "label": "115",
+      "defaultSubject": "Chem"
     },
     {
       "id": "309",
-      "label": "309"
+      "label": "309",
+      "defaultSubject": "Bio"
     }
   ],
   "subjectOrder": [
@@ -124,6 +127,21 @@
     "monthRange": {
       "start": 1,
       "end": 7
+    },
+    "groups": {
+      "high1": [
+        "105",
+        "107",
+        "108",
+        "109"
+      ],
+      "ib": [
+        "115"
+      ],
+      "el": [
+        "309",
+        "311"
+      ]
     },
     "events": [
       {

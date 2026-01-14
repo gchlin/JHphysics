@@ -455,12 +455,21 @@
   let viewYear = null;
   let viewMonthIndex = null;
   let isAutoMonth = true;
+  let classDefaults = {};
 
   const fallbackScopeMap = {
     high1: ['105', '107', '108', '109'],
     ib: ['115'],
     el: ['309', '311']
   };
+
+  function getGroupMap() {
+    const calGroups = appData?.calendar?.groups;
+    if (calGroups && Object.keys(calGroups).length) {
+      return calGroups;
+    }
+    return fallbackScopeMap;
+  }
 
   function buildSpecialDateMap(dates) {
     const map = {};
@@ -488,14 +497,36 @@
     return { year, monthIndex };
   }
 
+  function isRangeStart(year, monthIndex) {
+    const range = getMonthRange();
+    return monthIndex <= range.start;
+  }
+
+  function isRangeEnd(year, monthIndex) {
+    const range = getMonthRange();
+    return monthIndex >= range.end;
+  }
+
+  function updateMonthNavButtons() {
+    const prevBtn = document.getElementById('prevMonthBtn');
+    const nextBtn = document.getElementById('nextMonthBtn');
+    if (!prevBtn || !nextBtn) return;
+    prevBtn.disabled = isRangeStart(viewYear, viewMonthIndex);
+    nextBtn.disabled = isRangeEnd(viewYear, viewMonthIndex);
+  }
+
   function eventAppliesToClass(event, classId) {
     const scope = event.scope || 'all';
     if (scope === 'all') return true;
     if (scope === 'custom') {
       return Array.isArray(event.includeClasses) && event.includeClasses.includes(classId);
     }
-    const scopeMap = appData.scopeClassMap || fallbackScopeMap;
-    const classes = scopeMap[scope];
+    const groups = getGroupMap();
+    if (scope === 'group') {
+      const target = groups[event.groupId];
+      return Array.isArray(target) && target.includes(classId);
+    }
+    const classes = groups[scope];
     if (!classes) return true;
     return classes.includes(classId);
   }
@@ -524,6 +555,13 @@
     }
 
     return map;
+  }
+
+  function buildClassDefaults() {
+    classDefaults = {};
+    (appData.classes || []).forEach(cls => {
+      classDefaults[cls.id] = cls.defaultSubject || appData.defaults.subject;
+    });
   }
 
   function applyStaticText() {
@@ -604,6 +642,10 @@
   // ---- UI switching ----
   function setClass(cls) {
     currClass = cls;
+    const defaultSubject = classDefaults[cls];
+    if (defaultSubject) {
+      currSubject = defaultSubject;
+    }
     updateActiveButtons();
     updateUI();
   }
@@ -626,6 +668,7 @@
       .replace('{subject}', subject.labelFull)
       .replace('{year}', viewYear)
       .replace('{month}', viewMonthIndex + 1);
+    updateMonthNavButtons();
   }
 
   // ---- Calendar ----
@@ -773,8 +816,9 @@
   async function init() {
     const response = await fetch(dataUrl);
     appData = await response.json();
+    buildClassDefaults();
     currClass = appData.defaults.classId;
-    currSubject = appData.defaults.subject;
+    currSubject = classDefaults[currClass] || appData.defaults.subject;
     const now = new Date();
     const clamped = clampMonthToRange(now.getFullYear(), now.getMonth());
     viewYear = clamped.year;
