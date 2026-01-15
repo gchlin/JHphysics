@@ -564,6 +564,50 @@
     });
   }
 
+  function getClassGroup(classId) {
+    const groups = getGroupMap();
+    for (const [groupId, classList] of Object.entries(groups)) {
+      if (classList.includes(classId)) return groupId;
+    }
+    return null;
+  }
+
+  function getCountdownTargetDate(classId) {
+    const targets = appData.countdownTargets || [];
+    const groupId = getClassGroup(classId);
+    if (groupId) {
+      const entry = targets.find(item => item.group === groupId);
+      if (entry && entry.until) {
+        const untilDate = new Date(entry.until);
+        if (!isNaN(untilDate)) {
+          return untilDate;
+        }
+      }
+    }
+    return null;
+  }
+
+  function parseDateValue(dateStr) {
+    if (!dateStr) return null;
+    const parsed = new Date(dateStr);
+    if (isNaN(parsed)) return null;
+    return parsed;
+  }
+
+  function dateKey(dateObj) {
+    const y = dateObj.getFullYear();
+    const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const d = String(dateObj.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  function isNoClassDay(dateObj) {
+    const calendar = appData.calendar || {};
+    const events = calendar.events || [];
+    const key = dateKey(dateObj);
+    return events.some(event => event.date === key && eventAppliesToClass(event, currClass));
+  }
+
   function applyStaticText() {
     document.title = appData.ui.title;
     document.getElementById('pageTitle').innerText = appData.ui.title;
@@ -732,15 +776,23 @@
     const schedList = appData.schedule[currClass][currSubject];
     if (!schedList || schedList.length === 0) return null;
 
+    const targetDate = getCountdownTargetDate(currClass);
+    if (!targetDate) return null;
+
+    const termStart = parseDateValue(appData.meta.termStart);
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const loopStart = termStart && termStart > todayStart ? termStart : todayStart;
+    const endDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
+
+    if (endDate < loopStart) return null;
+
     let totalMins = 0;
     let totalPeriods = 0;
 
-    for(let d=1; d<=appData.meta.countdownLastDay; d++) {
-      if (specialDateMap[d]) continue;
-      
-      const dateCheck = new Date(appData.meta.year, appData.meta.monthIndex, d);
+    for (let dateCheck = new Date(loopStart); dateCheck <= endDate; dateCheck.setDate(dateCheck.getDate() + 1)) {
       const dw = dateCheck.getDay();
       if (dw === 0 || dw === 6) continue;
+      if (isNoClassDay(dateCheck)) continue;
 
       const daySched = schedList.find(s => s.d === dw);
       if (!daySched) continue;
@@ -750,8 +802,8 @@
         const startParts = pTime.s.split(':').map(Number);
         const endParts = pTime.e.split(':').map(Number);
 
-        const startT = new Date(appData.meta.year, appData.meta.monthIndex, d, startParts[0], startParts[1]);
-        const endT = new Date(appData.meta.year, appData.meta.monthIndex, d, endParts[0], endParts[1]);
+        const startT = new Date(dateCheck.getFullYear(), dateCheck.getMonth(), dateCheck.getDate(), startParts[0], startParts[1]);
+        const endT = new Date(dateCheck.getFullYear(), dateCheck.getMonth(), dateCheck.getDate(), endParts[0], endParts[1]);
 
         if (now < startT) {
           totalMins += 50;

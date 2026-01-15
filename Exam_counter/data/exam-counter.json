@@ -5,8 +5,19 @@
     "month": 1,
     "daysInMonth": 31,
     "countdownLastDay": 31,
-    "examStartDay": 32
+    "examStartDay": 32,
+    "termStart": "2026-01-21"
   },
+  "countdownTargets": [
+    {
+      "group": "high1",
+      "until": "2026-03-26"
+    },
+    {
+      "group": "el",
+      "until": "2026-03-26"
+    }
+  ],
   "defaults": {
     "classId": "105",
     "subject": "Phy"
@@ -342,6 +353,12 @@
         "date": "2026-02-13",
         "type": "holiday",
         "label": "彈性放假",
+        "scope": "all"
+      },
+      {
+        "date": "2026-02-14",
+        "type": "holiday",
+        "label": "寒假",
         "scope": "all"
       },
       {
