@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RDKit SVG Studio</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">&#9883;</span>
+        <div><strong>化學結構圖工作台</strong><small>高中化學&#183;教學工具</small></div>
+      </div>
+      <div class="top-actions">
+        <div class="status-wrap"><span id="statusDot" class="status-dot"></span><span id="statusText">連線檢查中</span></div>
+        <button id="openGallery" class="gallery-button" type="button">&#x7bc4;&#x4f8b;&#x5eab;</button>
+        <button id="cartButton" class="cart-button" type="button" aria-label="已選清單">&#128722; <b id="cartCount">0</b></button>
+      </div>
+    </header>
+
+    <main>
+      <section class="workspace-grid" aria-label="輸入與預覽工作區">
+        <section class="panel editor-panel">
+          <div class="structure-entry">
+            <label for="structureInput">輸入化學式或俗名</label>
+            <input id="structureInput" type="text" autocomplete="off" placeholder="例如：C2H6O、乙醇、苯、二氧化碳">
+            <small>輸入後按下編譯即可產生結構圖。</small>
+          </div>
+          <textarea id="codeInput" hidden aria-hidden="true"></textarea>
+          <div class="quick-row">
+            <span>快速載入</span>
+            <button type="button" data-code="benzene">苯</button>
+            <button type="button" data-code="caffeine">咖啡因</button>
+            <button type="button" data-code="aspirin">阿斯匹靈</button>
+            <button type="button" data-code="dna">腺嘌呤</button>
+          </div>
+          <div class="action-row">
+            <button id="renderButton" class="primary-button" type="button"><span aria-hidden="true">&#9654;</span> 編譯 SVG</button>
+            <span class="shortcut">輸入後按此按鈕編譯</span>
+          </div>
+          <div id="errorBox" class="error-box" role="alert"></div>
+        </section>
+
+        <section class="panel preview-panel">
+          <div class="panel-head">
+            <div><strong>輸出預覽</strong></div>
+            <div class="output-actions">
+              <select id="formatInput" aria-label="輸出格式"><option value="png">PNG</option><option value="svg">SVG</option></select>
+              <button id="copyOutput" class="icon-button" type="button">&#128203; 複製 PNG</button>
+              <button id="downloadOutput" class="download-button" type="button" disabled>&#11015; 下載 PNG</button>
+            </div>
+          </div>
+          <div id="previewStage" class="preview-stage">
+            <div class="empty-state"><div class="orbit" aria-hidden="true">&#9883;</div><strong>等待編譯</strong><p>貼上程式碼後按下編譯。</p></div>
+          </div>
+          <div class="meta-row"><span id="metaFormula">—</span><span id="metaAtoms">原子數 —</span><span id="metaSize">—</span></div>
+        </section>
+      </section>
+
+      <section class="style-strip" aria-label="圖像樣式">
+        <label>寬 <input id="widthCm" type="number" min="1" max="5" step="0.1" value="4"> cm</label>
+        <label>高 <input id="heightCm" type="number" min="1" max="5" step="0.1" value="3"> cm</label>
+        <label class="range-label">鍵粗細 <output id="bondOutput">1.4</output><input id="bondInput" type="range" min="0.6" max="3" step="0.1" value="1.4"></label>
+        <label class="mini-switch"><input id="colorInput" type="checkbox" checked><i></i> 元素配色</label>
+        <label class="mini-switch"><input id="transparentInput" type="checkbox"><i></i> 透明背景</label>
+        <label class="mini-switch"><input id="hydrogenInput" type="checkbox"><i></i> 顯示氫</label>
+        <label class="mini-switch"><input id="carbonInput" type="checkbox"><i></i> 顯示碳</label>
+        <label class="mini-switch"><input id="condensedInput" type="checkbox"><i></i> 示性式</label>
+        <label class="mini-switch"><input id="indexInput" type="checkbox"><i></i> 原子編號</label>
+      </section>
+    </main>
+
+    <div id="drawerBackdrop" class="drawer-backdrop"></div>
+    <aside id="galleryDrawer" class="gallery-drawer" aria-hidden="true" aria-label="範例庫">
+      <div class="drawer-head"><div><h2 id="drawerTitle">教學範例庫</h2><p class="section-copy">選取範例或管理已選項目。</p></div><button id="closeGallery" class="icon-button" type="button" aria-label="關閉">關閉</button></div>
+      <section id="galleryView" class="drawer-view">
+        <div id="drawerSubjectTabs" class="subject-tabs drawer-tabs">
+          <button class="active" type="button" data-subject="全部">全部</button>
+          <button type="button" data-subject="無機">無機</button>
+          <button type="button" data-subject="有機">有機</button>
+        </div>
+        <div id="categoryFilter" class="category-filter"></div>
+        <div id="galleryGrid" class="gallery-grid"></div>
+      </section>
+      <section id="cartView" class="drawer-view" hidden>
+        <div class="cart-view-head"><strong>已選項目</strong><span>可加入目前輸出或範例</span></div>
+        <div id="cartGrid" class="gallery-grid cart-grid"></div>
+      </section>
+    </aside>
+  </div>
+  <script src="vendor/RDKit_minimal.js"></script>
+  <script src="renderer.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
