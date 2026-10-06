@@ -9,7 +9,6 @@ let lastSvg = '';
 let lastFormula = '';
 let lastSmiles = '';
 let gallery = [];
-let cart = [];
 let selectedSubject = '\u5168\u90e8';
 let selectedCategory = '\u5168\u90e8';
 
@@ -125,49 +124,6 @@ function scheduleStyleRender() {
   clearTimeout(styleTimer);
   styleTimer = setTimeout(render, 80);
 }
-function updateCart() {
-  document.querySelector('#cartCount').textContent = cart.length;
-  document.querySelectorAll('[data-cart]').forEach(button => {
-    const inCart = cart.some(item => item.smiles === button.dataset.cart);
-    button.textContent = inCart ? '\u5df2\u9078' : '\u52a0\u5165';
-    button.classList.toggle('selected', inCart);
-  });
-  renderCart();
-}
-function toggleCart(item) {
-  const exists = cart.some(entry => entry.smiles === item.smiles);
-  cart = exists ? cart.filter(entry => entry.smiles !== item.smiles) : [...cart, item];
-  updateCart();
-}
-function renderCart() {
-  const target = document.querySelector('#cartGrid');
-  if (!cart.length) {
-    target.innerHTML = '<div class="empty-state gallery-empty"><strong>尚未選擇項目</strong><p>從範例庫加入項目。</p></div>';
-    return;
-  }
-  target.innerHTML = cart.map(item => {
-    const image = item.file
-      ? '<img src="' + escapeHTML(item.file) + '" alt="' + escapeHTML(item.name) + '" loading="lazy">'
-      : '<div class="generated-thumb" data-thumb-smiles="' + escapeHTML(item.smiles) + '"><span>' + escapeHTML(item.name) + '</span></div>';
-    return '<article class="gallery-card cart-card" data-smiles="' + escapeHTML(item.smiles) + '">' +
-      '<div class="gallery-image">' + image + '</div>' +
-      '<div class="card-topline"><div><div class="gallery-name">' + escapeHTML(item.name) + '</div><div class="gallery-en">' + escapeHTML(item.english || '') + '</div></div>' +
-      '<button class="add-card selected" data-remove-cart="' + escapeHTML(item.smiles) + '">移除</button></div>' +
-      '<div class="card-meta"><span>' + escapeHTML(item.subject || '') + '</span><span>' + escapeHTML(item.category || '') + '</span></div></article>';
-  }).join('');
-  hydrateThumbnails(target);
-  target.querySelectorAll('[data-remove-cart]').forEach(button => button.addEventListener('click', event => {
-    event.stopPropagation();
-    cart = cart.filter(item => item.smiles !== button.dataset.removeCart);
-    updateCart();
-    renderGallery();
-  }));
-  target.querySelectorAll('.cart-card').forEach(card => card.addEventListener('click', event => {
-    if (event.target.closest('[data-remove-cart]')) return;
-    const item = cart.find(entry => entry.smiles === card.dataset.smiles);
-    if (item) loadCode(item.smiles, item.name);
-  }));
-}
 function hydrateThumbnails(root) {
   root.querySelectorAll('[data-thumb-smiles]').forEach(async node => {
     try {
@@ -182,27 +138,19 @@ function renderGallery() {
     (selectedCategory === '\u5168\u90e8' || item.category === selectedCategory)
   );
   document.querySelector('#galleryGrid').innerHTML = visible.map(item => {
-    const inCart = cart.some(entry => entry.smiles === item.smiles);
     const image = item.file
       ? '<img src="' + escapeHTML(item.file) + '" alt="' + escapeHTML(item.name) + '" loading="lazy">'
       : '<div class="generated-thumb" data-thumb-smiles="' + escapeHTML(item.smiles) + '"><span>' + escapeHTML(item.name) + '</span><small>圖形預覽</small></div>';
     return '<article class="gallery-card" data-smiles="' + escapeHTML(item.smiles) + '">' +
       '<div class="gallery-image">' + image + '</div>' +
-      '<div class="card-topline"><div><div class="gallery-name">' + escapeHTML(item.name) + '</div><div class="gallery-en">' + escapeHTML(item.english) + '</div></div>' +
-      '<button class="add-card ' + (inCart ? 'selected' : '') + '" data-cart="' + escapeHTML(item.smiles) + '">' + (inCart ? '\u5df2\u9078' : '\u52a0\u5165') + '</button></div>' +
+      '<div class="card-topline"><div><div class="gallery-name">' + escapeHTML(item.name) + '</div><div class="gallery-en">' + escapeHTML(item.english) + '</div></div></div>' +
       '<div class="card-meta"><span>' + escapeHTML(item.subject) + '</span><span>' + escapeHTML(item.category) + '</span></div>' +
       '</article>';
   }).join('');
   hydrateThumbnails(document.querySelector('#galleryGrid'));
   document.querySelectorAll('.gallery-card').forEach(card => card.addEventListener('click', event => {
-    if (event.target.closest('[data-cart]')) return;
     const item = gallery.find(entry => entry.smiles === card.dataset.smiles);
     if (item) loadCode(item.smiles, item.name);
-  }));
-  document.querySelectorAll('[data-cart]').forEach(button => button.addEventListener('click', event => {
-    event.stopPropagation();
-    const item = gallery.find(entry => entry.smiles === button.dataset.cart);
-    if (item) toggleCart(item);
   }));
 }
 function renderCategoryFilter() {
@@ -308,29 +256,21 @@ function changeSubject(event) {
 document.querySelector('#drawerSubjectTabs').addEventListener('click', changeSubject);
 const drawer = document.querySelector('#galleryDrawer');
 const backdrop = document.querySelector('#drawerBackdrop');
-const galleryView = document.querySelector('#galleryView');
-const cartView = document.querySelector('#cartView');
-const drawerTitle = document.querySelector('#drawerTitle');
 function closeDrawer() {
   drawer.classList.remove('open');
   backdrop.classList.remove('open');
   drawer.setAttribute('aria-hidden', 'true');
 }
-function openDrawer(view = 'gallery') {
-  const showingCart = view === 'cart';
-  galleryView.hidden = showingCart;
-  cartView.hidden = !showingCart;
-  drawerTitle.textContent = showingCart ? '已選清單' : '範例庫';
-  if (showingCart) renderCart();
-  else { renderCategoryFilter(); renderGallery(); }
+function openDrawer() {
+  renderCategoryFilter();
+  renderGallery();
   drawer.classList.add('open');
   backdrop.classList.add('open');
   drawer.setAttribute('aria-hidden', 'false');
 }
-document.querySelector('#openGallery').addEventListener('click', () => openDrawer('gallery'));
+document.querySelector('#openGallery').addEventListener('click', openDrawer);
 document.querySelector('#closeGallery').addEventListener('click', closeDrawer);
 backdrop.addEventListener('click', closeDrawer);
-document.querySelector('#cartButton').addEventListener('click', () => openDrawer('cart'));
 
 structureInput.value = '';
 document.querySelector('#formatInput').value = 'png';

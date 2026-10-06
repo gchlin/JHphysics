@@ -16,7 +16,6 @@
       <div class="top-actions">
         <div class="status-wrap"><span id="statusDot" class="status-dot"></span><span id="statusText">連線檢查中</span></div>
         <button id="openGallery" class="gallery-button" type="button">&#x7bc4;&#x4f8b;&#x5eab;</button>
-        <button id="cartButton" class="cart-button" type="button" aria-label="已選清單">&#128722; <b id="cartCount">0</b></button>
       </div>
     </header>
 
@@ -74,7 +73,7 @@
 
     <div id="drawerBackdrop" class="drawer-backdrop"></div>
     <aside id="galleryDrawer" class="gallery-drawer" aria-hidden="true" aria-label="範例庫">
-      <div class="drawer-head"><div><h2 id="drawerTitle">教學範例庫</h2><p class="section-copy">選取範例或管理已選項目。</p></div><button id="closeGallery" class="icon-button" type="button" aria-label="關閉">關閉</button></div>
+      <div class="drawer-head"><div><h2 id="drawerTitle">教學範例庫</h2><p class="section-copy">點選範例即可產生結構圖。</p></div><button id="closeGallery" class="icon-button" type="button" aria-label="關閉">關閉</button></div>
       <section id="galleryView" class="drawer-view">
         <div id="drawerSubjectTabs" class="subject-tabs drawer-tabs">
           <button class="active" type="button" data-subject="全部">全部</button>
@@ -83,10 +82,6 @@
         </div>
         <div id="categoryFilter" class="category-filter"></div>
         <div id="galleryGrid" class="gallery-grid"></div>
-      </section>
-      <section id="cartView" class="drawer-view" hidden>
-        <div class="cart-view-head"><strong>已選項目</strong><span>可加入目前輸出或範例</span></div>
-        <div id="cartGrid" class="gallery-grid cart-grid"></div>
       </section>
     </aside>
   </div>
