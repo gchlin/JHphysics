@@ -9,6 +9,7 @@ let lastSvg = '';
 let lastFormula = '';
 let lastSmiles = '';
 let gallery = [];
+const thumbnailCache = new Map();
 let selectedSubject = '\u5168\u90e8';
 let selectedCategory = '\u5168\u90e8';
 
@@ -127,8 +128,15 @@ function scheduleStyleRender() {
 function hydrateThumbnails(root) {
   root.querySelectorAll('[data-thumb-smiles]').forEach(async node => {
     try {
-      const data = await drawMolecule(node.dataset.thumbSmiles, {width:220, height:150, transparent_background:true, use_element_colors:true});
-      if (node.isConnected) node.innerHTML = data.svg;
+      const smiles = node.dataset.thumbSmiles;
+      if (!thumbnailCache.has(smiles)) {
+        const image = drawMolecule(smiles, {width:220, height:150, transparent_background:true, use_element_colors:true})
+          .then(data => data.svg)
+          .catch(error => { thumbnailCache.delete(smiles); throw error; });
+        thumbnailCache.set(smiles, image);
+      }
+      const svg = await thumbnailCache.get(smiles);
+      if (node.isConnected) node.innerHTML = svg;
     } catch { /* keep text fallback */ }
   });
 }
@@ -176,7 +184,7 @@ async function loadGallery() {
     const data = await response.json();
     gallery = Array.isArray(data) ? data : [];
     renderCategoryFilter();
-    renderGallery();
+    if (drawer.classList.contains('open')) renderGallery();
   } catch (error) {
     gallery = [];
     document.querySelector('#categoryFilter').innerHTML = '';

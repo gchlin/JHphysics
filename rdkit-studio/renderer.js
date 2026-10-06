@@ -1,7 +1,73 @@
 // Browser-side replacement for the local /api/render and /api/render-png endpoints.
-const rdkitReady = typeof initRDKitModule === 'function'
-  ? initRDKitModule()
-  : Promise.reject(new Error('無法載入 RDKit.js，請檢查網路連線。'));
+const WASM_SIZE_BYTES = 6913251;
+const loadingScreen = document.querySelector('#loadingScreen');
+const loadingPhase = document.querySelector('#loadingPhase');
+const loadingAmount = document.querySelector('#loadingAmount');
+const wasmProgress = document.querySelector('#wasmProgress');
+
+function showDownloadProgress(received) {
+  const loaded = Math.min(received, WASM_SIZE_BYTES);
+  const percent = Math.round(loaded / WASM_SIZE_BYTES * 100);
+  wasmProgress.value = loaded;
+  loadingAmount.textContent = `${(loaded / 1e6).toFixed(1)} / ${(WASM_SIZE_BYTES / 1e6).toFixed(1)} MB（${percent}%）`;
+  if (received >= WASM_SIZE_BYTES) loadingPhase.textContent = '下載完成，正在初始化 RDKit…';
+}
+
+async function trackDownload(response) {
+  if (!response.body) {
+    const bytes = await response.arrayBuffer();
+    showDownloadProgress(bytes.byteLength);
+    return;
+  }
+  const reader = response.body.getReader();
+  let received = 0;
+  while (true) {
+    const {done, value} = await reader.read();
+    if (done) break;
+    received += value.byteLength;
+    showDownloadProgress(received);
+  }
+  showDownloadProgress(received);
+}
+
+function loadRDKit() {
+  if (typeof initRDKitModule !== 'function') {
+    return Promise.reject(new Error('無法載入 RDKit.js。'));
+  }
+  let rejectLoad;
+  const loadFailure = new Promise((_, reject) => { rejectLoad = reject; });
+  const moduleReady = initRDKitModule({
+    instantiateWasm(imports, receiveInstance) {
+      (async () => {
+        const response = await fetch('vendor/RDKit_minimal.wasm');
+        if (!response.ok) throw new Error(`WASM 下載失敗（HTTP ${response.status}）`);
+        const progressTask = trackDownload(response.clone());
+        let result;
+        try {
+          result = typeof WebAssembly.instantiateStreaming === 'function'
+            ? await WebAssembly.instantiateStreaming(response.clone(), imports)
+            : await WebAssembly.instantiate(await response.clone().arrayBuffer(), imports);
+        } catch {
+          result = await WebAssembly.instantiate(await response.arrayBuffer(), imports);
+        }
+        await progressTask;
+        receiveInstance(result.instance, result.module);
+      })().catch(rejectLoad);
+      return {};
+    }
+  });
+  return Promise.race([moduleReady, loadFailure]);
+}
+
+const rdkitReady = loadRDKit();
+rdkitReady.then(() => {
+  loadingScreen.hidden = true;
+  document.querySelector('#renderButton').disabled = false;
+}, () => {
+  loadingPhase.textContent = 'RDKit 載入失敗，請檢查網路後重試。';
+  document.querySelector('#retryLoading').hidden = false;
+});
+document.querySelector('#retryLoading').addEventListener('click', () => location.reload());
 
 const elementSymbols = [
   '', 'H', 'He', 'Li', 'Be', 'B', 'C', 'N', 'O', 'F', 'Ne', 'Na', 'Mg',
