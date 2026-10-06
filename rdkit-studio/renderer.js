@@ -145,6 +145,7 @@ async function drawMolecule(smiles, options = {}) {
     const atoms = moleculeAtoms(mol);
     const formula = moleculeFormula(atoms);
     if (options.show_hydrogens) mol.add_hs_in_place();
+    mol.set_new_coords(!!options.use_coordgen);
     const svg = mol.get_svg_with_highlights(JSON.stringify(drawingOptions(atoms, options)));
     if (!svg || !svg.includes('<svg')) throw new Error('無法產生分子結構圖。');
     return {svg, formula, smiles, atom_count: mol.get_num_atoms(), options};

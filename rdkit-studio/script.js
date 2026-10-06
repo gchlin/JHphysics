@@ -44,6 +44,7 @@ function options() {
     width_cm: widthCm,
     height_cm: heightCm,
     bond_line_width: Number(document.querySelector('#bondInput').value),
+    use_coordgen: document.querySelector('#coordGenInput').checked,
     use_element_colors: document.querySelector('#colorInput').checked,
     transparent_background: document.querySelector('#transparentInput').checked,
     show_hydrogens: document.querySelector('#hydrogenInput').checked,
@@ -123,7 +124,7 @@ function safeFilename(value, extension) {
 let styleTimer = null;
 function scheduleStyleRender() {
   clearTimeout(styleTimer);
-  styleTimer = setTimeout(render, 80);
+  if (structureInput.value.trim()) styleTimer = setTimeout(render, 80);
 }
 function hydrateThumbnails(root) {
   root.querySelectorAll('[data-thumb-smiles]').forEach(async node => {
