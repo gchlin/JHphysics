@@ -6,10 +6,18 @@ const renderButton = document.querySelector('#renderButton');
 const downloadButton = document.querySelector('#downloadOutput');
 const copyButton = document.querySelector('#copyOutput');
 let lastSvg = '';
+let baseSvg = '';
 let lastFormula = '';
 let lastSmiles = '';
+let lastRenderOptions = null;
+let renderSequence = 0;
+let rotation = 0;
+let flipX = false;
+let flipY = false;
+let hydrogenMode = 'hetero';
+let stereoAnnotations = false;
+let explicitMethyl = false;
 let gallery = [];
-const thumbnailCache = new Map();
 let selectedSubject = '\u5168\u90e8';
 let selectedCategory = '\u5168\u90e8';
 
@@ -38,20 +46,34 @@ const formulaAliases = {
 function options() {
   const widthCm = Number(document.querySelector('#widthCm').value);
   const heightCm = Number(document.querySelector('#heightCm').value);
+  if (![widthCm, heightCm].every(value => Number.isFinite(value) && value >= 1 && value <= 5)) {
+    throw new Error('輸出寬高請設定為 1 至 5 cm。');
+  }
   return {
     width: Math.round(widthCm * 118.11),
     height: Math.round(heightCm * 118.11),
     width_cm: widthCm,
     height_cm: heightCm,
     bond_line_width: Number(document.querySelector('#bondInput').value),
-    use_coordgen: document.querySelector('#coordGenInput').checked,
     use_element_colors: document.querySelector('#colorInput').checked,
     transparent_background: document.querySelector('#transparentInput').checked,
-    show_hydrogens: document.querySelector('#hydrogenInput').checked,
+    show_hydrogens: hydrogenMode === 'all',
+    hydrogen_mode: hydrogenMode,
+    use_coordgen: document.querySelector('#coordGenInput').checked,
+    rotation,
+    flip_x: flipX,
+    flip_y: flipY,
     show_carbons: document.querySelector('#carbonInput').checked,
+    explicit_methyl: explicitMethyl,
+    add_stereo_annotation: stereoAnnotations,
     condensed_formula: document.querySelector('#condensedInput').checked,
     add_atom_indices: document.querySelector('#indexInput').checked
   };
+}
+async function refreshTransform() {
+  document.querySelector('#flipHorizontal').setAttribute('aria-pressed', String(flipX));
+  document.querySelector('#flipVertical').setAttribute('aria-pressed', String(flipY));
+  return lastSvg ? render() : false;
 }
 function setError(message = '') { errorBox.textContent = message; }
 function setStatus(online, text) {
@@ -96,6 +118,7 @@ function resolveStructure(value) {
   return item ? item.smiles : input;
 }
 async function render() {
+  const sequence = ++renderSequence;
   setError('');
   setLoading(true);
   try {
@@ -103,41 +126,51 @@ async function render() {
     if (!structure) throw new Error('\u8acb\u5148\u8f38\u5165\u5316\u5b78\u5f0f\u6216\u4fd7\u540d');
     codeInput.value = itemCode({smiles: structure});
     const data = await drawMolecule(structure, options());
-    lastSvg = data.svg;
+    if (sequence !== renderSequence) return false;
+    baseSvg = data.svg;
+    lastSvg = baseSvg;
     lastFormula = data.formula || data.smiles;
-    lastSmiles = data.smiles;
-    previewStage.innerHTML = data.svg;
+    lastSmiles = structure;
+    lastRenderOptions = data.options;
+    previewStage.innerHTML = lastSvg;
+    document.querySelector('#flipHorizontal').setAttribute('aria-pressed', String(flipX));
+    document.querySelector('#flipVertical').setAttribute('aria-pressed', String(flipY));
     document.querySelector('#metaFormula').textContent = data.formula;
     document.querySelector('#metaAtoms').textContent = '\u539f\u5b50\u6578 ' + data.atom_count;
-    document.querySelector('#metaSize').textContent = data.options.width_cm.toFixed(2) + ' x ' + data.options.height_cm.toFixed(2) + ' cm';
+    document.querySelector('#metaSize').textContent = `${data.options.width_cm.toFixed(2)} x ${data.options.height_cm.toFixed(2)} cm`;
     downloadButton.disabled = false;
+    copyButton.disabled = false;
+    return true;
   } catch (error) {
-    setError(error.message);
+    if (sequence === renderSequence) setError(error.message);
+    return false;
   } finally {
-    setLoading(false);
+    if (sequence === renderSequence) setLoading(false);
   }
 }
-function loadCode(structure, label = structure) { structureInput.value = label; render(); }
+function loadCode(structure) { structureInput.value = structure; render(); }
 function safeFilename(value, extension) {
   return String(value).replace(/[\\/:*?"<>|]/g, '_').replace(/\s+/g, '') + '.' + extension;
+}
+function svgForExport() {
+  const doc = new DOMParser().parseFromString(lastSvg, 'image/svg+xml');
+  const root = doc.documentElement;
+  root.setAttribute('width', `${lastRenderOptions.width_cm}cm`);
+  root.setAttribute('height', `${lastRenderOptions.height_cm}cm`);
+  return new XMLSerializer().serializeToString(root);
 }
 let styleTimer = null;
 function scheduleStyleRender() {
   clearTimeout(styleTimer);
-  if (structureInput.value.trim()) styleTimer = setTimeout(render, 80);
+  downloadButton.disabled = true;
+  copyButton.disabled = true;
+  styleTimer = setTimeout(render, 80);
 }
 function hydrateThumbnails(root) {
   root.querySelectorAll('[data-thumb-smiles]').forEach(async node => {
     try {
-      const smiles = node.dataset.thumbSmiles;
-      if (!thumbnailCache.has(smiles)) {
-        const image = drawMolecule(smiles, {width:220, height:150, transparent_background:true, use_element_colors:true})
-          .then(data => data.svg)
-          .catch(error => { thumbnailCache.delete(smiles); throw error; });
-        thumbnailCache.set(smiles, image);
-      }
-      const svg = await thumbnailCache.get(smiles);
-      if (node.isConnected) node.innerHTML = svg;
+      const data = await drawMolecule(node.dataset.thumbSmiles, {width:220, height:150, transparent_background:true, use_element_colors:true});
+      if (node.isConnected) node.innerHTML = data.svg;
     } catch { /* keep text fallback */ }
   });
 }
@@ -161,6 +194,7 @@ function renderGallery() {
     const item = gallery.find(entry => entry.smiles === card.dataset.smiles);
     if (item) loadCode(item.smiles, item.name);
   }));
+
 }
 function renderCategoryFilter() {
   const categories = ['\u5168\u90e8', ...new Set(
@@ -185,7 +219,7 @@ async function loadGallery() {
     const data = await response.json();
     gallery = Array.isArray(data) ? data : [];
     renderCategoryFilter();
-    if (drawer.classList.contains('open')) renderGallery();
+    renderGallery();
   } catch (error) {
     gallery = [];
     document.querySelector('#categoryFilter').innerHTML = '';
@@ -197,6 +231,7 @@ async function loadGallery() {
 document.querySelector('#renderButton').addEventListener('click', render);
 structureInput.addEventListener('input', () => {
   downloadButton.disabled = true;
+  copyButton.disabled = true;
 });
 structureInput.addEventListener('keydown', event => {
   if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
@@ -207,20 +242,79 @@ structureInput.addEventListener('keydown', event => {
 document.querySelector('#bondInput').addEventListener('input', event => {
   document.querySelector('#bondOutput').textContent = Number(event.target.value).toFixed(1);
 });
-document.querySelectorAll('.style-strip input').forEach(control => control.addEventListener('input', scheduleStyleRender));
-document.querySelectorAll('.quick-row button').forEach(button => button.addEventListener('click', () => loadCode(snippets[button.dataset.code])));
+document.querySelectorAll('[data-bond]').forEach(button => button.addEventListener('click', () => {
+  document.querySelector('#bondInput').value = button.dataset.bond;
+  document.querySelectorAll('[data-bond]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+  scheduleStyleRender();
+}));
+document.querySelectorAll('.style-strip input:not([type=hidden])').forEach(control => control.addEventListener('input', scheduleStyleRender));
+document.querySelectorAll('.quick-row button[data-code]').forEach(button => button.addEventListener('click', () => loadCode(snippets[button.dataset.code])));
+document.querySelectorAll('button[data-smiles]').forEach(button => button.addEventListener('click', () => loadCode(button.dataset.smiles, button.dataset.label)));
+document.querySelectorAll('[data-color]').forEach(button => button.addEventListener('click', () => {
+  const color = button.dataset.color === 'color';
+  document.querySelector('#colorInput').checked = color;
+  document.querySelectorAll('[data-color]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+  scheduleStyleRender();
+}));
+document.querySelectorAll('[data-hydrogens]').forEach(button => button.addEventListener('click', () => {
+  hydrogenMode = button.dataset.hydrogens;
+  document.querySelectorAll('[data-hydrogens]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+  scheduleStyleRender();
+}));
+document.querySelectorAll('[data-stereo]').forEach(button => button.addEventListener('click', () => {
+  stereoAnnotations = button.dataset.stereo === 'on';
+  document.querySelectorAll('[data-stereo]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+  scheduleStyleRender();
+}));
+document.querySelectorAll('[data-methyl]').forEach(button => button.addEventListener('click', () => {
+  explicitMethyl = button.dataset.methyl === 'explicit';
+  document.querySelectorAll('[data-methyl]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+  scheduleStyleRender();
+}));
+document.querySelectorAll('[data-preset]').forEach(button => button.addEventListener('click', () => {
+  const preset = button.dataset.preset;
+  document.querySelector('#bondInput').value = preset === 'standard' ? '1.4' : '2.0';
+  document.querySelector('#bondOutput').textContent = Number(document.querySelector('#bondInput').value).toFixed(1);
+  document.querySelectorAll('[data-bond]').forEach(item => item.setAttribute('aria-pressed', String(item.dataset.bond === document.querySelector('#bondInput').value)));
+  document.querySelector('#colorInput').checked = preset === 'standard';
+  document.querySelector('#carbonInput').checked = preset === 'teaching';
+  document.querySelectorAll('[data-color]').forEach(item => item.setAttribute('aria-pressed', String((item.dataset.color === 'color') === document.querySelector('#colorInput').checked)));
+  document.querySelectorAll('[data-preset]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+  scheduleStyleRender();
+}));
+document.querySelector('#rotateLeft').addEventListener('click', () => { rotation = (rotation + 270) % 360; refreshTransform(); });
+document.querySelector('#rotateRight').addEventListener('click', () => { rotation = (rotation + 90) % 360; refreshTransform(); });
+document.querySelector('#flipHorizontal').addEventListener('click', async () => {
+  flipX = !flipX;
+  if (await refreshTransform()) toast(flipX ? '已水平翻轉；已驗證分子組態不變。' : '已取消水平翻轉。');
+});
+document.querySelector('#flipVertical').addEventListener('click', async () => {
+  flipY = !flipY;
+  if (await refreshTransform()) toast(flipY ? '已垂直翻轉；已驗證分子組態不變。' : '已取消垂直翻轉。');
+});
+document.querySelector('#resetTransform').addEventListener('click', () => { rotation = 0; flipX = false; flipY = false; render(); });
+let outputFormat = 'png';
 function updateFormatLabels() {
-  const png = document.querySelector('#formatInput').value === 'png';
+  const png = outputFormat === 'png';
   copyButton.innerHTML = png ? '&#128203; 複製 PNG' : '&#128203; 複製 SVG';
   downloadButton.innerHTML = png ? '&#11015; 下載 PNG' : '&#11015; 下載 SVG';
 }
-document.querySelector('#formatInput').addEventListener('change', updateFormatLabels);
+document.querySelectorAll('[data-format]').forEach(button => button.addEventListener('click', () => {
+  outputFormat = button.dataset.format;
+  document.querySelectorAll('[data-format]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+  document.querySelectorAll('[data-dpi]').forEach(item => { item.disabled = outputFormat !== 'png'; });
+  updateFormatLabels();
+}));
+document.querySelectorAll('[data-dpi]').forEach(button => button.addEventListener('click', () => {
+  document.querySelector('#dpiInput').value = button.dataset.dpi;
+  document.querySelectorAll('[data-dpi]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+}));
 downloadButton.addEventListener('click', async () => {
   if (!lastSvg) return;
-  const format = document.querySelector('#formatInput').value;
+  const format = outputFormat;
   const smiles = lastFormula;
   if (format === 'svg') {
-    const blob = new Blob([lastSvg], {type:'image/svg+xml'});
+    const blob = new Blob([svgForExport()], {type:'image/svg+xml'});
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = safeFilename(lastFormula || smiles, 'svg');
@@ -229,7 +323,7 @@ downloadButton.addEventListener('click', async () => {
     return;
   }
   let blob;
-  try { blob = await svgToPng(lastSvg); }
+  try { blob = await svgToPng(lastSvg, Number(document.querySelector('#dpiInput').value) / 300); }
   catch { toast('\u7121\u6cd5\u7522\u751f PNG'); return; }
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
@@ -239,14 +333,18 @@ downloadButton.addEventListener('click', async () => {
 });
 copyButton.addEventListener('click', async () => {
   if (!lastSvg) return;
-  const format = document.querySelector('#formatInput').value;
+  const format = outputFormat;
   if (format === 'svg') {
-    await navigator.clipboard.writeText(lastSvg);
-    toast('SVG \u5df2\u8907\u88fd');
+    try {
+      await navigator.clipboard.writeText(svgForExport());
+      toast('SVG \u5df2\u8907\u88fd');
+    } catch {
+      toast('\u700f\u89bd\u5668\u4e0d\u652f\u63f4 SVG \u526a\u8cbc');
+    }
     return;
   }
   try {
-    const blob = await svgToPng(lastSvg);
+    const blob = await svgToPng(lastSvg, Number(document.querySelector('#dpiInput').value) / 300);
     await navigator.clipboard.write([new ClipboardItem({'image/png': blob})]);
     toast('PNG \u5df2\u8907\u88fd');
   } catch {
@@ -265,6 +363,8 @@ function changeSubject(event) {
 document.querySelector('#drawerSubjectTabs').addEventListener('click', changeSubject);
 const drawer = document.querySelector('#galleryDrawer');
 const backdrop = document.querySelector('#drawerBackdrop');
+const galleryView = document.querySelector('#galleryView');
+const drawerTitle = document.querySelector('#drawerTitle');
 function closeDrawer() {
   drawer.classList.remove('open');
   backdrop.classList.remove('open');
@@ -282,7 +382,7 @@ document.querySelector('#closeGallery').addEventListener('click', closeDrawer);
 backdrop.addEventListener('click', closeDrawer);
 
 structureInput.value = '';
-document.querySelector('#formatInput').value = 'png';
+document.querySelector('#dpiInput').value = '300';
 updateFormatLabels();
 checkHealth();
 loadGallery();
