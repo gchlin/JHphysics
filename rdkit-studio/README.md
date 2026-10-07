@@ -12,6 +12,8 @@
 
 `compound-aliases.json` 是優先查詢的本機資料。每筆化合物包含穩定的 `id`、中文 `name`、`english`、`formula`、可交給 RDKit 的 `smiles`，以及其他名稱 `names` 和示性式 `condensed`。這是**精確對照表**，不是通用的示性式語法解析器。新增條目時，應核對結構、分子式及立體組態；俗名若指混合物或範圍不明，不應直接對到單一 SMILES。
 
+目前收錄 120 筆，涵蓋高中常見的雙原子分子、酸鹼鹽、烷烯炔與其異構物、醇醛酮羧酸酯、芳香族、胺基酸與糖類。選取範圍參考[普通型高中自然科學領域課程綱要](https://stv.naer.edu.tw/data/course_outline/pta_18538_240851_60502.pdf)，資料是便於繪圖的常用範例，並非完整化學物質庫。離子化合物以**化學式單位的分離離子**繪製；溶液名稱（如鹽酸、氨水）、組成不定的材料與網狀固體不直接映射成單一分子。新增的 SMILES 與分子式已由 RDKit 核對；有指定立體組態的乳酸與丙胺酸也核對了 CIP 標記。
+
 ```json
 {"id":"ethanol","name":"乙醇","english":"Ethanol","formula":"C2H6O","smiles":"CCO","names":["酒精","Ethyl alcohol"],"condensed":["CH3CH2OH","C2H5OH"]}
 ```
