@@ -33,7 +33,13 @@
       <section class="workspace-grid" aria-label="輸入與預覽工作區">
         <div class="editor-column">
         <section class="panel editor-panel">
-          <div class="editor-heading"><strong>結構輸入</strong><span>名稱 · 示性式 · SMILES</span></div>
+          <div class="editor-heading"><strong>結構輸入</strong><span class="entry-hint">名稱 · 示性式 · SMILES <button id="smilesHelpButton" class="help-icon" type="button" aria-label="如何取得 SMILES" aria-expanded="false" aria-controls="smilesHelpPanel" title="複製提示詞，請 AI 協助查找 SMILES">?</button></span></div>
+          <div id="smilesHelpPanel" class="smiles-help" hidden>
+            <div><strong>找不到結構？</strong><button id="closeSmilesHelp" type="button" aria-label="關閉說明">×</button></div>
+            <p>複製提示詞，填入化合物名稱或示性式後詢問 AI；有異構物時請先選定結構。</p>
+            <textarea id="smilesPromptText" readonly aria-label="取得 SMILES 的提示詞">請將「［填入名稱、示性式或用途］」轉換為可供 RDKit 解析的 SMILES。請先核對化合物名稱、分子式、原子數與電荷；若有位置異構、環／開鏈、R/S、E/Z、酸鹼型態或水合物等歧義，列出各候選的名稱、差異及 isomeric SMILES，讓我選擇，不要自行指定唯一結構。若是混合物或組成不定的聚合物，請說明沒有唯一 SMILES，並提供可繪製的具體代表物。確認後，請單獨列出最終 SMILES，方便我貼進 RDKit。</textarea>
+            <button id="copySmilesPrompt" class="copy-prompt" type="button">複製提示詞</button>
+          </div>
           <div class="structure-entry">
             <label for="structureInput" class="sr-only">輸入 SMILES、化學式或名稱</label>
             <div class="input-line">

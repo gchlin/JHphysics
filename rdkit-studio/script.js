@@ -23,6 +23,7 @@ let selectedSubject = '\u5168\u90e8';
 let selectedCategory = '\u5168\u90e8';
 let selectedName = '';
 let catalog = [];
+let catalogConcepts = [];
 let exactAliases = new Map();
 let foldedFormulaAliases = new Map();
 let nameAliases = new Map();
@@ -51,6 +52,7 @@ async function loadCatalog() {
     const data = await response.json();
     if (data.version !== 1 || !Array.isArray(data.compounds)) throw new Error('對照表格式不正確');
     catalog = data.compounds;
+    catalogConcepts = Array.isArray(data.concepts) ? data.concepts : [];
     exactAliases = new Map();
     foldedFormulaAliases = new Map();
     nameAliases = new Map();
@@ -154,6 +156,9 @@ async function resolveCandidates(value) {
   const input = String(value || '').trim();
   const key = normalizeQuery(input);
   if (!key) return [];
+  const concept = catalogConcepts.find(item => [item.name, ...(item.aliases || [])]
+    .some(alias => normalizeQuery(alias).toLowerCase() === key.toLowerCase()));
+  if (concept) throw new Error(concept.message);
   if (selectedChoice?.key === key) return [selectedChoice.compound];
   const records = [
     ...(exactAliases.get(key) || []),
@@ -359,13 +364,31 @@ function scheduleStyleRender() {
   copyButton.disabled = true;
   styleTimer = setTimeout(render, 80);
 }
+const thumbnailCache = new Map();
+let thumbnailObserver = null;
+let thumbnailQueue = Promise.resolve();
 function hydrateThumbnails(root) {
-  root.querySelectorAll('[data-thumb-smiles]').forEach(async node => {
-    try {
-      const data = await drawMolecule(node.dataset.thumbSmiles, {width:220, height:150, transparent_background:true, use_element_colors:true});
-      if (node.isConnected) node.innerHTML = data.svg;
-    } catch { /* keep text fallback */ }
-  });
+  if (thumbnailObserver) thumbnailObserver.disconnect();
+  const observer = new IntersectionObserver(entries => {
+    for (const entry of entries) {
+      if (!entry.isIntersecting) continue;
+      const node = entry.target;
+      observer.unobserve(node);
+      thumbnailQueue = thumbnailQueue.then(async () => {
+        if (!node.isConnected) return;
+        const smiles = node.dataset.thumbSmiles;
+        try {
+          if (!thumbnailCache.has(smiles)) {
+            const data = await drawMolecule(smiles, {width:220, height:150, transparent_background:true, use_element_colors:true});
+            thumbnailCache.set(smiles, data.svg);
+          }
+          if (node.isConnected) node.innerHTML = thumbnailCache.get(smiles);
+        } catch { /* keep text fallback */ }
+      });
+    }
+  }, {root:document.querySelector('#galleryView'), rootMargin:'80px'});
+  thumbnailObserver = observer;
+  root.querySelectorAll('[data-thumb-smiles]').forEach(node => thumbnailObserver.observe(node));
 }
 function renderGallery() {
   const visible = gallery.filter(item =>
@@ -674,6 +697,30 @@ document.querySelector('#closeGallery').addEventListener('click', closeDrawer);
 backdrop.addEventListener('click', closeDrawer);
 document.addEventListener('keydown', event => {
   if (event.key === 'Escape' && drawer.classList.contains('open')) closeDrawer();
+});
+const smilesHelpButton = document.querySelector('#smilesHelpButton');
+const smilesHelpPanel = document.querySelector('#smilesHelpPanel');
+function closeSmilesHelp() {
+  smilesHelpPanel.hidden = true;
+  smilesHelpButton.setAttribute('aria-expanded', 'false');
+}
+smilesHelpButton.addEventListener('click', () => {
+  smilesHelpPanel.hidden = !smilesHelpPanel.hidden;
+  smilesHelpButton.setAttribute('aria-expanded', String(!smilesHelpPanel.hidden));
+});
+document.querySelector('#closeSmilesHelp').addEventListener('click', closeSmilesHelp);
+document.querySelector('#copySmilesPrompt').addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText(document.querySelector('#smilesPromptText').value);
+    toast('提示詞已複製');
+    closeSmilesHelp();
+  } catch { toast('無法複製，請選取提示詞後手動複製'); }
+});
+document.addEventListener('pointerdown', event => {
+  if (!smilesHelpPanel.hidden && !smilesHelpPanel.contains(event.target) && event.target !== smilesHelpButton) closeSmilesHelp();
+});
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && !smilesHelpPanel.hidden) closeSmilesHelp();
 });
 
 structureInput.value = '';
