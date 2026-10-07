@@ -15,7 +15,7 @@ let rotation = 0;
 let flipX = false;
 let flipY = false;
 let hydrogenMode = 'hetero';
-let stereoAnnotations = false;
+let stereoMode = 'wedge';
 let explicitMethyl = false;
 let gallery = [];
 let selectedSubject = '\u5168\u90e8';
@@ -62,7 +62,8 @@ function options() {
     flip_y: flipY,
     show_carbons: document.querySelector('#carbonInput').checked,
     explicit_methyl: explicitMethyl,
-    add_stereo_annotation: stereoAnnotations,
+    add_stereo_annotation: stereoMode !== 'wedge',
+    stereo_bond_mode: stereoMode,
     condensed_formula: document.querySelector('#condensedInput').checked,
     add_atom_indices: document.querySelector('#indexInput').checked
   };
@@ -248,6 +249,11 @@ document.querySelectorAll('[data-bond]').forEach(button => button.addEventListen
 }));
 document.querySelectorAll('.style-strip input:not([type=hidden])').forEach(control => control.addEventListener('input', scheduleStyleRender));
 document.querySelector('#transparentInput').addEventListener('input', scheduleStyleRender);
+document.querySelectorAll('[data-background]').forEach(button => button.addEventListener('click', () => {
+  document.querySelector('#transparentInput').checked = button.dataset.background === 'transparent';
+  document.querySelectorAll('[data-background]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+  scheduleStyleRender();
+}));
 document.querySelector('#widthCm').addEventListener('input', () => {
   const width = Number(document.querySelector('#widthCm').value);
   document.querySelectorAll('[data-width]').forEach(item => item.setAttribute('aria-pressed', String(Number(item.dataset.width) === width)));
@@ -277,7 +283,7 @@ document.querySelectorAll('[data-carbons]').forEach(button => button.addEventLis
   scheduleStyleRender();
 }));
 document.querySelectorAll('[data-stereo]').forEach(button => button.addEventListener('click', () => {
-  stereoAnnotations = button.dataset.stereo === 'on';
+  stereoMode = button.dataset.stereo;
   document.querySelectorAll('[data-stereo]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
   scheduleStyleRender();
 }));

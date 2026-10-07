@@ -112,6 +112,7 @@ function drawingOptions(atoms, options) {
     addAtomIndices: !!options.add_atom_indices,
     explicitMethyl: !options.show_hydrogens && !!(options.explicit_methyl || options.show_carbons || options.condensed_formula),
     addStereoAnnotation: !!options.add_stereo_annotation,
+    wedgeBonds: options.stereo_bond_mode !== 'labels',
     clearBackground: !options.transparent_background
   };
   const labels = {};
@@ -188,6 +189,36 @@ function moleculeAspectRatio(molblock) {
   return Math.max(0.5, Math.min(3.5, ratio));
 }
 
+function fitSvgToArtwork(svg, widthPx) {
+  const root = new DOMParser().parseFromString(svg, 'image/svg+xml').documentElement;
+  const originalStyle = root.getAttribute('style');
+  root.setAttribute('style', 'position:absolute;left:-100000px;top:0;visibility:hidden;pointer-events:none');
+  document.body.append(root);
+  try {
+    const boxes = [...root.querySelectorAll('path,polygon,ellipse,circle,line,text')]
+      .filter(element => !element.closest('defs,clipPath'))
+      .map(element => element.getBBox())
+      .filter(box => [box.x, box.y, box.width, box.height].every(Number.isFinite));
+    if (!boxes.length) return {svg, heightPx: Math.round(parseFloat(root.getAttribute('height')) || widthPx)};
+    const left = Math.min(...boxes.map(box => box.x));
+    const top = Math.min(...boxes.map(box => box.y));
+    const right = Math.max(...boxes.map(box => box.x + box.width));
+    const bottom = Math.max(...boxes.map(box => box.y + box.height));
+    const padding = Math.max(18, Math.min(right - left, bottom - top) * 0.06);
+    const artWidth = right - left + padding * 2;
+    const artHeight = bottom - top + padding * 2;
+    const heightPx = Math.round(widthPx * artHeight / artWidth);
+    root.setAttribute('viewBox', `${left - padding} ${top - padding} ${artWidth} ${artHeight}`);
+    root.setAttribute('width', `${widthPx}px`);
+    root.setAttribute('height', `${heightPx}px`);
+    if (originalStyle === null) root.removeAttribute('style');
+    else root.setAttribute('style', originalStyle);
+    return {svg: new XMLSerializer().serializeToString(root), heightPx};
+  } finally {
+    root.remove();
+  }
+}
+
 async function drawMolecule(smiles, options = {}) {
   const rdkit = await rdkitReady;
   const mol = rdkit.get_mol(smiles);
@@ -208,9 +239,14 @@ async function drawMolecule(smiles, options = {}) {
     if (!transformed || !sameStereo(JSON.parse(mol.get_stereo_tags()), JSON.parse(transformed.get_stereo_tags()))) {
       throw new Error('旋轉或翻轉後立體組態無法驗證，已停止輸出。');
     }
-    const svg = transformed.get_svg_with_highlights(JSON.stringify(drawingOptions(atoms, outputOptions)));
-    if (!svg || !svg.includes('<svg')) throw new Error('無法產生分子結構圖。');
-    return {svg, formula, smiles, atom_count: mol.get_num_atoms(), options: outputOptions};
+    const rawSvg = transformed.get_svg_with_highlights(JSON.stringify(drawingOptions(atoms, outputOptions)));
+    if (!rawSvg || !rawSvg.includes('<svg')) throw new Error('無法產生分子結構圖。');
+    const fitted = options.width_cm ? fitSvgToArtwork(rawSvg, outputOptions.width) : {svg: rawSvg};
+    if (options.width_cm) {
+      outputOptions.height = fitted.heightPx;
+      outputOptions.height_cm = Math.round(fitted.heightPx / 118.11 * 100) / 100;
+    }
+    return {svg: fitted.svg, formula, smiles, atom_count: mol.get_num_atoms(), options: outputOptions};
   } finally {
     if (transformed) transformed.delete();
     mol.delete();
@@ -229,7 +265,7 @@ async function svgToPng(svg, scale = 1) {
     canvas.height = Math.round(image.naturalHeight * scale);
     const context = canvas.getContext('2d');
     if (!context) throw new Error('無法產生 PNG。');
-    context.drawImage(image, 0, 0);
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
     const blob = await new Promise((resolve, reject) => canvas.toBlob(value => value ? resolve(value) : reject(new Error('無法產生 PNG。')), 'image/png'));
     return pngWithDpi(blob, Math.round(300 * scale));
   } finally {
