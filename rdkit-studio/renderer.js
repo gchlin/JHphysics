@@ -1,5 +1,7 @@
 // RDKit runs in the browser. Keep the WASM local and show its download progress.
 const WASM_SIZE_BYTES = 6913251;
+const PIXELS_PER_CM = 300 / 2.54;
+const STANDARD_BOND_CM = 0.508;
 const loadingScreen = document.querySelector('#loadingScreen');
 const loadingPhase = document.querySelector('#loadingPhase');
 const loadingAmount = document.querySelector('#loadingAmount');
@@ -106,15 +108,21 @@ function moleculeFormula(atoms) {
 
 function drawingOptions(atoms, options) {
   const details = {
-    width: Math.max(240, Math.min(2400, options.width || 640)),
-    height: Math.max(180, Math.min(3000, options.height || 420)),
-    bondLineWidth: options.bond_line_width || 1.4,
+    width: Math.max(240, Math.min(6000, options.width || 640)),
+    height: Math.max(180, Math.min(6000, options.height || 420)),
+    bondLineWidth: (options.bond_line_width || 1.4) * (options.size_mode === 'bond' ? options.scale_percent / 100 : 1),
     addAtomIndices: !!options.add_atom_indices,
     explicitMethyl: !options.show_hydrogens && !!(options.explicit_methyl || options.show_carbons),
     addStereoAnnotation: !!options.add_stereo_annotation,
     wedgeBonds: options.stereo_bond_mode !== 'labels',
     clearBackground: !options.transparent_background
   };
+  if (options.size_mode === 'bond') {
+    const scale = options.scale_percent / 100;
+    details.fixedBondLength = STANDARD_BOND_CM * PIXELS_PER_CM * scale;
+    details.minFontSize = Math.round(40 * scale);
+    details.maxFontSize = Math.round(40 * scale);
+  }
   const labels = {};
   atoms.forEach((atom, index) => {
     const isHetero = atom.z !== 6 && atom.z !== 1;
@@ -177,19 +185,17 @@ function sameStereo(before, after) {
   return normalized(before) === normalized(after);
 }
 
-function moleculeAspectRatio(molblock) {
+function moleculeBounds(molblock) {
   const lines = molblock.split('\n');
   const atomCount = Number(lines[3]?.slice(0, 3));
   const points = lines.slice(4, 4 + atomCount).map(line => [Number(line.slice(0, 10)), Number(line.slice(10, 20))]);
-  if (!points.length || points.some(point => point.some(value => !Number.isFinite(value)))) return 1;
+  if (!points.length || points.some(point => point.some(value => !Number.isFinite(value)))) return {width:0, height:0};
   const xs = points.map(point => point[0]);
   const ys = points.map(point => point[1]);
-  // One bond length of spare room includes the labels at the outer atoms.
-  const ratio = (Math.max(...xs) - Math.min(...xs) + 1.5) / (Math.max(...ys) - Math.min(...ys) + 1.5);
-  return Math.max(0.5, Math.min(3.5, ratio));
+  return {width:Math.max(...xs) - Math.min(...xs), height:Math.max(...ys) - Math.min(...ys)};
 }
 
-function fitSvgToArtwork(svg, widthPx) {
+function fitSvgToArtwork(svg, sizing) {
   const root = new DOMParser().parseFromString(svg, 'image/svg+xml').documentElement;
   const originalStyle = root.getAttribute('style');
   root.setAttribute('style', 'position:absolute;left:-100000px;top:0;visibility:hidden;pointer-events:none');
@@ -199,21 +205,23 @@ function fitSvgToArtwork(svg, widthPx) {
       .filter(element => !element.closest('defs,clipPath'))
       .map(element => element.getBBox())
       .filter(box => [box.x, box.y, box.width, box.height].every(Number.isFinite));
-    if (!boxes.length) return {svg, heightPx: Math.round(parseFloat(root.getAttribute('height')) || widthPx)};
+    if (!boxes.length) throw new Error('無法計算分子圖的實際範圍。');
     const left = Math.min(...boxes.map(box => box.x));
     const top = Math.min(...boxes.map(box => box.y));
     const right = Math.max(...boxes.map(box => box.x + box.width));
     const bottom = Math.max(...boxes.map(box => box.y + box.height));
-    const padding = Math.max(18, Math.min(right - left, bottom - top) * 0.06);
+    const padding = sizing.mode === 'bond' ? Math.max(6, sizing.bondPx * 0.3)
+      : Math.max(18, Math.min(right - left, bottom - top) * 0.06);
     const artWidth = right - left + padding * 2;
     const artHeight = bottom - top + padding * 2;
-    const heightPx = Math.round(widthPx * artHeight / artWidth);
+    const heightPx = sizing.mode === 'height' ? Math.round(sizing.heightCm * PIXELS_PER_CM) : Math.round(artHeight);
+    const widthPx = sizing.mode === 'height' ? Math.round(heightPx * artWidth / artHeight) : Math.round(artWidth);
     root.setAttribute('viewBox', `${left - padding} ${top - padding} ${artWidth} ${artHeight}`);
     root.setAttribute('width', `${widthPx}px`);
     root.setAttribute('height', `${heightPx}px`);
     if (originalStyle === null) root.removeAttribute('style');
     else root.setAttribute('style', originalStyle);
-    return {svg: new XMLSerializer().serializeToString(root), heightPx};
+    return {svg: new XMLSerializer().serializeToString(root), widthPx, heightPx};
   } finally {
     root.remove();
   }
@@ -233,9 +241,16 @@ async function drawMolecule(smiles, options = {}) {
     mol.set_new_coords(!!options.use_coordgen);
     const molblock = transformedMolblock(mol.get_molblock(), options);
     const outputOptions = {...options};
-    if (options.width_cm) {
-      outputOptions.height_cm = Math.round(Math.max(1.5, Math.min(25, options.width_cm / moleculeAspectRatio(molblock))) * 10) / 10;
-      outputOptions.height = Math.round(outputOptions.height_cm * 118.11);
+    const bondPx = options.size_mode === 'bond' ? STANDARD_BOND_CM * PIXELS_PER_CM * options.scale_percent / 100 : 0;
+    if (options.size_mode === 'bond') {
+      const bounds = moleculeBounds(molblock);
+      outputOptions.width = Math.ceil((bounds.width / 1.5 + 4) * bondPx);
+      outputOptions.height = Math.ceil((bounds.height / 1.5 + 4) * bondPx);
+      if (outputOptions.width > 6000 || outputOptions.height > 6000)
+        throw new Error('此分子在所選鍵長下超過可繪製範圍，請降低比例。');
+    } else if (options.size_mode === 'height') {
+      outputOptions.width = 900;
+      outputOptions.height = 900;
     }
     transformed = rdkit.get_mol(molblock);
     if (!transformed || !sameStereo(JSON.parse(mol.get_stereo_tags()), JSON.parse(transformed.get_stereo_tags()))) {
@@ -243,10 +258,15 @@ async function drawMolecule(smiles, options = {}) {
     }
     const rawSvg = transformed.get_svg_with_highlights(JSON.stringify(drawingOptions(atoms, outputOptions)));
     if (!rawSvg || !rawSvg.includes('<svg')) throw new Error('無法產生分子結構圖。');
-    const fitted = options.width_cm ? fitSvgToArtwork(rawSvg, outputOptions.width) : {svg: rawSvg};
-    if (options.width_cm) {
+    const fitted = options.size_mode ? fitSvgToArtwork(rawSvg, {
+      mode: options.size_mode, heightCm: options.height_cm, bondPx
+    }) : {svg:rawSvg};
+    if (options.size_mode) {
+      outputOptions.width = fitted.widthPx;
       outputOptions.height = fitted.heightPx;
-      outputOptions.height_cm = Math.round(fitted.heightPx / 118.11 * 100) / 100;
+      outputOptions.width_cm = Math.round(fitted.widthPx / PIXELS_PER_CM * 100) / 100;
+      outputOptions.height_cm = options.size_mode === 'height' ? options.height_cm
+        : Math.round(fitted.heightPx / PIXELS_PER_CM * 100) / 100;
     }
     return {svg: fitted.svg, formula, molecular_weight: descriptors.amw, stereo_tags: stereoTags, smiles, atom_count: mol.get_num_atoms(), options: outputOptions};
   } finally {
@@ -255,7 +275,7 @@ async function drawMolecule(smiles, options = {}) {
   }
 }
 
-async function svgToPng(svg, scale = 1) {
+async function svgToPng(svg, widthCm, heightCm, dpi) {
   const source = new Blob([svg], {type: 'image/svg+xml;charset=utf-8'});
   const url = URL.createObjectURL(source);
   try {
@@ -263,13 +283,17 @@ async function svgToPng(svg, scale = 1) {
     image.src = url;
     await image.decode();
     const canvas = document.createElement('canvas');
-    canvas.width = Math.round(image.naturalWidth * scale);
-    canvas.height = Math.round(image.naturalHeight * scale);
+    const pixelWidth = Math.round(widthCm / 2.54 * dpi);
+    const pixelHeight = Math.round(heightCm / 2.54 * dpi);
+    if (pixelWidth > 16000 || pixelHeight > 16000 || pixelWidth * pixelHeight > 80000000)
+      throw new Error('PNG 尺寸過大，請縮小畫布或改用 300 DPI。');
+    canvas.width = pixelWidth;
+    canvas.height = pixelHeight;
     const context = canvas.getContext('2d');
     if (!context) throw new Error('無法產生 PNG。');
     context.drawImage(image, 0, 0, canvas.width, canvas.height);
     const blob = await new Promise((resolve, reject) => canvas.toBlob(value => value ? resolve(value) : reject(new Error('無法產生 PNG。')), 'image/png'));
-    return pngWithDpi(blob, Math.round(300 * scale));
+    return pngWithDpi(blob, dpi);
   } finally {
     URL.revokeObjectURL(url);
   }
@@ -291,5 +315,19 @@ async function pngWithDpi(blob, dpi) {
     for (let bit = 0; bit < 8; bit += 1) crc = (crc >>> 1) ^ ((crc & 1) ? 0xedb88320 : 0);
   }
   view.setUint32(17, (crc ^ 0xffffffff) >>> 0);
-  return new Blob([source.slice(0, 33), chunk, source.slice(33)], {type: 'image/png'});
+  const parts = [source.slice(0, 8)];
+  const bytes = new DataView(source.buffer, source.byteOffset, source.byteLength);
+  let offset = 8;
+  let inserted = false;
+  while (offset + 12 <= source.length) {
+    const length = bytes.getUint32(offset);
+    const next = offset + length + 12;
+    if (next > source.length) throw new Error('PNG 資料不完整。');
+    const type = String.fromCharCode(...source.slice(offset + 4, offset + 8));
+    if (type !== 'pHYs') parts.push(source.slice(offset, next));
+    if (type === 'IHDR') { parts.push(chunk); inserted = true; }
+    offset = next;
+  }
+  if (!inserted) throw new Error('PNG 缺少 IHDR。');
+  return new Blob(parts, {type:'image/png'});
 }

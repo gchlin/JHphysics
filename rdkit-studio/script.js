@@ -17,6 +17,7 @@ let flipY = false;
 let hydrogenMode = 'hetero';
 let stereoMode = 'wedge';
 let explicitMethyl = false;
+let sizeMode = 'height';
 let gallery = [];
 let selectedSubject = '\u5168\u90e8';
 let selectedCategory = '\u5168\u90e8';
@@ -70,13 +71,16 @@ async function loadCatalog() {
 const catalogReady = loadCatalog();
 
 function options() {
-  const widthCm = Number(document.querySelector('#widthCm').value);
-  if (!Number.isFinite(widthCm) || widthCm < 3 || widthCm > 12) {
-    throw new Error('插入文件寬度請設定為 3 至 12 cm。');
-  }
+  const heightCm = Number(document.querySelector('#heightCm').value);
+  const scalePercent = Number(document.querySelector('#scalePercent').value);
+  if (sizeMode === 'height' && (!Number.isFinite(heightCm) || heightCm < 1 || heightCm > 30))
+    throw new Error('畫布高度請設定為 1 至 30 cm。');
+  if (sizeMode === 'bond' && (!Number.isFinite(scalePercent) || scalePercent < 20 || scalePercent > 300))
+    throw new Error('鍵長比例請設定為 20% 至 300%。');
   return {
-    width: Math.round(widthCm * 118.11),
-    width_cm: widthCm,
+    size_mode: sizeMode,
+    height_cm: heightCm,
+    scale_percent: scalePercent,
     bond_line_width: Number(document.querySelector('#bondInput').value),
     use_element_colors: document.querySelector('#colorInput').checked,
     transparent_background: document.querySelector('#transparentInput').checked,
@@ -118,6 +122,7 @@ function clearPreview(message = '輸入結構或選擇範例後按下編譯。')
   document.querySelector('#metaFormula').textContent = '—';
   document.querySelector('#metaWeight').textContent = 'MW: —';
   document.querySelector('#metaSize').textContent = '—';
+  document.querySelector('#autoSizeHint').textContent = sizeMode === 'height' ? '自動寬度：—' : '畫布：—';
   downloadButton.disabled = true;
   copyButton.disabled = true;
   document.querySelector('#copyFormula').disabled = true;
@@ -298,8 +303,10 @@ async function render() {
     document.querySelector('#metaFormula').innerHTML = formulaMarkup(data.formula);
     document.querySelector('#metaWeight').textContent = Number.isFinite(data.molecular_weight)
       ? `MW: ${data.molecular_weight.toFixed(2)} g/mol` : 'MW: —';
-    document.querySelector('#metaSize').textContent = `${data.options.width_cm.toFixed(2)} x ${data.options.height_cm.toFixed(2)} cm`;
-    document.querySelector('#autoHeightHint').textContent = `自動高度約 ${data.options.height_cm.toFixed(1)} cm`;
+    document.querySelector('#metaSize').textContent = `${data.options.width_cm.toFixed(2)} × ${data.options.height_cm.toFixed(2)} cm`;
+    document.querySelector('#autoSizeHint').textContent = sizeMode === 'height'
+      ? `自動寬度：約 ${data.options.width_cm.toFixed(2)} cm`
+      : `畫布：約 ${data.options.width_cm.toFixed(2)} × ${data.options.height_cm.toFixed(2)} cm`;
     downloadButton.disabled = false;
     copyButton.disabled = false;
     document.querySelector('#copyFormula').disabled = false;
@@ -322,8 +329,8 @@ function safeFilename(value, extension) {
 function svgForExport() {
   const doc = new DOMParser().parseFromString(lastSvg, 'image/svg+xml');
   const root = doc.documentElement;
-  root.setAttribute('width', `${lastRenderOptions.width_cm}cm`);
-  root.setAttribute('height', `${lastRenderOptions.height_cm}cm`);
+  root.setAttribute('width', `${lastRenderOptions.width_cm.toFixed(2)}cm`);
+  root.setAttribute('height', `${lastRenderOptions.height_cm.toFixed(2)}cm`);
   return new XMLSerializer().serializeToString(root);
 }
 let styleTimer = null;
@@ -438,16 +445,27 @@ document.querySelectorAll('[data-background]').forEach(button => button.addEvent
   document.querySelectorAll('[data-background]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
   scheduleStyleRender();
 }));
-document.querySelector('#widthCm').addEventListener('input', () => {
-  const width = Number(document.querySelector('#widthCm').value);
-  document.querySelectorAll('[data-width]').forEach(item => item.setAttribute('aria-pressed', String(Number(item.dataset.width) === width)));
-  scheduleStyleRender();
-});
-document.querySelectorAll('[data-width]').forEach(button => button.addEventListener('click', () => {
-  document.querySelector('#widthCm').value = button.dataset.width;
-  document.querySelectorAll('[data-width]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
-  scheduleStyleRender();
+document.querySelectorAll('[data-size-mode]').forEach(button => button.addEventListener('click', () => {
+  sizeMode = button.dataset.sizeMode;
+  document.querySelectorAll('[data-size-mode]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+  document.querySelector('#heightControls').hidden = sizeMode !== 'height';
+  document.querySelector('#bondControls').hidden = sizeMode !== 'bond';
+  document.querySelector('#autoSizeHint').textContent = sizeMode === 'height' ? '自動寬度：—' : '畫布：—';
+  if (lastSmiles) scheduleStyleRender();
 }));
+for (const [attribute, inputId] of [['height', 'heightCm'], ['scale', 'scalePercent']]) {
+  const input = document.querySelector(`#${inputId}`);
+  const buttons = document.querySelectorAll(`[data-${attribute}]`);
+  input.addEventListener('input', () => {
+    buttons.forEach(button => button.setAttribute('aria-pressed', String(Number(button.dataset[attribute]) === Number(input.value))));
+    if (lastSmiles) scheduleStyleRender();
+  });
+  buttons.forEach(button => button.addEventListener('click', () => {
+    input.value = button.dataset[attribute];
+    buttons.forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+    if (lastSmiles) scheduleStyleRender();
+  }));
+}
 document.querySelectorAll('.quick-row button[data-code]').forEach(button => button.addEventListener('click', () => loadCode(snippets[button.dataset.code])));
 document.querySelectorAll('button[data-smiles]').forEach(button => button.addEventListener('click', () => loadCode(button.dataset.smiles, button.dataset.label)));
 document.querySelectorAll('[data-color]').forEach(button => button.addEventListener('click', () => {
@@ -576,8 +594,8 @@ downloadButton.addEventListener('click', async () => {
     return;
   }
   let blob;
-  try { blob = await svgToPng(lastSvg, Number(document.querySelector('#dpiInput').value) / 300); }
-  catch { toast('\u7121\u6cd5\u7522\u751f PNG'); return; }
+  try { blob = await svgToPng(svgForExport(), lastRenderOptions.width_cm, lastRenderOptions.height_cm, Number(document.querySelector('#dpiInput').value)); }
+  catch (error) { toast(error.message || '無法產生 PNG'); return; }
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
   link.download = safeFilename(lastFormula || smiles, 'png');
@@ -597,11 +615,11 @@ copyButton.addEventListener('click', async () => {
     return;
   }
   try {
-    const blob = await svgToPng(lastSvg, Number(document.querySelector('#dpiInput').value) / 300);
+    const blob = await svgToPng(svgForExport(), lastRenderOptions.width_cm, lastRenderOptions.height_cm, Number(document.querySelector('#dpiInput').value));
     await navigator.clipboard.write([new ClipboardItem({'image/png': blob})]);
     toast('PNG \u5df2\u8907\u88fd');
-  } catch {
-    toast('\u700f\u89bd\u5668\u4e0d\u652f\u63f4 PNG \u526a\u8cbc');
+  } catch (error) {
+    toast(error.message || '瀏覽器不支援 PNG 剪貼');
   }
 });
 function changeSubject(event) {

@@ -179,6 +179,11 @@ main { display:block; }
   .transform-toolbar .chirality-action { margin-left:0; }
   .meta-row { justify-content:flex-start; }
 }
+[hidden] { display:none!important; }
+.output-settings .size-choices { display:inline-flex; align-items:center; gap:4px; }
+.output-settings .size-choices label { padding:0; gap:3px; font-size:10px; }
+.output-settings .size-choices input { width:45px; padding:3px 4px; }
+.output-settings .size-hint { padding:0; margin-right:auto; white-space:nowrap; }
 
 .candidate-list { display:grid; grid-template-columns:repeat(auto-fit,minmax(155px,1fr)); gap:7px; margin-top:10px; padding:10px; border:1px solid #cfe3d8; border-radius:9px; background:#f7fbf8; }
 .candidate-list[hidden] { display:none; }
