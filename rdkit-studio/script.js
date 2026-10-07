@@ -21,6 +21,12 @@ let gallery = [];
 let selectedSubject = '\u5168\u90e8';
 let selectedCategory = '\u5168\u90e8';
 let selectedName = '';
+let catalog = [];
+let exactAliases = new Map();
+let foldedFormulaAliases = new Map();
+let nameAliases = new Map();
+let selectedChoice = null;
+const candidateList = document.querySelector('#candidateList');
 
 const snippets = {
   benzene: 'c1ccccc1',
@@ -29,20 +35,40 @@ const snippets = {
   dna: 'Nc1ncnc2[nH]cnc12'
 };
 
-const formulaAliases = {
-  'h2o':'O', '水':'O', 'co2':'O=C=O', '二氧化碳':'O=C=O',
-  'h2so4':'OS(=O)(=O)O', '硫酸':'OS(=O)(=O)O', 'nh3':'N', '氨':'N',
-  'nacl':'[Na+].[Cl-]', '氯化鈉':'[Na+].[Cl-]', 'ch4':'C', '甲烷':'C',
-  'c2h6':'CC', '乙烷':'CC', 'c2h4':'C=C', '乙烯':'C=C',
-  'c2h2':'C#C', '乙炔':'C#C', 'c2h6o':'CCO', '乙醇':'CCO', 'ethanol':'CCO',
-  'c2h4o':'CC=O', '乙醛':'CC=O', 'c3h6o':'CC(C)=O', '丙酮':'CC(C)=O',
-  'ch2o2':'C(=O)O', '甲酸':'C(=O)O', 'c2h4o2':'CC(=O)O', '乙酸':'CC(=O)O',
-  'c3h8o3':'OCC(O)CO', '甘油':'OCC(O)CO', 'c4h8o2':'CCOC(C)=O', '乙酸乙酯':'CCOC(C)=O',
-  'ch5n':'CN', '甲胺':'CN', 'c7h8':'Cc1ccccc1', '甲苯':'Cc1ccccc1',
-  'c6h5cl':'Clc1ccccc1', '氯苯':'Clc1ccccc1', 'c6h6o':'Oc1ccccc1', '苯酚':'Oc1ccccc1',
-  'ch4n2o':'NC(=O)N', '尿素':'NC(=O)N', 'c6h5no2':'[N+](=O)([O-])c1ccccc1', '硝基苯':'[N+](=O)([O-])c1ccccc1',
-  'c6h6':'c1ccccc1', '苯':'c1ccccc1', 'benzene':'c1ccccc1'
-};
+function normalizeQuery(value) {
+  return String(value || '').normalize('NFKC').trim().replace(/\s+/g, '').replace(/[−–]/g, '-');
+}
+function addAlias(index, key, compound) {
+  if (!key) return;
+  const entries = index.get(key) || [];
+  if (!entries.some(entry => entry.id === compound.id)) entries.push(compound);
+  index.set(key, entries);
+}
+async function loadCatalog() {
+  try {
+    const response = await fetch('compound-aliases.json');
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    if (data.version !== 1 || !Array.isArray(data.compounds)) throw new Error('對照表格式不正確');
+    catalog = data.compounds;
+    exactAliases = new Map();
+    foldedFormulaAliases = new Map();
+    nameAliases = new Map();
+    for (const compound of catalog) {
+      for (const alias of [compound.formula, ...(compound.condensed || [])]) {
+        const key = normalizeQuery(alias);
+        addAlias(exactAliases, key, compound);
+        if (key.length > 2) addAlias(foldedFormulaAliases, key.toLowerCase(), compound);
+      }
+      for (const alias of [compound.name, compound.english, ...(compound.names || [])]) {
+        addAlias(nameAliases, normalizeQuery(alias).toLowerCase(), compound);
+      }
+    }
+  } catch (error) {
+    console.error('本機化合物對照表載入失敗', error);
+  }
+}
+const catalogReady = loadCatalog();
 
 function options() {
   const widthCm = Number(document.querySelector('#widthCm').value);
@@ -85,6 +111,22 @@ function setLoading(loading) {
     ? '<span aria-hidden="true">...</span> \u7de8\u8b6f\u4e2d\u2026'
     : '<span aria-hidden="true">&#9654;</span> \u7de8\u8b6f SVG';
 }
+function clearPreview(message = '輸入結構或選擇範例後按下編譯。') {
+  lastSvg = '';
+  lastFormula = '';
+  lastSmiles = '';
+  lastRenderOptions = null;
+  previewStage.innerHTML = `<div class="empty-state"><strong>等待選擇結構</strong><p>${escapeHTML(message)}</p></div>`;
+  document.querySelector('#metaName').textContent = '—';
+  document.querySelector('#metaStereo').textContent = '—';
+  document.querySelector('#metaFormula').textContent = '—';
+  document.querySelector('#metaWeight').textContent = 'MW: —';
+  document.querySelector('#metaSize').textContent = '—';
+  downloadButton.disabled = true;
+  copyButton.disabled = true;
+  document.querySelector('#copyFormula').disabled = true;
+  document.querySelector('#invertChirality').disabled = true;
+}
 function escapeHTML(value) {
   return String(value).replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
 }
@@ -106,15 +148,68 @@ async function checkHealth() {
     setStatus(false, 'RDKit 載入失敗');
   }
 }
-function resolveStructure(value) {
+async function resolveCandidates(value) {
+  await catalogReady;
   const input = String(value || '').trim();
-  if (!input) return '';
-  const key = input.toLowerCase().replace(/[₀₁₂₃₄₅₆₇₈₉]/g, digit => '₀₁₂₃₄₅₆₇₈₉'.indexOf(digit)).replace(/\s+/g, '');
-  if (formulaAliases[key]) return formulaAliases[key];
-  const item = gallery.find(entry =>
-    [entry.name, entry.english, entry.smiles].some(label => String(label).toLowerCase() === key)
-  );
-  return item ? item.smiles : input;
+  const key = normalizeQuery(input);
+  if (!key) return [];
+  if (selectedChoice?.key === key) return [selectedChoice.compound];
+  const records = [
+    ...(exactAliases.get(key) || []),
+    ...(nameAliases.get(key.toLowerCase()) || [])
+  ];
+  if (key === key.toLowerCase() && key.length > 2) {
+    records.push(...(foldedFormulaAliases.get(key) || []));
+  }
+  const candidates = [...new Map(records.map(item => [item.id, item])).values()];
+  if (!candidates.length) {
+    const item = gallery.find(entry =>
+      [entry.name, entry.english, entry.smiles].some(label => normalizeQuery(label).toLowerCase() === key.toLowerCase())
+    );
+    if (item) candidates.push({id:`gallery:${item.smiles}`, name:item.name, smiles:item.smiles});
+  }
+  if (candidates.length && /^[\x00-\x7F]+$/.test(input)) {
+    const rdkit = await rdkitReady;
+    const parsed = rdkit.get_mol(input);
+    if (parsed) {
+      try {
+        const parsedSmiles = parsed.get_smiles();
+        const same = candidates.some(candidate => {
+          const molecule = rdkit.get_mol(candidate.smiles);
+          if (!molecule) return false;
+          try { return molecule.get_smiles() === parsedSmiles; }
+          finally { molecule.delete(); }
+        });
+        if (!same) candidates.push({id:`smiles:${input}`, name:`依 SMILES 解析：${input}`, smiles:input});
+      } finally { parsed.delete(); }
+    }
+  }
+  return candidates.length ? candidates : [{id:`raw:${input}`, name:'自訂分子', smiles:input}];
+}
+function needsFormulaConfirmation(value) {
+  const key = normalizeQuery(value);
+  if (selectedChoice?.key === key) return false;
+  const exact = exactAliases.get(key) || [];
+  if (exact.some(item => item.formula === key)) return true;
+  return key === key.toLowerCase() && key.length > 2 &&
+    (foldedFormulaAliases.get(key) || []).some(item => item.formula.toLowerCase() === key);
+}
+async function showCandidates(candidates, sequence) {
+  const images = await Promise.all(candidates.map(async candidate => {
+    try {
+      return (await drawMolecule(candidate.smiles, {width:160, height:110, transparent_background:true, use_element_colors:true})).svg;
+    } catch { return ''; }
+  }));
+  if (sequence !== renderSequence) return;
+  candidateList.innerHTML = `<strong>${candidates.length > 1 ? '找到多個可能結構，請選擇一個' : '找到一筆已收錄結構，請確認'}</strong>` +
+    '<p>以下列出本機已收錄或可由 SMILES 解析的候選；同分子式可能還有其他異構物。</p>' +
+    candidates.map((candidate, index) =>
+      `<button type="button" class="candidate-card" data-candidate="${index}">` +
+      `<span class="candidate-image">${images[index]}</span>` +
+      `<span><b>${escapeHTML(candidate.name)}</b><small>${escapeHTML(candidate.smiles)}</small></span></button>`
+    ).join('');
+  candidateList.hidden = false;
+  candidateList._candidates = candidates;
 }
 function stereoLabel(tags) {
   const values = [...(tags.CIP_atoms || []), ...(tags.CIP_bonds || [])]
@@ -148,10 +243,27 @@ async function render() {
   setError('');
   setLoading(true);
   try {
-    const structure = resolveStructure(structureInput.value);
-    if (!structure) throw new Error('\u8acb\u5148\u8f38\u5165\u5316\u5b78\u5f0f\u6216\u4fd7\u540d');
+    if (!structureInput.value.trim()) throw new Error('\u8acb\u5148\u8f38\u5165\u5316\u5b78\u5f0f\u6216\u4fd7\u540d');
+    const candidates = await resolveCandidates(structureInput.value);
+    if (sequence !== renderSequence) return false;
+    if (candidates.length > 1 || needsFormulaConfirmation(structureInput.value)) {
+      clearPreview('請從左側候選結構選擇一個。');
+      await showCandidates(candidates, sequence);
+      return false;
+    }
+    candidateList.hidden = true;
+    candidateList.innerHTML = '';
+    const candidate = candidates[0];
+    const structure = candidate.smiles;
     codeInput.value = itemCode({smiles: structure});
-    const data = await drawMolecule(structure, options());
+    let data;
+    try { data = await drawMolecule(structure, options()); }
+    catch (error) {
+      if (candidate.id.startsWith('raw:') && /SMILES 無法解析/.test(error.message)) {
+        throw new Error(`本機對照表未收錄「${structureInput.value.trim()}」，且無法當作 SMILES 解析；請選擇範例或輸入有效 SMILES。`);
+      }
+      throw error;
+    }
     if (sequence !== renderSequence) return false;
     baseSvg = data.svg;
     lastSvg = baseSvg;
@@ -163,7 +275,7 @@ async function render() {
     document.querySelector('#flipHorizontal').setAttribute('aria-pressed', String(flipX));
     document.querySelector('#flipVertical').setAttribute('aria-pressed', String(flipY));
     const galleryName = gallery.find(entry => entry.smiles === structure)?.name;
-    document.querySelector('#metaName').textContent = selectedName || galleryName || '自訂分子';
+    document.querySelector('#metaName').textContent = selectedName || (candidate.id.startsWith('raw:') ? '' : candidate.name) || galleryName || '自訂分子';
     document.querySelector('#metaStereo').textContent = stereoLabel(data.stereo_tags);
     document.querySelector('#metaFormula').innerHTML = formulaMarkup(data.formula);
     document.querySelector('#metaWeight').textContent = Number.isFinite(data.molecular_weight)
@@ -176,13 +288,16 @@ async function render() {
     document.querySelector('#invertChirality').disabled = !(data.stereo_tags.CIP_atoms?.length && /\[[^\]]*@@?[^\]]*\]/.test(structure));
     return true;
   } catch (error) {
-    if (sequence === renderSequence) setError(error.message);
+    if (sequence === renderSequence) {
+      clearPreview('請修正輸入後再編譯。');
+      setError(error.message);
+    }
     return false;
   } finally {
     if (sequence === renderSequence) setLoading(false);
   }
 }
-function loadCode(structure, name = '') { selectedName = name; structureInput.value = structure; render(); }
+function loadCode(structure, name = '') { selectedChoice = null; selectedName = name; structureInput.value = structure; render(); }
 function safeFilename(value, extension) {
   return String(value).replace(/[\\/:*?"<>|]/g, '_').replace(/\s+/g, '') + '.' + extension;
 }
@@ -263,8 +378,19 @@ async function loadGallery() {
 }
 
 document.querySelector('#renderButton').addEventListener('click', render);
+candidateList.addEventListener('click', event => {
+  const button = event.target.closest('[data-candidate]');
+  if (!button) return;
+  const compound = candidateList._candidates?.[Number(button.dataset.candidate)];
+  if (!compound) return;
+  selectedChoice = {key:normalizeQuery(structureInput.value), compound};
+  selectedName = compound.id.startsWith('smiles:') ? '' : compound.name;
+  render();
+});
 structureInput.addEventListener('input', () => {
+  selectedChoice = null;
   selectedName = '';
+  candidateList.hidden = true;
   downloadButton.disabled = true;
   copyButton.disabled = true;
   document.querySelector('#copyFormula').disabled = true;

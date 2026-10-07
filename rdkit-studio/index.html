@@ -36,7 +36,7 @@
           <div class="structure-entry">
             <label for="structureInput">輸入 SMILES、化學式或名稱</label>
             <input id="structureInput" type="text" autocomplete="off" placeholder="例如：CCO、C2H6O、乙醇、苯">
-            <small>精確結構請輸入 SMILES；單一化學式可能對應多種異構物。</small>
+            <small>可輸入常用名稱、示性式或 SMILES；分子式有多個已收錄結構時會請你選擇。</small>
           </div>
           <textarea id="codeInput" hidden aria-hidden="true"></textarea>
           <div class="quick-row">
@@ -59,6 +59,7 @@
             <span class="shortcut">輸入後按此按鈕編譯</span>
           </div>
           <div id="errorBox" class="error-box" role="alert"></div>
+          <div id="candidateList" class="candidate-list" aria-label="結構候選" hidden></div>
         </section>
 
         <section class="style-strip" aria-label="圖像樣式">
