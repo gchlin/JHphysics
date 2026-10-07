@@ -333,6 +333,25 @@ function svgForExport() {
   root.setAttribute('height', `${lastRenderOptions.height_cm.toFixed(2)}cm`);
   return new XMLSerializer().serializeToString(root);
 }
+async function pngClipboardItem(blob) {
+  const dataUrl = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error('無法準備圖片剪貼簿。'));
+    reader.readAsDataURL(blob);
+  });
+  const widthCm = lastRenderOptions.width_cm.toFixed(2);
+  const heightCm = lastRenderOptions.height_cm.toFixed(2);
+  // Office may choose HTML when PNG clipboard metadata is removed by the browser.
+  // Pixel attributes are a 96-DPI fallback if the destination ignores CSS cm units.
+  const widthPx = Math.round(lastRenderOptions.width_cm / 2.54 * 96);
+  const heightPx = Math.round(lastRenderOptions.height_cm / 2.54 * 96);
+  const html = `<html><body><!--StartFragment--><img src="${dataUrl}" width="${widthPx}" height="${heightPx}" style="width:${widthCm}cm;height:${heightCm}cm" alt="化學結構圖"><!--EndFragment--></body></html>`;
+  return new ClipboardItem({
+    'text/html': new Blob([html], {type:'text/html'}),
+    'image/png': blob
+  });
+}
 let styleTimer = null;
 function scheduleStyleRender() {
   clearTimeout(styleTimer);
@@ -564,7 +583,7 @@ let outputFormat = 'png';
 function updateFormatLabels() {
   const png = outputFormat === 'png';
   copyButton.textContent = '⧉';
-  copyButton.title = png ? '複製 PNG' : '複製 SVG 原始碼';
+  copyButton.title = png ? '複製 PNG（包含文件尺寸）' : '複製 SVG 原始碼';
   copyButton.setAttribute('aria-label', copyButton.title);
   downloadButton.textContent = '↓ 下載';
   downloadButton.title = png ? '下載 PNG' : '下載 SVG';
@@ -616,8 +635,8 @@ copyButton.addEventListener('click', async () => {
   }
   try {
     const blob = await svgToPng(svgForExport(), lastRenderOptions.width_cm, lastRenderOptions.height_cm, Number(document.querySelector('#dpiInput').value));
-    await navigator.clipboard.write([new ClipboardItem({'image/png': blob})]);
-    toast('PNG \u5df2\u8907\u88fd');
+    await navigator.clipboard.write([await pngClipboardItem(blob)]);
+    toast(`已複製 ${lastRenderOptions.width_cm.toFixed(2)} × ${lastRenderOptions.height_cm.toFixed(2)} cm 圖片`);
   } catch (error) {
     toast(error.message || '瀏覽器不支援 PNG 剪貼');
   }
