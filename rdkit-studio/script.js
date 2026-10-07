@@ -107,9 +107,7 @@ function setStatus(online, text) {
 }
 function setLoading(loading) {
   renderButton.disabled = loading;
-  renderButton.innerHTML = loading
-    ? '<span aria-hidden="true">...</span> \u7de8\u8b6f\u4e2d\u2026'
-    : '<span aria-hidden="true">&#9654;</span> \u7de8\u8b6f SVG';
+  renderButton.textContent = loading ? '繪製中…' : '繪製';
 }
 function clearPreview(message = '輸入結構或選擇範例後按下編譯。') {
   lastSvg = '';
@@ -514,8 +512,12 @@ document.querySelector('#copyFormula').addEventListener('click', async () => {
 let outputFormat = 'png';
 function updateFormatLabels() {
   const png = outputFormat === 'png';
-  copyButton.innerHTML = png ? '&#128203; 複製 PNG' : '&#128203; 複製 SVG 原始碼';
-  downloadButton.innerHTML = png ? '&#11015; 下載 PNG' : '&#11015; 下載 SVG';
+  copyButton.textContent = '⧉';
+  copyButton.title = png ? '複製 PNG' : '複製 SVG 原始碼';
+  copyButton.setAttribute('aria-label', copyButton.title);
+  downloadButton.textContent = '↓ 下載';
+  downloadButton.title = png ? '下載 PNG' : '下載 SVG';
+  downloadButton.setAttribute('aria-label', downloadButton.title);
 }
 document.querySelectorAll('[data-format]').forEach(button => button.addEventListener('click', () => {
   outputFormat = button.dataset.format;
@@ -587,6 +589,7 @@ function closeDrawer() {
   drawer.classList.remove('open');
   backdrop.classList.remove('open');
   drawer.setAttribute('aria-hidden', 'true');
+  document.body.classList.remove('drawer-open');
 }
 function openDrawer() {
   renderCategoryFilter();
@@ -594,10 +597,14 @@ function openDrawer() {
   drawer.classList.add('open');
   backdrop.classList.add('open');
   drawer.setAttribute('aria-hidden', 'false');
+  document.body.classList.add('drawer-open');
 }
 document.querySelector('#openGallery').addEventListener('click', openDrawer);
 document.querySelector('#closeGallery').addEventListener('click', closeDrawer);
 backdrop.addEventListener('click', closeDrawer);
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && drawer.classList.contains('open')) closeDrawer();
+});
 
 structureInput.value = '';
 document.querySelector('#dpiInput').value = '300';

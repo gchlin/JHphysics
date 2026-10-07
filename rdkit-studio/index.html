@@ -21,11 +21,11 @@
     <header class="topbar">
       <div class="brand">
         <span class="brand-mark" aria-hidden="true">&#9883;</span>
-        <div><strong>化學結構圖工作台</strong><small>高中化學&#183;教學工具</small></div>
+        <div><strong>化學結構圖</strong></div>
       </div>
       <div class="top-actions">
         <div class="status-wrap"><span id="statusDot" class="status-dot"></span><span id="statusText">RDKit 載入中</span></div>
-        <button id="openGallery" class="gallery-button" type="button">&#x7bc4;&#x4f8b;&#x5eab;</button>
+        <button id="openGallery" class="gallery-button" type="button" title="開啟範例庫">▦ 範例庫</button>
       </div>
     </header>
 
@@ -33,10 +33,13 @@
       <section class="workspace-grid" aria-label="輸入與預覽工作區">
         <div class="editor-column">
         <section class="panel editor-panel">
+          <div class="editor-heading"><strong>結構輸入</strong><span>名稱 · 示性式 · SMILES</span></div>
           <div class="structure-entry">
-            <label for="structureInput">輸入 SMILES、化學式或名稱</label>
-            <input id="structureInput" type="text" autocomplete="off" placeholder="例如：CCO、C2H6O、乙醇、苯">
-            <small>可輸入常用名稱、示性式或 SMILES；分子式有多個已收錄結構時會請你選擇。</small>
+            <label for="structureInput" class="sr-only">輸入 SMILES、化學式或名稱</label>
+            <div class="input-line">
+              <input id="structureInput" type="text" autocomplete="off" placeholder="乙醇 / CH3CH2OH / CCO">
+              <button id="renderButton" class="primary-button" type="button" disabled>繪製</button>
+            </div>
           </div>
           <textarea id="codeInput" hidden aria-hidden="true"></textarea>
           <div class="quick-row">
@@ -54,59 +57,56 @@
             <button type="button" data-smiles="O=C1CC[C@H](N2C(=O)c3ccccc3C2=O)C(=O)N1" data-label="手性沙利竇邁">手性沙利竇邁</button>
             <button type="button" data-smiles="F/C=C/F" data-label="(E)-二氟乙烯">(E)-二氟乙烯</button>
           </div>
-          <div class="action-row">
-            <button id="renderButton" class="primary-button" type="button" disabled><span aria-hidden="true">&#9654;</span> 編譯 SVG</button>
-            <span class="shortcut">輸入後按此按鈕編譯</span>
-          </div>
           <div id="errorBox" class="error-box" role="alert"></div>
           <div id="candidateList" class="candidate-list" aria-label="結構候選" hidden></div>
         </section>
 
         <section class="style-strip" aria-label="圖像樣式">
-          <div class="style-group"><strong>樣式預設</strong><div class="segmented" role="group" aria-label="樣式預設">
+          <div class="style-title"><strong>圖像樣式</strong><span>即時套用</span></div>
+          <div class="control-row"><div class="style-group"><strong>預設</strong><div class="segmented" role="group" aria-label="樣式預設">
             <button type="button" data-preset="standard" aria-pressed="true">標準</button>
             <button type="button" data-preset="acs" aria-pressed="false" title="ACS 圖稿規格的近似預設；請依期刊要求檢查最終輸出">ACS 參考</button>
             <button type="button" data-preset="teaching" aria-pressed="false">教學簡化</button>
           </div></div>
-          <div class="style-group beauty-group"><strong>結構排版</strong><label class="mini-switch" title="使用 CoordGen 產生 2D 結構座標"><input id="coordGenInput" type="checkbox" checked><i></i> 結構美化</label></div>
-          <div class="style-group"><strong>顏色</strong><div class="segmented" role="group" aria-label="顏色模式">
+          <div class="style-group beauty-group"><strong>排版</strong><label class="mini-switch" title="使用 CoordGen 產生 2D 結構座標"><input id="coordGenInput" type="checkbox" checked><i></i> 美化</label></div></div>
+          <div class="control-row"><div class="style-group"><strong>顏色</strong><div class="segmented" role="group" aria-label="顏色模式">
             <button type="button" data-color="color" aria-pressed="true">彩色</button>
             <button type="button" data-color="mono" aria-pressed="false">黑白</button>
           </div></div>
-          <div class="style-group"><strong>氫原子</strong><div class="segmented" role="group" aria-label="氫原子顯示">
+          <div class="style-group"><strong>鍵粗</strong><div class="segmented" role="group" aria-label="鍵粗細">
+            <button type="button" data-bond="1.0" aria-pressed="false">細</button>
+            <button type="button" data-bond="1.4" aria-pressed="true">標準</button>
+            <button type="button" data-bond="2.0" aria-pressed="false">粗</button>
+          </div></div></div>
+          <div class="control-row"><div class="style-group"><strong>氫</strong><div class="segmented" role="group" aria-label="氫原子顯示">
             <button type="button" data-hydrogens="implicit" aria-pressed="false">隱藏</button>
             <button type="button" data-hydrogens="hetero" aria-pressed="true">雜原子</button>
             <button type="button" data-hydrogens="all" aria-pressed="false">全部</button>
           </div></div>
-          <div class="style-group"><strong>碳原子</strong><div class="segmented" role="group" aria-label="碳原子顯示">
+          <div class="style-group"><strong>碳</strong><div class="segmented" role="group" aria-label="碳原子顯示">
             <button type="button" data-carbons="hide" aria-pressed="true" title="隱藏碳符號，保留骨架線">隱藏</button>
             <button type="button" data-carbons="show" aria-pressed="false">顯示</button>
-          </div></div>
-          <div class="style-group"><strong>立體鍵表示</strong><div class="segmented" role="group" aria-label="立體鍵與 R/S、E/Z 標註">
+          </div></div></div>
+          <div class="control-row"><div class="style-group"><strong>立體鍵</strong><div class="segmented" role="group" aria-label="立體鍵與 R/S、E/Z 標註">
             <button type="button" data-stereo="wedge" aria-pressed="true" title="用實心楔形與虛線楔形表示立體方向">楔形鍵</button>
-            <button type="button" data-stereo="both" aria-pressed="false" title="保留楔形鍵，並加上 R/S、E/Z 標註">楔形＋標註</button>
-            <button type="button" data-stereo="labels" aria-pressed="false" title="將楔形鍵改為普通線段，以 R/S、E/Z 文字標示立體組態">文字標註</button>
+            <button type="button" data-stereo="both" aria-pressed="false" title="保留楔形鍵，並加上 R/S、E/Z 標註">楔形＋字</button>
+            <button type="button" data-stereo="labels" aria-pressed="false" title="將楔形鍵改為普通線段，以 R/S、E/Z 文字標示立體組態">文字</button>
           </div></div>
-          <div class="style-group"><strong>末端甲基</strong><div class="segmented" role="group" aria-label="末端甲基顯示">
-            <button type="button" data-methyl="skeletal" aria-pressed="true">骨架折線</button>
-            <button type="button" data-methyl="explicit" aria-pressed="false">顯式 CH₃</button>
-          </div></div>
-          <div class="style-group"><strong>鍵粗細</strong><div class="segmented" role="group" aria-label="鍵粗細">
-            <button type="button" data-bond="1.0" aria-pressed="false">細</button>
-            <button type="button" data-bond="1.4" aria-pressed="true">標準</button>
-            <button type="button" data-bond="2.0" aria-pressed="false">加粗</button>
-          </div></div>
+          <div class="style-group"><strong>甲基</strong><div class="segmented" role="group" aria-label="末端甲基顯示">
+            <button type="button" data-methyl="skeletal" aria-pressed="true">骨架</button>
+            <button type="button" data-methyl="explicit" aria-pressed="false">CH₃</button>
+          </div></div></div>
           <input id="bondInput" type="hidden" value="1.4"><output id="bondOutput" hidden>1.4</output>
           <input id="colorInput" type="checkbox" checked hidden>
           <input id="carbonInput" type="checkbox" hidden>
-          <label class="mini-switch"><input id="condensedInput" type="checkbox"><i></i> 示性式</label>
-          <label class="mini-switch"><input id="indexInput" type="checkbox"><i></i> 原子編號</label>
+          <div class="control-row extra-row"><strong>附加</strong><label class="mini-switch"><input id="condensedInput" type="checkbox"><i></i> 示性式</label>
+          <label class="mini-switch"><input id="indexInput" type="checkbox"><i></i> 原子編號</label></div>
         </section>
         </div>
 
         <section class="panel preview-panel">
           <div class="panel-head">
-            <div><strong>輸出預覽</strong></div>
+            <div><strong>預覽</strong></div>
             <div class="output-actions">
               <div class="segmented" role="group" aria-label="輸出格式">
                 <button type="button" data-format="png" aria-pressed="true">PNG</button>
@@ -117,19 +117,19 @@
                 <button type="button" data-dpi="600" aria-pressed="false">600 DPI</button>
               </div>
               <input id="dpiInput" type="hidden" value="300">
-              <button id="copyOutput" class="icon-button" type="button" disabled>&#128203; 複製 PNG</button>
-              <button id="downloadOutput" class="download-button" type="button" disabled>&#11015; 下載 PNG</button>
+              <button id="copyOutput" class="icon-button" type="button" title="複製 PNG" aria-label="複製 PNG" disabled>⧉</button>
+              <button id="downloadOutput" class="download-button" type="button" title="下載 PNG" aria-label="下載 PNG" disabled>↓ 下載</button>
             </div>
           </div>
           <div class="output-settings" aria-label="貼入文件尺寸與背景">
-            <div class="style-group"><strong>插入文件寬度</strong><div class="segmented" role="group" aria-label="插入文件寬度">
-              <button type="button" data-width="4" aria-pressed="false">小 4 cm</button>
-              <button type="button" data-width="7" aria-pressed="true">中 7 cm</button>
-              <button type="button" data-width="10" aria-pressed="false">大 10 cm</button>
+            <div class="style-group"><strong>寬度</strong><div class="segmented" role="group" aria-label="插入文件寬度">
+              <button type="button" data-width="4" aria-pressed="false">4</button>
+              <button type="button" data-width="7" aria-pressed="true">7</button>
+              <button type="button" data-width="10" aria-pressed="false">10</button>
             </div></div>
-            <label class="custom-width" for="widthCm">自訂 <input id="widthCm" type="number" min="3" max="12" step="0.5" value="7"> cm</label>
-            <span id="autoHeightHint" class="size-hint">高度依結構比例自動調整</span>
-            <div class="style-group background-choice"><strong>輸出背景</strong><div class="segmented" role="group" aria-label="輸出背景">
+            <label class="custom-width" for="widthCm"><input id="widthCm" type="number" min="3" max="12" step="0.5" value="7" aria-label="自訂寬度"> cm</label>
+            <span id="autoHeightHint" class="size-hint sr-only">高度依結構比例自動調整</span>
+            <div class="style-group background-choice"><strong>背景</strong><div class="segmented" role="group" aria-label="輸出背景">
               <button type="button" data-background="transparent" aria-pressed="true">透明</button>
               <button type="button" data-background="white" aria-pressed="false">白色</button>
             </div></div>
@@ -137,13 +137,13 @@
           </div>
           <div class="transform-toolbar" role="group" aria-label="排版與手性操作">
             <span>排版</span>
-            <button id="rotateLeft" type="button" title="逆時針旋轉 90 度">↺ 左轉 90°</button>
-            <button id="rotateRight" type="button" title="順時針旋轉 90 度">↻ 右轉 90°</button>
-            <button id="flipHorizontal" type="button" aria-pressed="false">↔ 水平鏡射</button>
-            <button id="flipVertical" type="button" aria-pressed="false">↕ 垂直鏡射</button>
-            <button id="resetTransform" type="button">重設</button>
+            <button id="rotateLeft" type="button" title="左轉 90°" aria-label="左轉 90°">↺ 90°</button>
+            <button id="rotateRight" type="button" title="右轉 90°" aria-label="右轉 90°">↻ 90°</button>
+            <button id="flipHorizontal" type="button" title="水平鏡射" aria-label="水平鏡射" aria-pressed="false">↔</button>
+            <button id="flipVertical" type="button" title="垂直鏡射" aria-label="垂直鏡射" aria-pressed="false">↕</button>
+            <button id="resetTransform" type="button" title="重設排版">重設</button>
             <i aria-hidden="true"></i>
-            <button id="invertChirality" class="chirality-action" type="button" title="產生對映異構物，將所有已指定的 R/S 手性中心反轉；E/Z 不變" disabled>⇌ 手性反轉 (R↔S)</button>
+            <button id="invertChirality" class="chirality-action" type="button" title="產生對映異構物，將所有已指定的 R/S 手性中心反轉；E/Z 不變" disabled>⇌ R↔S</button>
           </div>
           <div id="previewStage" class="preview-stage">
             <div class="empty-state"><div class="orbit" aria-hidden="true">&#9883;</div><strong>等待編譯</strong><p>輸入結構或選擇範例後按下編譯。</p></div>
