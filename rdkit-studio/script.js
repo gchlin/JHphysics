@@ -20,6 +20,7 @@ let explicitMethyl = false;
 let gallery = [];
 let selectedSubject = '\u5168\u90e8';
 let selectedCategory = '\u5168\u90e8';
+let selectedName = '';
 
 const snippets = {
   benzene: 'c1ccccc1',
@@ -115,6 +116,33 @@ function resolveStructure(value) {
   );
   return item ? item.smiles : input;
 }
+function stereoLabel(tags) {
+  const values = [...(tags.CIP_atoms || []), ...(tags.CIP_bonds || [])]
+    .map(item => item.at(-1)).filter(value => typeof value === 'string')
+    .map(value => value.replace(/^\((.*)\)$/, '$1'));
+  return values.length ? [...new Set(values)].join(' · ') : '無指定';
+}
+function formulaMarkup(formula) {
+  return escapeHTML(formula).replace(/(\d+)/g, '<sub>$1</sub>');
+}
+function invertedSmiles(smiles) {
+  let count = 0;
+  const inverted = smiles.replace(/\[([^\]]+)\]/g, (bracket, contents) => {
+    if (!contents.includes('@')) return bracket;
+    if (/@(?:TH|AL|SP|TB|OH)\d/i.test(contents)) throw new Error('目前只支援反轉一般四面體手性中心。');
+    const changed = contents.replace(/@@?/g, mark => {
+      count += 1;
+      return mark === '@' ? '@@' : '@';
+    });
+    return `[${changed}]`;
+  });
+  if (!count) throw new Error('這個結構沒有可反轉的 R/S 手性中心。');
+  return inverted;
+}
+function invertedName(name) {
+  return name.replace(/^\((R|S)\)/, (_, sense) => sense === 'R' ? '(S)' : '(R)')
+    .replace(/^([LD])-/, (_, sense) => sense === 'L' ? 'D-' : 'L-');
+}
 async function render() {
   const sequence = ++renderSequence;
   setError('');
@@ -134,12 +162,18 @@ async function render() {
     previewStage.classList.toggle('transparent', data.options.transparent_background);
     document.querySelector('#flipHorizontal').setAttribute('aria-pressed', String(flipX));
     document.querySelector('#flipVertical').setAttribute('aria-pressed', String(flipY));
-    document.querySelector('#metaFormula').textContent = data.formula;
-    document.querySelector('#metaAtoms').textContent = '\u539f\u5b50\u6578 ' + data.atom_count;
+    const galleryName = gallery.find(entry => entry.smiles === structure)?.name;
+    document.querySelector('#metaName').textContent = selectedName || galleryName || '自訂分子';
+    document.querySelector('#metaStereo').textContent = stereoLabel(data.stereo_tags);
+    document.querySelector('#metaFormula').innerHTML = formulaMarkup(data.formula);
+    document.querySelector('#metaWeight').textContent = Number.isFinite(data.molecular_weight)
+      ? `MW: ${data.molecular_weight.toFixed(2)} g/mol` : 'MW: —';
     document.querySelector('#metaSize').textContent = `${data.options.width_cm.toFixed(2)} x ${data.options.height_cm.toFixed(2)} cm`;
     document.querySelector('#autoHeightHint').textContent = `自動高度約 ${data.options.height_cm.toFixed(1)} cm`;
     downloadButton.disabled = false;
     copyButton.disabled = false;
+    document.querySelector('#copyFormula').disabled = false;
+    document.querySelector('#invertChirality').disabled = !(data.stereo_tags.CIP_atoms?.length && /\[[^\]]*@@?[^\]]*\]/.test(structure));
     return true;
   } catch (error) {
     if (sequence === renderSequence) setError(error.message);
@@ -148,7 +182,7 @@ async function render() {
     if (sequence === renderSequence) setLoading(false);
   }
 }
-function loadCode(structure) { structureInput.value = structure; render(); }
+function loadCode(structure, name = '') { selectedName = name; structureInput.value = structure; render(); }
 function safeFilename(value, extension) {
   return String(value).replace(/[\\/:*?"<>|]/g, '_').replace(/\s+/g, '') + '.' + extension;
 }
@@ -230,8 +264,11 @@ async function loadGallery() {
 
 document.querySelector('#renderButton').addEventListener('click', render);
 structureInput.addEventListener('input', () => {
+  selectedName = '';
   downloadButton.disabled = true;
   copyButton.disabled = true;
+  document.querySelector('#copyFormula').disabled = true;
+  document.querySelector('#invertChirality').disabled = true;
 });
 structureInput.addEventListener('keydown', event => {
   if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
@@ -315,6 +352,39 @@ document.querySelector('#flipVertical').addEventListener('click', async () => {
   if (await refreshTransform()) toast(flipY ? '已垂直翻轉；已驗證分子組態不變。' : '已取消垂直翻轉。');
 });
 document.querySelector('#resetTransform').addEventListener('click', () => { rotation = 0; flipX = false; flipY = false; render(); });
+document.querySelector('#invertChirality').addEventListener('click', async () => {
+  try {
+    const before = lastSmiles;
+    const next = invertedSmiles(before);
+    const rdkit = await rdkitReady;
+    const original = rdkit.get_mol(before);
+    const mol = rdkit.get_mol(next);
+    if (!original || !mol) {
+      original?.delete();
+      mol?.delete();
+      throw new Error('反轉後的結構無法解析。');
+    }
+    try {
+      const originalTags = JSON.parse(original.get_stereo_tags());
+      const tags = JSON.parse(mol.get_stereo_tags());
+      const beforeAtoms = new Map((originalTags.CIP_atoms || []).map(([index, sense]) => [index, sense]));
+      const afterAtoms = new Map((tags.CIP_atoms || []).map(([index, sense]) => [index, sense]));
+      if (!beforeAtoms.size || beforeAtoms.size !== afterAtoms.size ||
+          [...beforeAtoms].some(([index, sense]) => afterAtoms.get(index) !== (sense === '(R)' ? '(S)' : sense === '(S)' ? '(R)' : null)) ||
+          JSON.stringify(originalTags.CIP_bonds || []) !== JSON.stringify(tags.CIP_bonds || [])) {
+        throw new Error('無法確認所有 R/S 皆已反轉且 E/Z 保持不變，已停止操作。');
+      }
+    } finally { original.delete(); mol.delete(); }
+    selectedName = invertedName(selectedName);
+    structureInput.value = next;
+    if (await render()) toast('已產生對映異構物；R/S 手性中心已反轉，E/Z 保持不變。');
+  } catch (error) { setError(error.message); }
+});
+document.querySelector('#copyFormula').addEventListener('click', async () => {
+  if (!lastFormula) return;
+  try { await navigator.clipboard.writeText(lastFormula); toast('分子式已複製'); }
+  catch { toast('瀏覽器無法複製分子式'); }
+});
 let outputFormat = 'png';
 function updateFormatLabels() {
   const png = outputFormat === 'png';

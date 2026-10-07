@@ -227,6 +227,8 @@ async function drawMolecule(smiles, options = {}) {
   try {
     const atoms = moleculeAtoms(mol);
     const formula = moleculeFormula(atoms);
+    const descriptors = JSON.parse(mol.get_descriptors());
+    const stereoTags = JSON.parse(mol.get_stereo_tags());
     if (options.show_hydrogens) mol.add_hs_in_place();
     mol.set_new_coords(!!options.use_coordgen);
     const molblock = transformedMolblock(mol.get_molblock(), options);
@@ -246,7 +248,7 @@ async function drawMolecule(smiles, options = {}) {
       outputOptions.height = fitted.heightPx;
       outputOptions.height_cm = Math.round(fitted.heightPx / 118.11 * 100) / 100;
     }
-    return {svg: fitted.svg, formula, smiles, atom_count: mol.get_num_atoms(), options: outputOptions};
+    return {svg: fitted.svg, formula, molecular_weight: descriptors.amw, stereo_tags: stereoTags, smiles, atom_count: mol.get_num_atoms(), options: outputOptions};
   } finally {
     if (transformed) transformed.delete();
     mol.delete();

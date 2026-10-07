@@ -134,19 +134,25 @@
             </div></div>
             <input id="transparentInput" type="checkbox" checked hidden>
           </div>
-          <div class="transform-toolbar" role="group" aria-label="旋轉與翻轉">
+          <div class="transform-toolbar" role="group" aria-label="排版與手性操作">
             <span>排版</span>
             <button id="rotateLeft" type="button" title="逆時針旋轉 90 度">↺ 左轉 90°</button>
             <button id="rotateRight" type="button" title="順時針旋轉 90 度">↻ 右轉 90°</button>
-            <i aria-hidden="true"></i>
-            <button id="flipHorizontal" type="button" aria-pressed="false">↔ 水平翻轉</button>
-            <button id="flipVertical" type="button" aria-pressed="false">↕ 垂直翻轉</button>
+            <button id="flipHorizontal" type="button" aria-pressed="false">↔ 水平鏡射</button>
+            <button id="flipVertical" type="button" aria-pressed="false">↕ 垂直鏡射</button>
             <button id="resetTransform" type="button">重設</button>
+            <i aria-hidden="true"></i>
+            <button id="invertChirality" class="chirality-action" type="button" title="產生對映異構物，將所有已指定的 R/S 手性中心反轉；E/Z 不變" disabled>⇌ 手性反轉 (R↔S)</button>
           </div>
           <div id="previewStage" class="preview-stage">
             <div class="empty-state"><div class="orbit" aria-hidden="true">&#9883;</div><strong>等待編譯</strong><p>輸入結構或選擇範例後按下編譯。</p></div>
           </div>
-          <div class="meta-row"><span id="metaFormula">—</span><span id="metaAtoms">原子數 —</span><span id="metaSize">—</span></div>
+          <div class="meta-row" aria-label="分子資訊">
+            <div class="meta-identity"><strong id="metaName">—</strong><span id="metaStereo" class="stereo-badge">—</span></div>
+            <button id="copyFormula" class="formula-copy" type="button" title="複製分子式" aria-label="複製分子式" disabled><span id="metaFormula">—</span><span aria-hidden="true"> ⧉</span></button>
+            <span id="metaWeight">MW: —</span>
+            <span id="metaSize">—</span>
+          </div>
         </section>
       </section>
 

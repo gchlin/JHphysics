@@ -159,3 +159,23 @@ main { display:block; }
 @media (max-width:900px) {
   .workspace-grid { grid-template-columns:1fr; }
 }
+
+/* Canvas controls and chemical information stay attached to the preview. */
+.transform-toolbar { padding:2px 0 9px; margin:0; border-bottom:1px solid var(--line); }
+.transform-toolbar .chirality-action { margin-left:auto; border-color:#d8bfa1; color:#825b2f; background:#fffaf2; font-weight:700; }
+.transform-toolbar .chirality-action:hover:not(:disabled) { border-color:#d6ad7f; background:#fff1dd; color:#825b2f; }
+.transform-toolbar button:disabled { opacity:.45; cursor:not-allowed; }
+.preview-stage { margin-top:9px; }
+.meta-row { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px 12px; margin-top:0; padding:11px 3px 2px; border-top:1px solid var(--line); color:var(--ink); font:11px 'DM Sans','Noto Sans TC',sans-serif; }
+.meta-identity { display:inline-flex; align-items:center; gap:7px; min-width:0; }
+.meta-identity strong { font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.stereo-badge { display:inline-flex; align-items:center; min-height:21px; padding:2px 6px; border:1px solid #cce3d7; border-radius:5px; background:#f1f8f3; color:var(--teal); font:10px 'DM Mono',monospace; white-space:nowrap; }
+.formula-copy { border:1px solid var(--line); border-radius:6px; padding:4px 7px; background:#fff; color:var(--ink); font:11px 'DM Mono',monospace; white-space:nowrap; }
+.formula-copy:hover:not(:disabled) { border-color:#9bcdbd; color:var(--teal); }
+.formula-copy:disabled { opacity:.55; cursor:not-allowed; }
+.formula-copy sub { font-size:8px; line-height:0; }
+#metaWeight,#metaSize { white-space:nowrap; }
+@media (max-width:560px) {
+  .transform-toolbar .chirality-action { margin-left:0; }
+  .meta-row { justify-content:flex-start; }
+}
