@@ -55,44 +55,43 @@
 
         <section class="style-strip" aria-label="圖像樣式">
           <div class="style-title"><strong>圖像樣式</strong><span>即時套用</span></div>
-          <div class="control-row"><div class="style-group"><strong>預設</strong><div class="segmented" role="group" aria-label="樣式預設">
+          <div class="control-row"><div class="style-group" title="試用苯，比較標準、ACS 參考與教學簡化的線條與字體"><strong>預設</strong><div class="segmented" role="group" aria-label="樣式預設">
             <button type="button" data-preset="standard" aria-pressed="true">標準</button>
             <button type="button" data-preset="acs" aria-pressed="false" title="ACS 圖稿規格的近似預設；請依期刊要求檢查最終輸出">ACS 參考</button>
             <button type="button" data-preset="teaching" aria-pressed="false">教學簡化</button>
           </div></div>
-          <div class="style-group beauty-group"><strong>排版</strong><label class="mini-switch" title="使用 CoordGen 產生 2D 結構座標"><input id="coordGenInput" type="checkbox" checked><i></i> 美化</label></div></div>
-          <div class="control-row"><div class="style-group"><strong>顏色</strong><div class="segmented" role="group" aria-label="顏色模式">
+          <div class="style-group beauty-group"><strong>排版</strong><label class="mini-switch" title="使用咖啡因比較 CoordGen 結構美化前後的座標排版"><input id="coordGenInput" type="checkbox" checked><i></i> 美化</label></div></div>
+          <div class="control-row"><div class="style-group" title="試用咖啡因，比較氧、氮原子的彩色與純黑標示"><strong>顏色</strong><div class="segmented" role="group" aria-label="顏色模式">
             <button type="button" data-color="color" aria-pressed="true">彩色</button>
             <button type="button" data-color="mono" aria-pressed="false">黑白</button>
           </div></div>
-          <div class="style-group"><strong>鍵粗</strong><div class="segmented" role="group" aria-label="鍵粗細">
+          <div class="style-group" title="試用苯，比較化學鍵的細、標準與加粗線條"><strong>鍵粗</strong><div class="segmented" role="group" aria-label="鍵粗細">
             <button type="button" data-bond="1.0" aria-pressed="false">細</button>
             <button type="button" data-bond="1.4" aria-pressed="true">標準</button>
             <button type="button" data-bond="2.0" aria-pressed="false">粗</button>
           </div></div></div>
-          <div class="control-row"><div class="style-group"><strong>氫</strong><div class="segmented" role="group" aria-label="氫原子顯示">
+          <div class="control-row"><div class="style-group" title="試用 (S)-乳酸，比較羥基氫與所有氫原子的顯示方式"><strong>氫</strong><div class="segmented" role="group" aria-label="氫原子顯示">
             <button type="button" data-hydrogens="implicit" aria-pressed="false">隱藏</button>
             <button type="button" data-hydrogens="hetero" aria-pressed="true">雜原子</button>
             <button type="button" data-hydrogens="all" aria-pressed="false">全部</button>
           </div></div>
-          <div class="style-group"><strong>碳</strong><div class="segmented" role="group" aria-label="碳原子顯示">
+          <div class="style-group" title="試用苯，比較骨架線與明示 C 原子"><strong>碳</strong><div class="segmented" role="group" aria-label="碳原子顯示">
             <button type="button" data-carbons="hide" aria-pressed="true" title="隱藏碳符號，保留骨架線">隱藏</button>
             <button type="button" data-carbons="show" aria-pressed="false">顯示</button>
           </div></div></div>
           <div class="control-row"><div class="style-group"><strong>立體鍵</strong><div class="segmented" role="group" aria-label="立體鍵與 R/S、E/Z 標註">
-            <button type="button" data-stereo="wedge" aria-pressed="true" title="用實心楔形與虛線楔形表示立體方向">楔形鍵</button>
-            <button type="button" data-stereo="both" aria-pressed="false" title="保留楔形鍵，並加上 R/S、E/Z 標註">楔形＋字</button>
-            <button type="button" data-stereo="labels" aria-pressed="false" title="將楔形鍵改為普通線段，以 R/S、E/Z 文字標示立體組態">文字</button>
+            <button type="button" data-stereo="wedge" aria-pressed="true" title="試用 (S)-乳酸：以實心與虛線楔形鍵表示立體方向">楔形鍵</button>
+            <button type="button" data-stereo="both" aria-pressed="false" title="試用 (S)-乳酸：同時顯示楔形鍵與 R/S 標註">楔形＋字</button>
+            <button type="button" data-stereo="labels" aria-pressed="false" title="試用 (S)-乳酸：以 R/S 文字取代楔形鍵">文字</button>
           </div></div>
-          <div class="style-group"><strong>甲基</strong><div class="segmented" role="group" aria-label="末端甲基顯示">
+          <div class="style-group" title="試用 (S)-乳酸，比較骨架末端與 CH₃ 標籤"><strong>甲基</strong><div class="segmented" role="group" aria-label="末端甲基顯示">
             <button type="button" data-methyl="skeletal" aria-pressed="true">骨架</button>
             <button type="button" data-methyl="explicit" aria-pressed="false">CH₃</button>
           </div></div></div>
           <input id="bondInput" type="hidden" value="1.4"><output id="bondOutput" hidden>1.4</output>
           <input id="colorInput" type="checkbox" checked hidden>
           <input id="carbonInput" type="checkbox" hidden>
-          <div class="control-row extra-row"><strong>附加</strong><label class="mini-switch"><input id="condensedInput" type="checkbox"><i></i> 示性式</label>
-          <label class="mini-switch"><input id="indexInput" type="checkbox"><i></i> 原子編號</label></div>
+          <div class="control-row extra-row"><strong>附加</strong><label class="mini-switch" title="試用咖啡因，在原子旁標出編號"><input id="indexInput" type="checkbox"><i></i> 原子編號</label></div>
         </section>
         </div>
 

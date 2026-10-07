@@ -110,7 +110,7 @@ function drawingOptions(atoms, options) {
     height: Math.max(180, Math.min(3000, options.height || 420)),
     bondLineWidth: options.bond_line_width || 1.4,
     addAtomIndices: !!options.add_atom_indices,
-    explicitMethyl: !options.show_hydrogens && !!(options.explicit_methyl || options.show_carbons || options.condensed_formula),
+    explicitMethyl: !options.show_hydrogens && !!(options.explicit_methyl || options.show_carbons),
     addStereoAnnotation: !!options.add_stereo_annotation,
     wedgeBonds: options.stereo_bond_mode !== 'labels',
     clearBackground: !options.transparent_background
@@ -118,12 +118,12 @@ function drawingOptions(atoms, options) {
   const labels = {};
   atoms.forEach((atom, index) => {
     const isHetero = atom.z !== 6 && atom.z !== 1;
-    const labelCarbon = atom.z === 6 && (options.show_carbons || options.condensed_formula);
+    const labelCarbon = atom.z === 6 && options.show_carbons;
     const hideHeteroHydrogen = options.hydrogen_mode === 'implicit' && isHetero && atom.impHs && !atom.chg;
-    if (!(labelCarbon || options.condensed_formula || hideHeteroHydrogen)) return;
+    if (!(labelCarbon || hideHeteroHydrogen)) return;
     const symbol = elementSymbols[atom.z] || '*';
     const hydrogens = atom.impHs || 0;
-    const showHydrogenLabel = !options.show_hydrogens && (options.show_carbons || options.condensed_formula);
+    const showHydrogenLabel = !options.show_hydrogens && options.show_carbons;
     const charge = atom.chg || 0;
     const chargeLabel = charge ? `${Math.abs(charge) === 1 ? '' : Math.abs(charge)}${charge > 0 ? '+' : '-'}` : '';
     labels[index] = symbol + (showHydrogenLabel && hydrogens ? 'H' + (hydrogens === 1 ? '' : hydrogens) : '') + chargeLabel;

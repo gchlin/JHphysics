@@ -90,7 +90,6 @@ function options() {
     explicit_methyl: explicitMethyl,
     add_stereo_annotation: stereoMode !== 'wedge',
     stereo_bond_mode: stereoMode,
-    condensed_formula: document.querySelector('#condensedInput').checked,
     add_atom_indices: document.querySelector('#indexInput').checked
   };
 }
@@ -360,7 +359,10 @@ function renderGallery() {
   hydrateThumbnails(document.querySelector('#galleryGrid'));
   document.querySelectorAll('.gallery-card').forEach(card => card.addEventListener('click', event => {
     const item = gallery.find(entry => entry.smiles === card.dataset.smiles);
-    if (item) loadCode(item.smiles, item.name);
+    if (item) {
+      closeDrawer();
+      loadCode(item.smiles, item.name);
+    }
   }));
 
 }
