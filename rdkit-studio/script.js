@@ -31,8 +31,7 @@ const candidateList = document.querySelector('#candidateList');
 const snippets = {
   benzene: 'c1ccccc1',
   caffeine: 'Cn1c(=O)c2c(ncn2C)n(C)c1=O',
-  aspirin: 'CC(=O)Oc1ccccc1C(=O)O',
-  dna: 'Nc1ncnc2[nH]cnc12'
+  adenine: 'Nc1ncnc2[nH]cnc12'
 };
 
 function normalizeQuery(value) {
@@ -217,6 +216,28 @@ function stereoLabel(tags) {
 }
 function formulaMarkup(formula) {
   return escapeHTML(formula).replace(/(\d+)/g, '<sub>$1</sub>');
+}
+function formulaMathML(formula) {
+  const source = String(formula || '');
+  const parts = [];
+  let index = 0;
+  while (index < source.length) {
+    const atom = /^([A-Z][a-z]?)(\d*)/.exec(source.slice(index));
+    if (atom) {
+      const symbol = `<mtext>${atom[1]}</mtext>`;
+      parts.push(atom[2] ? `<msub>${symbol}<mn>${atom[2]}</mn></msub>` : symbol);
+      index += atom[0].length;
+      continue;
+    }
+    const character = source[index];
+    if ((character === '+' || character === '-') && index === source.length - 1) {
+      parts.push(`<msup><mrow></mrow><mo>${character}</mo></msup>`);
+    } else {
+      parts.push(`<mtext>${escapeHTML(character)}</mtext>`);
+    }
+    index += 1;
+  }
+  return `<math xmlns="http://www.w3.org/1998/Math/MathML"><mrow>${parts.join('')}</mrow></math>`;
 }
 function invertedSmiles(smiles) {
   let count = 0;
@@ -506,8 +527,18 @@ document.querySelector('#invertChirality').addEventListener('click', async () =>
 });
 document.querySelector('#copyFormula').addEventListener('click', async () => {
   if (!lastFormula) return;
-  try { await navigator.clipboard.writeText(lastFormula); toast('分子式已複製'); }
-  catch { toast('瀏覽器無法複製分子式'); }
+  const mathml = formulaMathML(lastFormula);
+  try {
+    const html = `<html><body><!--StartFragment-->${mathml}<!--EndFragment--></body></html>`;
+    await navigator.clipboard.write([new ClipboardItem({
+      'text/html': new Blob([html], {type: 'text/html'}),
+      'text/plain': new Blob([mathml], {type: 'text/plain'})
+    })]);
+    toast('Word 公式已複製，可直接貼上');
+  } catch {
+    try { await navigator.clipboard.writeText(mathml); toast('Word 公式已複製，可直接貼上'); }
+    catch { toast('瀏覽器無法複製公式'); }
+  }
 });
 let outputFormat = 'png';
 function updateFormatLabels() {
