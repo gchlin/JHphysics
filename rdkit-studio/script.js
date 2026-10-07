@@ -45,15 +45,12 @@ const formulaAliases = {
 
 function options() {
   const widthCm = Number(document.querySelector('#widthCm').value);
-  const heightCm = Number(document.querySelector('#heightCm').value);
-  if (![widthCm, heightCm].every(value => Number.isFinite(value) && value >= 1 && value <= 5)) {
-    throw new Error('輸出寬高請設定為 1 至 5 cm。');
+  if (!Number.isFinite(widthCm) || widthCm < 3 || widthCm > 12) {
+    throw new Error('插入文件寬度請設定為 3 至 12 cm。');
   }
   return {
     width: Math.round(widthCm * 118.11),
-    height: Math.round(heightCm * 118.11),
     width_cm: widthCm,
-    height_cm: heightCm,
     bond_line_width: Number(document.querySelector('#bondInput').value),
     use_element_colors: document.querySelector('#colorInput').checked,
     transparent_background: document.querySelector('#transparentInput').checked,
@@ -133,11 +130,13 @@ async function render() {
     lastSmiles = structure;
     lastRenderOptions = data.options;
     previewStage.innerHTML = lastSvg;
+    previewStage.classList.toggle('transparent', data.options.transparent_background);
     document.querySelector('#flipHorizontal').setAttribute('aria-pressed', String(flipX));
     document.querySelector('#flipVertical').setAttribute('aria-pressed', String(flipY));
     document.querySelector('#metaFormula').textContent = data.formula;
     document.querySelector('#metaAtoms').textContent = '\u539f\u5b50\u6578 ' + data.atom_count;
     document.querySelector('#metaSize').textContent = `${data.options.width_cm.toFixed(2)} x ${data.options.height_cm.toFixed(2)} cm`;
+    document.querySelector('#autoHeightHint').textContent = `自動高度約 ${data.options.height_cm.toFixed(1)} cm`;
     downloadButton.disabled = false;
     copyButton.disabled = false;
     return true;
@@ -248,6 +247,17 @@ document.querySelectorAll('[data-bond]').forEach(button => button.addEventListen
   scheduleStyleRender();
 }));
 document.querySelectorAll('.style-strip input:not([type=hidden])').forEach(control => control.addEventListener('input', scheduleStyleRender));
+document.querySelector('#transparentInput').addEventListener('input', scheduleStyleRender);
+document.querySelector('#widthCm').addEventListener('input', () => {
+  const width = Number(document.querySelector('#widthCm').value);
+  document.querySelectorAll('[data-width]').forEach(item => item.setAttribute('aria-pressed', String(Number(item.dataset.width) === width)));
+  scheduleStyleRender();
+});
+document.querySelectorAll('[data-width]').forEach(button => button.addEventListener('click', () => {
+  document.querySelector('#widthCm').value = button.dataset.width;
+  document.querySelectorAll('[data-width]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+  scheduleStyleRender();
+}));
 document.querySelectorAll('.quick-row button[data-code]').forEach(button => button.addEventListener('click', () => loadCode(snippets[button.dataset.code])));
 document.querySelectorAll('button[data-smiles]').forEach(button => button.addEventListener('click', () => loadCode(button.dataset.smiles, button.dataset.label)));
 document.querySelectorAll('[data-color]').forEach(button => button.addEventListener('click', () => {
@@ -259,6 +269,11 @@ document.querySelectorAll('[data-color]').forEach(button => button.addEventListe
 document.querySelectorAll('[data-hydrogens]').forEach(button => button.addEventListener('click', () => {
   hydrogenMode = button.dataset.hydrogens;
   document.querySelectorAll('[data-hydrogens]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+  scheduleStyleRender();
+}));
+document.querySelectorAll('[data-carbons]').forEach(button => button.addEventListener('click', () => {
+  document.querySelector('#carbonInput').checked = button.dataset.carbons === 'show';
+  document.querySelectorAll('[data-carbons]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
   scheduleStyleRender();
 }));
 document.querySelectorAll('[data-stereo]').forEach(button => button.addEventListener('click', () => {
@@ -278,6 +293,7 @@ document.querySelectorAll('[data-preset]').forEach(button => button.addEventList
   document.querySelectorAll('[data-bond]').forEach(item => item.setAttribute('aria-pressed', String(item.dataset.bond === document.querySelector('#bondInput').value)));
   document.querySelector('#colorInput').checked = preset === 'standard';
   document.querySelector('#carbonInput').checked = preset === 'teaching';
+  document.querySelectorAll('[data-carbons]').forEach(item => item.setAttribute('aria-pressed', String((item.dataset.carbons === 'show') === document.querySelector('#carbonInput').checked)));
   document.querySelectorAll('[data-color]').forEach(item => item.setAttribute('aria-pressed', String((item.dataset.color === 'color') === document.querySelector('#colorInput').checked)));
   document.querySelectorAll('[data-preset]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
   scheduleStyleRender();
@@ -296,7 +312,7 @@ document.querySelector('#resetTransform').addEventListener('click', () => { rota
 let outputFormat = 'png';
 function updateFormatLabels() {
   const png = outputFormat === 'png';
-  copyButton.innerHTML = png ? '&#128203; 複製 PNG' : '&#128203; 複製 SVG';
+  copyButton.innerHTML = png ? '&#128203; 複製 PNG' : '&#128203; 複製 SVG 原始碼';
   downloadButton.innerHTML = png ? '&#11015; 下載 PNG' : '&#11015; 下載 SVG';
 }
 document.querySelectorAll('[data-format]').forEach(button => button.addEventListener('click', () => {
@@ -337,7 +353,7 @@ copyButton.addEventListener('click', async () => {
   if (format === 'svg') {
     try {
       await navigator.clipboard.writeText(svgForExport());
-      toast('SVG \u5df2\u8907\u88fd');
+      toast('SVG \u539f\u59cb\u78bc\u5df2\u8907\u88fd');
     } catch {
       toast('\u700f\u89bd\u5668\u4e0d\u652f\u63f4 SVG \u526a\u8cbc');
     }

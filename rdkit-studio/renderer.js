@@ -106,11 +106,11 @@ function moleculeFormula(atoms) {
 
 function drawingOptions(atoms, options) {
   const details = {
-    width: Math.max(240, Math.min(1600, options.width || 640)),
-    height: Math.max(180, Math.min(1200, options.height || 420)),
+    width: Math.max(240, Math.min(2400, options.width || 640)),
+    height: Math.max(180, Math.min(3000, options.height || 420)),
     bondLineWidth: options.bond_line_width || 1.4,
     addAtomIndices: !!options.add_atom_indices,
-    explicitMethyl: !!(options.explicit_methyl || options.show_carbons || options.condensed_formula),
+    explicitMethyl: !options.show_hydrogens && !!(options.explicit_methyl || options.show_carbons || options.condensed_formula),
     addStereoAnnotation: !!options.add_stereo_annotation,
     clearBackground: !options.transparent_background
   };
@@ -122,7 +122,7 @@ function drawingOptions(atoms, options) {
     if (!(labelCarbon || options.condensed_formula || hideHeteroHydrogen)) return;
     const symbol = elementSymbols[atom.z] || '*';
     const hydrogens = atom.impHs || 0;
-    const showHydrogenLabel = options.show_carbons || options.condensed_formula;
+    const showHydrogenLabel = !options.show_hydrogens && (options.show_carbons || options.condensed_formula);
     const charge = atom.chg || 0;
     const chargeLabel = charge ? `${Math.abs(charge) === 1 ? '' : Math.abs(charge)}${charge > 0 ? '+' : '-'}` : '';
     labels[index] = symbol + (showHydrogenLabel && hydrogens ? 'H' + (hydrogens === 1 ? '' : hydrogens) : '') + chargeLabel;
@@ -176,6 +176,18 @@ function sameStereo(before, after) {
   return normalized(before) === normalized(after);
 }
 
+function moleculeAspectRatio(molblock) {
+  const lines = molblock.split('\n');
+  const atomCount = Number(lines[3]?.slice(0, 3));
+  const points = lines.slice(4, 4 + atomCount).map(line => [Number(line.slice(0, 10)), Number(line.slice(10, 20))]);
+  if (!points.length || points.some(point => point.some(value => !Number.isFinite(value)))) return 1;
+  const xs = points.map(point => point[0]);
+  const ys = points.map(point => point[1]);
+  // One bond length of spare room includes the labels at the outer atoms.
+  const ratio = (Math.max(...xs) - Math.min(...xs) + 1.5) / (Math.max(...ys) - Math.min(...ys) + 1.5);
+  return Math.max(0.5, Math.min(3.5, ratio));
+}
+
 async function drawMolecule(smiles, options = {}) {
   const rdkit = await rdkitReady;
   const mol = rdkit.get_mol(smiles);
@@ -187,13 +199,18 @@ async function drawMolecule(smiles, options = {}) {
     if (options.show_hydrogens) mol.add_hs_in_place();
     mol.set_new_coords(!!options.use_coordgen);
     const molblock = transformedMolblock(mol.get_molblock(), options);
+    const outputOptions = {...options};
+    if (options.width_cm) {
+      outputOptions.height_cm = Math.round(Math.max(1.5, Math.min(25, options.width_cm / moleculeAspectRatio(molblock))) * 10) / 10;
+      outputOptions.height = Math.round(outputOptions.height_cm * 118.11);
+    }
     transformed = rdkit.get_mol(molblock);
     if (!transformed || !sameStereo(JSON.parse(mol.get_stereo_tags()), JSON.parse(transformed.get_stereo_tags()))) {
       throw new Error('旋轉或翻轉後立體組態無法驗證，已停止輸出。');
     }
-    const svg = transformed.get_svg_with_highlights(JSON.stringify(drawingOptions(atoms, options)));
+    const svg = transformed.get_svg_with_highlights(JSON.stringify(drawingOptions(atoms, outputOptions)));
     if (!svg || !svg.includes('<svg')) throw new Error('無法產生分子結構圖。');
-    return {svg, formula, smiles, atom_count: mol.get_num_atoms(), options};
+    return {svg, formula, smiles, atom_count: mol.get_num_atoms(), options: outputOptions};
   } finally {
     if (transformed) transformed.delete();
     mol.delete();

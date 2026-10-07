@@ -31,6 +31,7 @@
 
     <main>
       <section class="workspace-grid" aria-label="輸入與預覽工作區">
+        <div class="editor-column">
         <section class="panel editor-panel">
           <div class="structure-entry">
             <label for="structureInput">輸入 SMILES、化學式或名稱</label>
@@ -60,13 +61,54 @@
           <div id="errorBox" class="error-box" role="alert"></div>
         </section>
 
+        <section class="style-strip" aria-label="圖像樣式">
+          <div class="style-group"><strong>樣式預設</strong><div class="segmented" role="group" aria-label="樣式預設">
+            <button type="button" data-preset="standard" aria-pressed="true">標準</button>
+            <button type="button" data-preset="acs" aria-pressed="false" title="ACS 圖稿規格的近似預設；請依期刊要求檢查最終輸出">ACS 參考</button>
+            <button type="button" data-preset="teaching" aria-pressed="false">教學簡化</button>
+          </div></div>
+          <div class="style-group beauty-group"><strong>結構排版</strong><label class="mini-switch" title="使用 CoordGen 產生 2D 結構座標"><input id="coordGenInput" type="checkbox" checked><i></i> 結構美化</label></div>
+          <div class="style-group"><strong>顏色</strong><div class="segmented" role="group" aria-label="顏色模式">
+            <button type="button" data-color="color" aria-pressed="true">彩色</button>
+            <button type="button" data-color="mono" aria-pressed="false">黑白</button>
+          </div></div>
+          <div class="style-group"><strong>氫原子</strong><div class="segmented" role="group" aria-label="氫原子顯示">
+            <button type="button" data-hydrogens="implicit" aria-pressed="false">隱藏</button>
+            <button type="button" data-hydrogens="hetero" aria-pressed="true">雜原子</button>
+            <button type="button" data-hydrogens="all" aria-pressed="false">全部</button>
+          </div></div>
+          <div class="style-group"><strong>碳原子</strong><div class="segmented" role="group" aria-label="碳原子顯示">
+            <button type="button" data-carbons="hide" aria-pressed="true" title="隱藏碳符號，保留骨架線">隱藏</button>
+            <button type="button" data-carbons="show" aria-pressed="false">顯示</button>
+          </div></div>
+          <div class="style-group"><strong>立體標註</strong><div class="segmented" role="group" aria-label="R/S 與 E/Z 標註">
+            <button type="button" data-stereo="off" aria-pressed="true">關閉</button>
+            <button type="button" data-stereo="on" aria-pressed="false">R/S · E/Z</button>
+          </div></div>
+          <div class="style-group"><strong>末端甲基</strong><div class="segmented" role="group" aria-label="末端甲基顯示">
+            <button type="button" data-methyl="skeletal" aria-pressed="true">骨架折線</button>
+            <button type="button" data-methyl="explicit" aria-pressed="false">顯式 CH₃</button>
+          </div></div>
+          <div class="style-group"><strong>鍵粗細</strong><div class="segmented" role="group" aria-label="鍵粗細">
+            <button type="button" data-bond="1.0" aria-pressed="false">細</button>
+            <button type="button" data-bond="1.4" aria-pressed="true">標準</button>
+            <button type="button" data-bond="2.0" aria-pressed="false">加粗</button>
+          </div></div>
+          <input id="bondInput" type="hidden" value="1.4"><output id="bondOutput" hidden>1.4</output>
+          <input id="colorInput" type="checkbox" checked hidden>
+          <input id="carbonInput" type="checkbox" hidden>
+          <label class="mini-switch"><input id="condensedInput" type="checkbox"><i></i> 示性式</label>
+          <label class="mini-switch"><input id="indexInput" type="checkbox"><i></i> 原子編號</label>
+        </section>
+        </div>
+
         <section class="panel preview-panel">
           <div class="panel-head">
             <div><strong>輸出預覽</strong></div>
             <div class="output-actions">
               <div class="segmented" role="group" aria-label="輸出格式">
                 <button type="button" data-format="png" aria-pressed="true">PNG</button>
-                <button type="button" data-format="svg" aria-pressed="false">SVG</button>
+                <button type="button" data-format="svg" aria-pressed="false" title="適合以圖片插入支援 SVG 的 Word 或 PowerPoint">SVG</button>
               </div>
               <div id="dpiButtons" class="segmented" role="group" aria-label="PNG 解析度">
                 <button type="button" data-dpi="300" aria-pressed="true">300 DPI</button>
@@ -76,6 +118,16 @@
               <button id="copyOutput" class="icon-button" type="button" disabled>&#128203; 複製 PNG</button>
               <button id="downloadOutput" class="download-button" type="button" disabled>&#11015; 下載 PNG</button>
             </div>
+          </div>
+          <div class="output-settings" aria-label="貼入文件尺寸與背景">
+            <div class="style-group"><strong>插入文件寬度</strong><div class="segmented" role="group" aria-label="插入文件寬度">
+              <button type="button" data-width="4" aria-pressed="false">小 4 cm</button>
+              <button type="button" data-width="7" aria-pressed="true">中 7 cm</button>
+              <button type="button" data-width="10" aria-pressed="false">大 10 cm</button>
+            </div></div>
+            <label class="custom-width" for="widthCm">自訂 <input id="widthCm" type="number" min="3" max="12" step="0.5" value="7"> cm</label>
+            <span id="autoHeightHint" class="size-hint">高度依結構比例自動調整</span>
+            <label class="mini-switch"><input id="transparentInput" type="checkbox"><i></i> 透明背景</label>
           </div>
           <div class="transform-toolbar" role="group" aria-label="旋轉與翻轉">
             <span>排版</span>
@@ -93,44 +145,7 @@
         </section>
       </section>
 
-      <section class="style-strip" aria-label="圖像樣式">
-        <div class="style-group"><strong>樣式預設</strong><div class="segmented" role="group" aria-label="樣式預設">
-          <button type="button" data-preset="standard" aria-pressed="true">標準</button>
-          <button type="button" data-preset="acs" aria-pressed="false" title="ACS 圖稿規格的近似預設；請依期刊要求檢查最終輸出">ACS 參考</button>
-          <button type="button" data-preset="teaching" aria-pressed="false">教學簡化</button>
-        </div></div>
-        <div class="style-group"><strong>顏色</strong><div class="segmented" role="group" aria-label="顏色模式">
-          <button type="button" data-color="color" aria-pressed="true">彩色</button>
-          <button type="button" data-color="mono" aria-pressed="false">黑白</button>
-        </div></div>
-        <div class="style-group"><strong>氫原子</strong><div class="segmented" role="group" aria-label="氫原子顯示">
-          <button type="button" data-hydrogens="implicit" aria-pressed="false">隱藏</button>
-          <button type="button" data-hydrogens="hetero" aria-pressed="true">雜原子</button>
-          <button type="button" data-hydrogens="all" aria-pressed="false">全部</button>
-        </div></div>
-        <div class="style-group"><strong>立體標註</strong><div class="segmented" role="group" aria-label="R/S 與 E/Z 標註">
-          <button type="button" data-stereo="off" aria-pressed="true">關閉</button>
-          <button type="button" data-stereo="on" aria-pressed="false">R/S · E/Z</button>
-        </div></div>
-        <div class="style-group"><strong>末端甲基</strong><div class="segmented" role="group" aria-label="末端甲基顯示">
-          <button type="button" data-methyl="skeletal" aria-pressed="true">骨架折線</button>
-          <button type="button" data-methyl="explicit" aria-pressed="false">顯式 CH₃</button>
-        </div></div>
-        <label>寬 <input id="widthCm" type="number" min="1" max="5" step="0.1" value="4"> cm</label>
-        <label>高 <input id="heightCm" type="number" min="1" max="5" step="0.1" value="3"> cm</label>
-        <div class="style-group"><strong>鍵粗細</strong><div class="segmented" role="group" aria-label="鍵粗細">
-          <button type="button" data-bond="1.0" aria-pressed="false">細</button>
-          <button type="button" data-bond="1.4" aria-pressed="true">標準</button>
-          <button type="button" data-bond="2.0" aria-pressed="false">加粗</button>
-        </div></div>
-        <input id="bondInput" type="hidden" value="1.4"><output id="bondOutput" hidden>1.4</output>
-        <label class="mini-switch"><input id="coordGenInput" type="checkbox"><i></i> CoordGen 排版</label>
-        <input id="colorInput" type="checkbox" checked hidden>
-        <label class="mini-switch"><input id="transparentInput" type="checkbox"><i></i> 透明背景</label>
-        <label class="mini-switch"><input id="carbonInput" type="checkbox"><i></i> 顯示碳</label>
-        <label class="mini-switch"><input id="condensedInput" type="checkbox"><i></i> 示性式</label>
-        <label class="mini-switch"><input id="indexInput" type="checkbox"><i></i> 原子編號</label>
-      </section>
+
     </main>
 
     <div id="drawerBackdrop" class="drawer-backdrop"></div>
