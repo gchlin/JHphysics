@@ -180,12 +180,7 @@
     {"id":"guanine","name":"鳥嘌呤","english":"Guanine","formula":"C5H5N5O","smiles":"Nc1nc2[nH]cnc2c(=O)[nH]1","names":["G"],"condensed":[]},
     {"id":"cytosine","name":"胞嘧啶","english":"Cytosine","formula":"C4H5N3O","smiles":"Nc1nccc(=O)[nH]1","names":["C（核酸鹼基）"],"condensed":[]},
     {"id":"thymine","name":"胸腺嘧啶","english":"Thymine","formula":"C5H6N2O2","smiles":"Cc1c[nH]c(=O)[nH]c1=O","names":["T"],"condensed":[]},
-    {"id":"uracil","name":"尿嘧啶","english":"Uracil","formula":"C4H4N2O2","smiles":"O=c1cc[nH]c(=O)[nH]1","names":["U"],"condensed":[]},
-    {"id":"cholesterol","name":"膽固醇","english":"Cholesterol","formula":"C27H46O","smiles":"C[C@H](CCCC(C)C)[C@H]1CC[C@@H]2[C@@]1(CC[C@H]3[C@H]2CC=C4[C@@]3(CC[C@@H](C4)O)C)C","names":["Cholesterin","Cholest-5-en-3beta-ol"],"condensed":[]},
-    {"id":"testosterone","name":"睪固酮","english":"Testosterone","formula":"C19H28O2","smiles":"C[C@]12CC[C@H]3[C@H]([C@@H]1CC[C@@H]2O)CCC4=CC(=O)CC[C@]34C","names":["睪丸素"],"condensed":[]},
-    {"id":"estradiol","name":"雌二醇","english":"Estradiol","formula":"C18H24O2","smiles":"C[C@]12CC[C@H]3[C@H]([C@@H]1CC[C@@H]2O)CCC4=C3C=CC(=C4)O","names":["17β-雌二醇","17beta-Estradiol","Oestradiol"],"condensed":[]},
-    {"id":"cortisol","name":"皮質醇","english":"Cortisol","formula":"C21H30O5","smiles":"C[C@]12C[C@H](O)[C@H]3[C@@H](CCC4=CC(=O)CC[C@]34C)[C@@H]1CC[C@]2(O)C(=O)CO","names":["Hydrocortisone","氫化可體松"],"condensed":[]},
-    {"id":"cholic_acid","name":"膽酸","english":"Cholic acid","formula":"C24H40O5","smiles":"C[C@H](CCC(=O)O)[C@H]1CC[C@@H]2[C@@]1([C@H](C[C@H]3[C@H]2[C@@H](C[C@H]4[C@@]3(CC[C@H](C4)O)C)O)O)C","names":["Cholate acid","膽石酸"],"condensed":[]}
+    {"id":"uracil","name":"尿嘧啶","english":"Uracil","formula":"C4H4N2O2","smiles":"O=c1cc[nH]c(=O)[nH]1","names":["U"],"condensed":[]}
   ],
   "concepts": [
     {"name":"三酸甘油酯","aliases":["三甘油酯","Triglycerides","油脂"],"message":"三酸甘油酯是甘油與三條可變脂肪酸鏈形成的類別，沒有唯一 SMILES。請指定脂肪酸種類與位置；可先查「硬脂酸」或「軟脂酸」。"},
