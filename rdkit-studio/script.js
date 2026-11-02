@@ -94,7 +94,7 @@ function options() {
     flip_y: flipY,
     show_carbons: document.querySelector('#carbonInput').checked,
     explicit_methyl: explicitMethyl,
-    add_stereo_annotation: stereoMode !== 'wedge',
+    add_stereo_annotation: stereoMode === 'both' || stereoMode === 'labels',
     stereo_bond_mode: stereoMode,
     add_atom_indices: document.querySelector('#indexInput').checked
   };
