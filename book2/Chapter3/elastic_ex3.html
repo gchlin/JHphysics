@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>一維彈性碰撞與彈簧位能轉換 (質心速度對照版)</title>
+    <style>
+        html, body { width: 100%; height: 100%; height: 100dvh; margin: 0; overflow: hidden; }
+        body { box-sizing: border-box; padding: 8px; display: flex; flex-direction: column; align-items: stretch; justify-content: center; gap: 6px; }
+        #zero-scroll-layout { width: 100%; height: 100%; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
+        #zero-scroll-layout > .sim-container { width: 100%; max-width: 900px; max-height: 100%; min-height: 0; box-sizing: border-box; padding: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
+        #zero-scroll-layout canvas { width: auto !important; height: auto !important; max-width: 100%; max-height: 100%; object-fit: contain; flex: 0 1 auto; }
+        #zero-scroll-layout .sim-title { margin: 0; padding: 2px 0 5px; font-size: clamp(14px, 3vh, 20px); }
+        #zero-scroll-layout .controls, #zero-scroll-layout .controls-row { flex: 0 0 auto; max-width: 100%; max-height: 30%; overflow: auto; box-sizing: border-box; margin: 0; padding: 5px 8px; gap: 6px; flex-wrap: wrap; justify-content: center; font-size: 12px; }
+        #zero-scroll-layout button, #zero-scroll-layout select { min-height: 36px; padding: 6px 9px; font-size: 13px; touch-action: manipulation; }
+        #zero-scroll-layout .fixed-val { font-size: 14px; }
+        #zero-scroll-layout .divider { height: 16px; margin: 0 2px; }
+        #zero-scroll-layout .chapter-navigation { width: 100%; max-width: 900px; max-height: 20%; box-sizing: border-box; overflow: auto; flex: 0 0 auto; margin: 0 !important; padding: 4px 6px !important; font-size: 11px; line-height: 1.5; }
+        @media (orientation: landscape) and (max-height: 500px) {
+            body { padding: 4px; gap: 3px; }
+            #zero-scroll-layout { gap: 3px; }
+            #zero-scroll-layout > .sim-container { padding: 4px; gap: 3px; }
+            #zero-scroll-layout .controls, #zero-scroll-layout .controls-row { max-height: 35%; padding: 3px 5px; }
+            #zero-scroll-layout button, #zero-scroll-layout select { min-height: 32px; padding: 4px 7px; }
+            #zero-scroll-layout .chapter-navigation { max-height: 16%; font-size: 10px; }
+        }
+        body {
+            margin: 0; padding: 15px; display: flex; flex-direction: column; align-items: center; 
+            background-color: #f4f7f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .sim-container {
+            background: #fff; padding: 15px 25px; border-radius: 12px; box-shadow: 0 8px 16px rgba(0,0,0,0.1); 
+            display: flex; flex-direction: column; align-items: center; max-width: 900px;
+        }
+        .sim-title {
+            font-size: 20px; font-weight: bold; color: #333; margin-bottom: 12px; 
+            width: 100%; text-align: center; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px;
+        }
+        canvas {
+            background-color: #EBF1F4; border-radius: 8px; border: 1px solid #dcdcdc; display: block;
+            width: 800px; height: 340px; 
+        }
+        .controls-row {
+            margin-top: 15px; display: flex; gap: 10px; align-items: center; justify-content: center;
+            background: #fafafa; padding: 10px 15px; border-radius: 8px; border: 1px solid #e0e0e0; width: 100%; box-sizing: border-box; flex-wrap: wrap;
+        }
+        button, select {
+            font-size: 14px; padding: 6px 12px; cursor: pointer; border: none; border-radius: 6px; 
+            font-weight: 600; transition: background 0.2s, transform 0.1s; outline: none;
+        }
+        button:active { transform: scale(0.96); }
+        select { border: 1px solid #ccc; background: white; color: #333; }
+        
+        .btn-play { background-color: #4CAF50; color: white; min-width: 80px; }
+        .btn-play:hover { background-color: #43A047; }
+        .btn-reset { background-color: #f44336; color: white; }
+        .btn-reset:hover { background-color: #e53935; }
+        .btn-stage { background-color: #0288D1; color: white; }
+        .btn-stage:hover { background-color: #0277BD; }
+        .divider { border-left: 2px solid #ddd; height: 20px; margin: 0 5px; }
+        .control-label { font-weight: bold; color: #555; font-size: 14px; margin-right: 2px; }
+            /* Keep the canvas in the space left after controls and navigation. */
+        #zero-scroll-layout { justify-content: flex-start; }
+        #zero-scroll-layout > .sim-container { flex: 1 1 0; overflow: hidden; }
+        #zero-scroll-layout canvas { flex: 1 1 0; min-width: 0; min-height: 0; width: 100% !important; height: 100% !important; }
+        #zero-scroll-layout .controls, #zero-scroll-layout .controls-row { max-height: none; overflow: visible; flex-shrink: 0; }
+        #zero-scroll-layout .chapter-navigation { max-height: none; overflow: hidden; flex-shrink: 0; line-height: 1.35; }
+    </style>
+</head>
+<body>
+<div id="zero-scroll-layout">
+
+    <div class="sim-container">
+        <div class="sim-title">一維彈性碰撞與彈簧位能轉換 (定性演示)</div>
+        <canvas id="simCanvas"></canvas>
+        
+        <div class="controls-row">
+            <button id="playBtn" class="btn-play">▶ 播放</button>
+            <button id="resetBtn" class="btn-reset">↺ 重置</button>
+            <div class="divider"></div>
+            <span class="control-label">倍速:</span>
+            <select id="speedSelect">
+                <option value="1">1.0x</option>
+                <option value="0.5">0.5x</option>
+                <option value="0.25">0.25x</option>
+            </select>
+            <div class="divider"></div>
+            <span class="control-label">階段:</span>
+            <button class="btn-stage" onclick="jumpToStage('before')">碰撞前</button>
+            <button class="btn-stage" onclick="jumpToStage('closest')">最接近</button>
+            <button class="btn-stage" onclick="jumpToStage('after')">碰撞後</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+        let isPlaying = false;
+        let animationId;
+
+        const displayWidth = 800;
+        const displayHeight = 340; 
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = displayWidth * dpr;
+        canvas.height = displayHeight * dpr;
+        ctx.scale(dpr, dpr);
+
+        const sim = {
+            m: 10,        
+            k: 0.04,      
+            v0: 3.5,      
+            L0: 120,      
+            cartW: 90,    
+            cartH: 60,    
+            floorY: 280,  
+            timeSpeed: 1, 
+            snapshots: {},
+
+            init() {
+                this.xA = 50; this.xB = 450;
+                this.vA = this.v0; this.vB = 0;
+                this.totalE = 0.5 * this.m * this.v0 * this.v0; 
+                this.totalP = this.m * this.v0; 
+                // 質心速度 V_c = (m1*v1 + m2*v2) / (m1 + m2)
+                this.vc = this.totalP / (this.m * 2);
+                
+                this.calculateSnapshots();
+                this.draw();
+            },
+
+            calculateSnapshots() {
+                let simXA = 50, simXB = 450, simVA = this.v0, simVB = 0;
+                let dt = 0.05, stage = 'approaching';
+                
+                for (let i = 0; i < 20000; i++) {
+                    let springLeftX = simXB - this.L0;
+                    let aRightX = simXA + this.cartW;
+                    let force = 0;
+
+                    if (stage === 'approaching' && aRightX >= springLeftX) {
+                        this.snapshots['before'] = { xA: springLeftX - this.cartW, xB: simXB, vA: simVA, vB: simVB };
+                        stage = 'compressing';
+                    }
+
+                    if (aRightX > springLeftX) force = this.k * (aRightX - springLeftX);
+                    simVA += (-force / this.m) * dt; simVB += (force / this.m) * dt;
+                    simXA += simVA * dt; simXB += simVB * dt;
+
+                    if (stage === 'compressing' && force > 0 && Math.abs(simVA - simVB) < 0.01) {
+                        this.snapshots['closest'] = { xA: simXA, xB: simXB, vA: simVA, vB: simVB };
+                        stage = 'expanding';
+                    }
+                    if (stage === 'expanding' && force === 0 && simVB > simVA) {
+                        this.snapshots['after'] = { xA: simXA, xB: simXB, vA: simVA, vB: simVB };
+                        break;
+                    }
+                }
+            },
+
+            update() {
+                if (!isPlaying) return;
+                const steps = 10;
+                const dt = (1 / steps) * this.timeSpeed;
+                for (let i = 0; i < steps; i++) {
+                    let force = 0;
+                    if (this.xA + this.cartW > this.xB - this.L0) force = this.k * ((this.xA + this.cartW) - (this.xB - this.L0));
+                    this.vA += (-force / this.m) * dt; this.vB += (force / this.m) * dt;
+                    this.xA += this.vA * dt; this.xB += this.vB * dt;
+                }
+            },
+
+            draw() {
+                ctx.clearRect(0, 0, displayWidth, displayHeight);
+                this.drawCharts();
+
+                ctx.fillStyle = '#9CA6B0'; 
+                ctx.fillRect(0, this.floorY, displayWidth, displayHeight - this.floorY);
+
+                let springLeftX = Math.max(this.xA + this.cartW, this.xB - this.L0);
+                this.drawSpring(springLeftX, this.floorY - this.cartH / 2, this.xB, this.floorY - this.cartH / 2);
+
+                this.drawCart(this.xA, this.floorY, 'm1', this.vA, '#D59B78');
+                this.drawCart(this.xB, this.floorY, 'm2', this.vB, '#D59B78');
+
+                // 繪製系統唯一的質心速度 V_c 箭頭 (將箭頭中心點對齊兩車中央)
+                let centerX = (this.xA + this.xB + this.cartW) / 2;
+                let vcArrowY = this.floorY - this.cartH - 50; // 位置提高，避免與滑車速度標示重疊
+                let vcLength = this.vc * 25;
+                let vcStartX = centerX - vcLength / 2;
+                
+                // 紫色粗箭頭
+                this.drawArrow(vcStartX, vcArrowY, vcStartX + vcLength, vcArrowY, '#8E44AD', 4); 
+                
+                // 繪製標籤 V_c (透過精算寬度與 y 軸偏移，精準渲染下標)
+                ctx.fillStyle = '#8E44AD';
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'alphabetic';
+                
+                ctx.font = 'italic bold 20px "Times New Roman", serif';
+                let wV = ctx.measureText('V').width;
+                ctx.font = 'italic bold 14px "Times New Roman", serif';
+                let wc = ctx.measureText('c').width;
+                
+                let textStartX = centerX - (wV + wc) / 2;
+                let textY = vcArrowY - 8;
+
+                // 畫主體 V
+                ctx.font = 'italic bold 20px "Times New Roman", serif';
+                ctx.fillText('V', textStartX, textY);
+                // 畫下標 c (Y軸向下偏移 4px)
+                ctx.font = 'italic bold 14px "Times New Roman", serif';
+                ctx.fillText('c', textStartX + wV + 1, textY + 4);
+            },
+
+            drawCart(x, floorY, nameText, v, color) {
+                let y = floorY - this.cartH - 12; 
+                ctx.fillStyle = color; ctx.fillRect(x, y, this.cartW, this.cartH);
+                ctx.fillStyle = '#222'; ctx.font = 'italic bold 24px "Times New Roman", serif';
+                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText(nameText, x + this.cartW / 2, y + this.cartH / 2);
+
+                this.drawWheel(x + 20, floorY - 12, 12);
+                this.drawWheel(x + this.cartW - 20, floorY - 12, 12);
+
+                let arrowStartX = x + this.cartW / 2;
+                
+                // 繪製實時速度 v 箭頭 (動態長度，加粗)
+                if (v > 0.05) {
+                    let arrowY = y - 18;
+                    let arrowLength = v * 25; 
+                    this.drawArrow(arrowStartX, arrowY, arrowStartX + arrowLength, arrowY, '#4CAF50', 4); // 綠色加粗
+                    
+                    ctx.fillStyle = '#222'; 
+                    ctx.font = 'italic bold 20px "Times New Roman", serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'alphabetic';
+                    ctx.fillText('v', arrowStartX + arrowLength / 2, arrowY - 8);
+                }
+            },
+
+            drawWheel(x, y, r) {
+                ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fillStyle = '#666'; ctx.fill();
+                ctx.lineWidth = 3; ctx.strokeStyle = '#333'; ctx.stroke();
+                ctx.beginPath(); ctx.arc(x, y, r * 0.4, 0, Math.PI * 2); ctx.fillStyle = '#ddd'; ctx.fill();
+            },
+
+            drawSpring(startX, y, endX, endY) {
+                ctx.beginPath(); ctx.moveTo(startX, y);
+                let coils = 12; let step = (endX - startX) / coils;
+                for (let i = 0; i < coils; i++) {
+                    ctx.lineTo((startX + step * i + startX + step * (i + 1)) / 2, y - 10);
+                    ctx.lineTo(startX + step * (i + 1), y + 10);
+                }
+                ctx.lineTo(endX, y);
+                ctx.strokeStyle = '#7f8c8d'; ctx.lineWidth = 3.5; ctx.lineJoin = 'round'; ctx.stroke();
+            },
+
+            drawArrow(fromX, fromY, toX, toY, color, width) {
+                const headlen = 10; const angle = Math.atan2(toY - fromY, toX - fromX);
+                ctx.beginPath(); ctx.moveTo(fromX, fromY); ctx.lineTo(toX, toY);
+                ctx.lineTo(toX - headlen * Math.cos(angle - Math.PI / 6), toY - headlen * Math.sin(angle - Math.PI / 6));
+                ctx.moveTo(toX, toY);
+                ctx.lineTo(toX - headlen * Math.cos(angle + Math.PI / 6), toY - headlen * Math.sin(angle + Math.PI / 6));
+                ctx.strokeStyle = color; ctx.lineWidth = width; ctx.stroke();
+            },
+
+            drawCharts() {
+                // 動能與位能長條圖
+                let ekA = 0.5 * this.m * this.vA * this.vA;
+                let ekB = 0.5 * this.m * this.vB * this.vB;
+                let compression = Math.max(0, (this.xA + this.cartW) - (this.xB - this.L0));
+                let uSpring = 0.5 * this.k * compression * compression;
+
+                let barMaxWidth = 500; let barX = 130; let barY = 30; let barHeight = 24;
+                let wA = (ekA / this.totalE) * barMaxWidth;
+                let wB = (ekB / this.totalE) * barMaxWidth;
+                let wS = (uSpring / this.totalE) * barMaxWidth;
+
+                ctx.strokeStyle = '#aaa'; ctx.lineWidth = 1;
+                ctx.strokeRect(barX - 1, barY - 1, barMaxWidth + 2, barHeight + 2);
+
+                ctx.fillStyle = '#1A5276'; ctx.fillRect(barX, barY, wA, barHeight); 
+                ctx.fillStyle = '#5DADE2'; ctx.fillRect(barX + wA, barY, wB, barHeight);
+                ctx.fillStyle = '#222222'; ctx.fillRect(barX + wA + wB, barY, wS, barHeight);
+
+                ctx.font = '14px "Segoe UI", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                if (wA > 40) { ctx.fillStyle = '#fff'; ctx.fillText('m1 動能', barX + wA / 2, barY + barHeight / 2); }
+                if (wB > 40) { ctx.fillStyle = '#fff'; ctx.fillText('m2 動能', barX + wA + wB / 2, barY + barHeight / 2); }
+                if (wS > 45) { ctx.fillStyle = '#fff'; ctx.fillText('彈力位能', barX + wA + wB + wS / 2, barY + barHeight / 2); }
+
+                ctx.fillStyle = '#444'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'right';
+                ctx.fillText('能量分布', barX - 15, barY + barHeight / 2);
+
+                // 動量向量圖表
+                let pY = 85; let pX = 130; 
+                let pScale = 250 / this.totalP; 
+                let pTotalLen = this.totalP * pScale;
+                let pALen = (this.m * this.vA) * pScale;
+                let pBLen = (this.m * this.vB) * pScale;
+
+                ctx.fillText('動量向量', barX - 15, pY + 12);
+                ctx.textAlign = 'left';
+                
+                // 系統總動量 P
+                this.drawArrow(pX, pY, pX + pTotalLen, pY, '#000000', 4);
+                ctx.fillStyle = '#000'; ctx.fillText('P (系統總動量)', pX + pTotalLen + 8, pY);
+                
+                // A車動量 p1 
+                if (pALen > 2) {
+                    this.drawArrow(pX, pY + 22, pX + pALen, pY + 22, '#1A5276', 4);
+                    ctx.textAlign = 'center';
+                    ctx.fillStyle = '#1A5276'; ctx.fillText('p₁', pX + pALen / 2, pY + 38);
+                }
+                
+                // B車動量 p2
+                if (pBLen > 2) {
+                    this.drawArrow(pX + pALen, pY + 22, pX + pALen + pBLen, pY + 22, '#5DADE2', 4);
+                    ctx.textAlign = 'center';
+                    ctx.fillStyle = '#5DADE2'; ctx.fillText('p₂', pX + pALen + pBLen / 2, pY + 38);
+                }
+            },
+
+            loop() {
+                this.update(); this.draw();
+                if (isPlaying) { animationId = requestAnimationFrame(() => this.loop()); }
+            }
+        };
+
+        const playBtn = document.getElementById('playBtn');
+        playBtn.addEventListener('click', function() {
+            isPlaying = !isPlaying;
+            this.innerHTML = isPlaying ? '❚❚ 暫停' : '▶ 播放';
+            this.style.backgroundColor = isPlaying ? '#FF9800' : '#4CAF50';
+            if (isPlaying) sim.loop();
+            else cancelAnimationFrame(animationId);
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', function() {
+            pauseSimulation();
+            sim.init();
+        });
+
+        document.getElementById('speedSelect').addEventListener('change', function() {
+            sim.timeSpeed = parseFloat(this.value);
+        });
+
+        function pauseSimulation() {
+            isPlaying = false;
+            cancelAnimationFrame(animationId);
+            playBtn.innerHTML = '▶ 播放';
+            playBtn.style.backgroundColor = '#4CAF50';
+        }
+
+        window.jumpToStage = function(stageName) {
+            pauseSimulation();
+            const snap = sim.snapshots[stageName];
+            if (snap) {
+                sim.xA = snap.xA; sim.xB = snap.xB;
+                sim.vA = snap.vA; sim.vB = snap.vB;
+                sim.draw();
+            }
+        };
+
+        sim.init();
+    </script>
+    <nav class="chapter-navigation" aria-label="例題導覽" style="max-width: 900px; margin: 24px auto; padding: 12px 20px; text-align: center; font-family: sans-serif;">
+        <a href="javascript:history.back()">回上一頁</a> · <a href="index.html">回第三章例題列表</a> · <a href="elastic_ex3.html">彈性碰撞例題 3</a> · <a href="elastic_ex4.html">彈性碰撞例題 4</a> · <a href="non_elastic_ex1.html">完全非彈性碰撞例題 1</a> · <a href="non_elastic_ex2.html">完全非彈性碰撞例題 2</a>
+    </nav>
+</div>
+</body>
+</html>

@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>一維彈性碰撞演示</title>
+    <style>
+        html, body { width: 100%; height: 100%; height: 100dvh; margin: 0; overflow: hidden; }
+        body { box-sizing: border-box; padding: 8px; display: flex; flex-direction: column; align-items: stretch; justify-content: center; gap: 6px; }
+        #zero-scroll-layout { width: 100%; height: 100%; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
+        #zero-scroll-layout > .sim-container { width: 100%; max-width: 900px; max-height: 100%; min-height: 0; box-sizing: border-box; padding: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
+        #zero-scroll-layout canvas { width: auto !important; height: auto !important; max-width: 100%; max-height: 100%; object-fit: contain; flex: 0 1 auto; }
+        #zero-scroll-layout .sim-title { margin: 0; padding: 2px 0 5px; font-size: clamp(14px, 3vh, 20px); }
+        #zero-scroll-layout .controls, #zero-scroll-layout .controls-row { flex: 0 0 auto; max-width: 100%; max-height: 30%; overflow: auto; box-sizing: border-box; margin: 0; padding: 5px 8px; gap: 6px; flex-wrap: wrap; justify-content: center; font-size: 12px; }
+        #zero-scroll-layout button, #zero-scroll-layout select { min-height: 36px; padding: 6px 9px; font-size: 13px; touch-action: manipulation; }
+        #zero-scroll-layout .fixed-val { font-size: 14px; }
+        #zero-scroll-layout .divider { height: 16px; margin: 0 2px; }
+        #zero-scroll-layout .chapter-navigation { width: 100%; max-width: 900px; max-height: 20%; box-sizing: border-box; overflow: auto; flex: 0 0 auto; margin: 0 !important; padding: 4px 6px !important; font-size: 11px; line-height: 1.5; }
+        @media (orientation: landscape) and (max-height: 500px) {
+            body { padding: 4px; gap: 3px; }
+            #zero-scroll-layout { gap: 3px; }
+            #zero-scroll-layout > .sim-container { padding: 4px; gap: 3px; }
+            #zero-scroll-layout .controls, #zero-scroll-layout .controls-row { max-height: 35%; padding: 3px 5px; }
+            #zero-scroll-layout button, #zero-scroll-layout select { min-height: 32px; padding: 4px 7px; }
+            #zero-scroll-layout .chapter-navigation { max-height: 16%; font-size: 10px; }
+        }
+        body {
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f5f5f5;
+            font-family: sans-serif;
+        }
+        canvas {
+            background-color: #E6F2F2;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border-radius: 8px;
+        }
+        .controls {
+            margin-top: 15px;
+            display: flex;
+            gap: 20px;
+            background: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            align-items: center;
+        }
+        select, button {
+            font-size: 16px;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        button:hover { background-color: #45a049; }
+        button.reset { background-color: #f44336; }
+        button.reset:hover { background-color: #da190b; }
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+            /* Keep the canvas in the space left after controls and navigation. */
+        #zero-scroll-layout { justify-content: flex-start; }
+        #zero-scroll-layout > .sim-container { flex: 1 1 0; overflow: hidden; }
+        #zero-scroll-layout canvas { flex: 1 1 0; min-width: 0; min-height: 0; width: 100% !important; height: 100% !important; }
+        #zero-scroll-layout .controls, #zero-scroll-layout .controls-row { max-height: none; overflow: visible; flex-shrink: 0; }
+        #zero-scroll-layout .chapter-navigation { max-height: none; overflow: hidden; flex-shrink: 0; line-height: 1.35; }
+    </style>
+</head>
+<body>
+<div id="zero-scroll-layout">
+
+    <canvas id="simCanvas" width="900" height="300"></canvas>
+
+    <div class="controls">
+        <div class="control-group">
+            甲質量: 
+            <select id="m1">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+            </select>
+        </div>
+        <div class="control-group">
+            乙質量: 
+            <select id="m2">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+            </select>
+        </div>
+        <div class="control-group">
+            丙質量: 
+            <select id="m3">
+                <option value="1">1</option>
+                <option value="2" selected>2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+            </select>
+        </div>
+        <button id="playBtn">播放</button>
+        <button id="resetBtn" class="reset">重置</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // 控制狀態
+        let isPlaying = false;
+        let animationId;
+
+        // 物理與畫面常數
+        const floorY = 220;
+        const initialV = 2.5; // 甲的初始速度
+        
+        class Block {
+            constructor(name, startX, massElementId) {
+                this.name = name;
+                this.startX = startX;
+                this.massElementId = massElementId;
+                this.reset();
+            }
+
+            reset() {
+                this.mass = parseInt(document.getElementById(this.massElementId).value);
+                this.size = 40 + this.mass * 10; // 質量越大，視覺體積越大
+                this.x = this.startX;
+                this.y = floorY - this.size;
+                // 僅甲有初速
+                this.v = (this.name === '甲') ? initialV : 0; 
+            }
+
+            draw() {
+                ctx.fillStyle = '#D6A87C';
+                ctx.strokeStyle = '#B58455';
+                ctx.lineWidth = 2;
+                
+                // 畫木塊
+                ctx.beginPath();
+                ctx.roundRect(this.x, this.y, this.size, this.size, 4);
+                ctx.fill();
+                ctx.stroke();
+
+                // 畫文字
+                ctx.fillStyle = '#333';
+                ctx.font = '24px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(this.name, this.x + this.size / 2, this.y + this.size / 2);
+            }
+
+            update() {
+                if (isPlaying) {
+                    this.x += this.v;
+                }
+            }
+        }
+
+        // 建立三個物體 (初始位置)
+        const blockA = new Block('甲', 50, 'm1');
+        const blockB = new Block('乙', 300, 'm2');
+        const blockC = new Block('丙', 550, 'm3');
+        const blocks = [blockA, blockB, blockC];
+
+        // 碰撞計算 (一維彈性碰撞公式)
+        function checkCollision(b1, b2) {
+            // 檢查是否接觸且兩者正在互相靠近 (相對速度 > 0)
+            if (b1.x + b1.size >= b2.x && b1.x <= b2.x + b2.size) {
+                if (b1.v > b2.v) {
+                    let m1 = b1.mass;
+                    let m2 = b2.mass;
+                    let v1 = b1.v;
+                    let v2 = b2.v;
+                    
+                    // 更新速度
+                    b1.v = ((m1 - m2) * v1 + 2 * m2 * v2) / (m1 + m2);
+                    b2.v = ((m2 - m1) * v2 + 2 * m1 * v1) / (m1 + m2);
+                }
+            }
+        }
+
+        function drawScene() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 畫地板
+            ctx.fillStyle = '#C4C4C4';
+            ctx.fillRect(0, floorY, canvas.width, canvas.height - floorY);
+
+            // 畫物體
+            blocks.forEach(b => b.draw());
+        }
+
+        function loop() {
+            if (isPlaying) {
+                // 更新位置
+                blocks.forEach(b => b.update());
+                
+                // 檢查兩兩碰撞 (甲與乙, 乙與丙)
+                checkCollision(blockA, blockB);
+                checkCollision(blockB, blockC);
+                // 檢查反彈情況 (丙不會追上甲，但乙可能會反彈撞甲)
+                checkCollision(blockA, blockB); 
+            }
+
+            drawScene();
+            animationId = requestAnimationFrame(loop);
+        }
+
+        // UI 事件綁定
+        document.getElementById('playBtn').addEventListener('click', function() {
+            isPlaying = !isPlaying;
+            this.textContent = isPlaying ? '暫停' : '播放';
+            this.style.backgroundColor = isPlaying ? '#FF9800' : '#4CAF50';
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', function() {
+            isPlaying = false;
+            document.getElementById('playBtn').textContent = '播放';
+            document.getElementById('playBtn').style.backgroundColor = '#4CAF50';
+            blocks.forEach(b => b.reset());
+            drawScene();
+        });
+
+        // 當下拉選單改變時，若處於暫停狀態則立即重置以套用新質量
+        ['m1', 'm2', 'm3'].forEach(id => {
+            document.getElementById(id).addEventListener('change', () => {
+                if (!isPlaying) document.getElementById('resetBtn').click();
+            });
+        });
+
+        // 初始化
+        drawScene();
+        loop();
+    </script>
+    <nav class="chapter-navigation" aria-label="例題導覽" style="max-width: 900px; margin: 24px auto; padding: 12px 20px; text-align: center; font-family: sans-serif;">
+        <a href="javascript:history.back()">回上一頁</a> · <a href="index.html">回第三章例題列表</a> · <a href="elastic_ex3.html">彈性碰撞例題 3</a> · <a href="elastic_ex4.html">彈性碰撞例題 4</a> · <a href="non_elastic_ex1.html">完全非彈性碰撞例題 1</a> · <a href="non_elastic_ex2.html">完全非彈性碰撞例題 2</a>
+    </nav>
+</div>
+</body>
+</html>

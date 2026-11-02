@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>子彈打木塊 (彈道擺)</title>
+    <style>
+        html, body { width: 100%; height: 100%; height: 100dvh; margin: 0; overflow: hidden; }
+        body { box-sizing: border-box; padding: 8px; display: flex; flex-direction: column; align-items: stretch; justify-content: center; gap: 6px; }
+        #zero-scroll-layout { width: 100%; height: 100%; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
+        #zero-scroll-layout > .sim-container { width: 100%; max-width: 900px; max-height: 100%; min-height: 0; box-sizing: border-box; padding: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
+        #zero-scroll-layout canvas { width: auto !important; height: auto !important; max-width: 100%; max-height: 100%; object-fit: contain; flex: 0 1 auto; }
+        #zero-scroll-layout .sim-title { margin: 0; padding: 2px 0 5px; font-size: clamp(14px, 3vh, 20px); }
+        #zero-scroll-layout .controls, #zero-scroll-layout .controls-row { flex: 0 0 auto; max-width: 100%; max-height: 30%; overflow: auto; box-sizing: border-box; margin: 0; padding: 5px 8px; gap: 6px; flex-wrap: wrap; justify-content: center; font-size: 12px; }
+        #zero-scroll-layout button, #zero-scroll-layout select { min-height: 36px; padding: 6px 9px; font-size: 13px; touch-action: manipulation; }
+        #zero-scroll-layout .fixed-val { font-size: 14px; }
+        #zero-scroll-layout .divider { height: 16px; margin: 0 2px; }
+        #zero-scroll-layout .chapter-navigation { width: 100%; max-width: 900px; max-height: 20%; box-sizing: border-box; overflow: auto; flex: 0 0 auto; margin: 0 !important; padding: 4px 6px !important; font-size: 11px; line-height: 1.5; }
+        @media (orientation: landscape) and (max-height: 500px) {
+            body { padding: 4px; gap: 3px; }
+            #zero-scroll-layout { gap: 3px; }
+            #zero-scroll-layout > .sim-container { padding: 4px; gap: 3px; }
+            #zero-scroll-layout .controls, #zero-scroll-layout .controls-row { max-height: 35%; padding: 3px 5px; }
+            #zero-scroll-layout button, #zero-scroll-layout select { min-height: 32px; padding: 4px 7px; }
+            #zero-scroll-layout .chapter-navigation { max-height: 16%; font-size: 10px; }
+        }
+        body { margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; background-color: #f0f4f8; font-family: sans-serif; }
+        .sim-container { background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 6px 12px rgba(0,0,0,0.08); }
+        .sim-title { font-size: 20px; font-weight: bold; text-align: center; margin-bottom: 15px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        canvas { background-color: #E6F2F2; border-radius: 8px; display: block; }
+        .controls { margin-top: 15px; display: flex; gap: 30px; align-items: center; justify-content: center; background: #fafafa; padding: 15px; border-radius: 8px; font-size: 16px; }
+        .fixed-val { font-weight: bold; color: #207BB0; font-size: 18px; }
+        button { font-size: 16px; padding: 6px 16px; cursor: pointer; border: none; border-radius: 4px; color: white; transition: 0.2s; }
+        .btn-play { background-color: #4CAF50; } .btn-play:hover { background-color: #45a049; }
+        .btn-reset { background-color: #F44336; } .btn-reset:hover { background-color: #da190b; }
+            /* Keep the canvas in the space left after controls and navigation. */
+        #zero-scroll-layout { justify-content: flex-start; }
+        #zero-scroll-layout > .sim-container { flex: 1 1 0; overflow: hidden; }
+        #zero-scroll-layout canvas { flex: 1 1 0; min-width: 0; min-height: 0; width: 100% !important; height: 100% !important; }
+        #zero-scroll-layout .controls, #zero-scroll-layout .controls-row { max-height: none; overflow: visible; flex-shrink: 0; }
+        #zero-scroll-layout .chapter-navigation { max-height: none; overflow: hidden; flex-shrink: 0; line-height: 1.35; }
+    </style>
+</head>
+<body>
+<div id="zero-scroll-layout">
+    <div class="sim-container">
+        <div class="sim-title">子彈打木塊 (彈道擺)</div>
+        <canvas id="canvas" width="800" height="450"></canvas>
+        <div class="controls">
+            <div>子彈質量 (m): <span class="fixed-val">5</span></div>
+            <div>木塊質量 (M): <span class="fixed-val">1995</span></div>
+            <button id="playBtn" class="btn-play">播放</button>
+            <button id="resetBtn" class="btn-reset">重置</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let isPlaying = false, reqId = null;
+        
+        const sim = {
+            L: 250, pivotX: 400, pivotY: 40, g: 0.15,
+            init() {
+                this.m1 = 5;       
+                this.m2 = 1995;    
+                this.bw = 20; 
+                this.bh = 10;  
+                this.size = 70; 
+                this.theta = 0;
+                this.omega = 0;
+                this.state = 'shooting';
+                this.bulletX = 50;
+                // 木塊中心的 Y 座標
+                this.initialBlockY = this.pivotY + this.L + this.size / 2;
+                this.draw();
+            },
+            update() {
+                if (!isPlaying) return;
+
+                // 物理旋轉半徑 (懸掛點到木塊中心的距離)
+                let R = this.L + this.size / 2;
+
+                if (this.state === 'shooting') {
+                    this.bulletX += 15; 
+                    if (this.bulletX >= this.pivotX) {
+                        this.bulletX = this.pivotX;
+                        
+                        // 目標高度：使木塊中心上升繩長 (L) 的 20%
+                        let targetH = this.L * 0.2; 
+                        
+                        // 力學能守恆計算初速 v = sqrt(2gh)
+                        let v_bottom = Math.sqrt(2 * this.g * targetH);
+                        
+                        // 轉換為角速度 omega = v / R
+                        this.omega = v_bottom / R; 
+                        this.state = 'swinging';
+                    }
+                } else if (this.state === 'swinging') {
+                    // 使用真實半徑 R 更新物理狀態
+                    let alpha = -(this.g / R) * Math.sin(this.theta);
+                    this.omega += alpha;
+                    this.theta += this.omega;
+                }
+            },
+            draw() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                ctx.fillStyle = '#C4C4C4';
+                ctx.fillRect(350, 20, 100, 20);
+                
+                // 畫出底部基準線 (對齊木塊中心)
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                ctx.moveTo(0, this.initialBlockY);
+                ctx.lineTo(canvas.width, this.initialBlockY);
+                ctx.strokeStyle = '#999'; ctx.stroke();
+                
+                // 畫出目標高度 0.2L 基準線 (對齊木塊中心最高點)
+                let targetY = this.initialBlockY - (this.L * 0.2);
+                ctx.beginPath();
+                ctx.moveTo(this.pivotX, targetY);
+                ctx.lineTo(canvas.width, targetY);
+                ctx.strokeStyle = '#4CAF50'; ctx.stroke();
+                ctx.setLineDash([]);
+                
+                ctx.fillStyle = '#4CAF50'; ctx.font = '14px sans-serif';
+                ctx.fillText('最高點', canvas.width - 200, targetY - 10);
+
+                if (this.state === 'shooting') {
+                    this.drawRope(this.pivotX, this.pivotY, this.pivotX, this.pivotY + this.L);
+                    this.drawBlockAndBullet(this.pivotX, this.initialBlockY, 0, this.bulletX, this.initialBlockY);
+                } else {
+                    let topX = this.pivotX + this.L * Math.sin(this.theta);
+                    let topY = this.pivotY + this.L * Math.cos(this.theta);
+                    
+                    // 木塊中心坐標 bx, by
+                    let bx = topX + (this.size/2) * Math.sin(this.theta);
+                    let by = topY + (this.size/2) * Math.cos(this.theta);
+                    
+                    this.drawRope(this.pivotX, this.pivotY, topX, topY);
+                    this.drawBlockAndBullet(bx, by, this.theta, bx, by); 
+
+                    if (this.theta > 0) {
+                        // 以木塊中心繪製即時高度 h
+                        let centerY = by; 
+                        let initialCenterY = this.initialBlockY;
+                        
+                        ctx.setLineDash([5, 5]);
+                        ctx.beginPath();
+                        ctx.moveTo(bx, centerY);
+                        ctx.lineTo(this.pivotX + 220, centerY);
+                        ctx.strokeStyle = '#666'; ctx.stroke();
+                        ctx.setLineDash([]);
+                        
+                        ctx.beginPath();
+                        ctx.moveTo(this.pivotX + 200, initialCenterY);
+                        ctx.lineTo(this.pivotX + 200, centerY);
+                        ctx.strokeStyle = '#333'; ctx.lineWidth = 1.5; ctx.stroke();
+                        
+                        ctx.fillStyle = '#333'; ctx.font = '20px italic serif';
+                        ctx.fillText('h', this.pivotX + 215, (initialCenterY + centerY)/2 + 5);
+                    }
+                }
+            },
+            drawRope(x1, y1, x2, y2) {
+                ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
+                ctx.strokeStyle = '#333'; ctx.lineWidth = 2; ctx.stroke();
+            },
+            drawBlockAndBullet(bx, by, angle, bulletX, bulletY) {
+                ctx.save();
+                ctx.translate(bx, by);
+                ctx.rotate(-angle); 
+                
+                ctx.fillStyle = '#D6A87C'; ctx.strokeStyle = '#B58455'; ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.roundRect(-this.size/2, -this.size/2, this.size, this.size, 4);
+                ctx.fill(); ctx.stroke();
+                ctx.fillStyle = '#333'; ctx.font = '18px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText('M', 0, 15);
+                ctx.restore();
+
+                ctx.save();
+                if (this.state === 'swinging') {
+                    ctx.translate(bx, by);
+                    ctx.rotate(-angle);
+                    ctx.translate(0, -5); 
+                } else {
+                    ctx.translate(bulletX, bulletY - 5);
+                }
+                ctx.fillStyle = '#666'; ctx.beginPath();
+                ctx.moveTo(-this.bw/2, -this.bh/2); ctx.lineTo(this.bw/4, -this.bh/2);
+                ctx.quadraticCurveTo(this.bw/2, -this.bh/2, this.bw/2, 0);
+                ctx.quadraticCurveTo(this.bw/2, this.bh/2, this.bw/4, this.bh/2);
+                ctx.lineTo(-this.bw/2, this.bh/2); ctx.closePath(); ctx.fill();
+                ctx.restore();
+            },
+            loop() {
+                this.update(); this.draw();
+                if (isPlaying) reqId = requestAnimationFrame(() => this.loop());
+            }
+        };
+
+        document.getElementById('playBtn').onclick = function() {
+            isPlaying = !isPlaying;
+            this.textContent = isPlaying ? '暫停' : '播放';
+            this.style.backgroundColor = isPlaying ? '#FF9800' : '#4CAF50';
+            if (isPlaying) sim.loop();
+            else cancelAnimationFrame(reqId);
+        };
+        document.getElementById('resetBtn').onclick = function() {
+            isPlaying = false; cancelAnimationFrame(reqId);
+            document.getElementById('playBtn').textContent = '播放';
+            document.getElementById('playBtn').style.backgroundColor = '#4CAF50';
+            sim.init();
+        };
+        
+        sim.init();
+    </script>
+    <nav class="chapter-navigation" aria-label="例題導覽" style="max-width: 900px; margin: 24px auto; padding: 12px 20px; text-align: center; font-family: sans-serif;">
+        <a href="javascript:history.back()">回上一頁</a> · <a href="index.html">回第三章例題列表</a> · <a href="elastic_ex3.html">彈性碰撞例題 3</a> · <a href="elastic_ex4.html">彈性碰撞例題 4</a> · <a href="non_elastic_ex1.html">完全非彈性碰撞例題 1</a> · <a href="non_elastic_ex2.html">完全非彈性碰撞例題 2</a>
+    </nav>
+</div>
+</body>
+</html>

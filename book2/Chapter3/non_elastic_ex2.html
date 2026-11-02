@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>單擺與小球完全非彈性碰撞</title>
+    <style>
+        html, body { width: 100%; height: 100%; height: 100dvh; margin: 0; overflow: hidden; }
+        body { box-sizing: border-box; padding: 8px; display: flex; flex-direction: column; align-items: stretch; justify-content: center; gap: 6px; }
+        #zero-scroll-layout { width: 100%; height: 100%; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
+        #zero-scroll-layout > .sim-container { width: 100%; max-width: 900px; max-height: 100%; min-height: 0; box-sizing: border-box; padding: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
+        #zero-scroll-layout canvas { width: auto !important; height: auto !important; max-width: 100%; max-height: 100%; object-fit: contain; flex: 0 1 auto; }
+        #zero-scroll-layout .sim-title { margin: 0; padding: 2px 0 5px; font-size: clamp(14px, 3vh, 20px); }
+        #zero-scroll-layout .controls, #zero-scroll-layout .controls-row { flex: 0 0 auto; max-width: 100%; max-height: 30%; overflow: auto; box-sizing: border-box; margin: 0; padding: 5px 8px; gap: 6px; flex-wrap: wrap; justify-content: center; font-size: 12px; }
+        #zero-scroll-layout button, #zero-scroll-layout select { min-height: 36px; padding: 6px 9px; font-size: 13px; touch-action: manipulation; }
+        #zero-scroll-layout .fixed-val { font-size: 14px; }
+        #zero-scroll-layout .divider { height: 16px; margin: 0 2px; }
+        #zero-scroll-layout .chapter-navigation { width: 100%; max-width: 900px; max-height: 20%; box-sizing: border-box; overflow: auto; flex: 0 0 auto; margin: 0 !important; padding: 4px 6px !important; font-size: 11px; line-height: 1.5; }
+        @media (orientation: landscape) and (max-height: 500px) {
+            body { padding: 4px; gap: 3px; }
+            #zero-scroll-layout { gap: 3px; }
+            #zero-scroll-layout > .sim-container { padding: 4px; gap: 3px; }
+            #zero-scroll-layout .controls, #zero-scroll-layout .controls-row { max-height: 35%; padding: 3px 5px; }
+            #zero-scroll-layout button, #zero-scroll-layout select { min-height: 32px; padding: 4px 7px; }
+            #zero-scroll-layout .chapter-navigation { max-height: 16%; font-size: 10px; }
+        }
+        body { margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; background-color: #f0f4f8; font-family: sans-serif; }
+        .sim-container { background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 6px 12px rgba(0,0,0,0.08); }
+        .sim-title { font-size: 20px; font-weight: bold; text-align: center; margin-bottom: 15px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        canvas { background-color: #E6F2F2; border-radius: 8px; display: block; }
+        .controls { margin-top: 15px; display: flex; gap: 20px; align-items: center; justify-content: center; background: #fafafa; padding: 15px; border-radius: 8px; }
+        select { font-size: 16px; padding: 4px 8px; }
+        button { font-size: 16px; padding: 6px 16px; cursor: pointer; border: none; border-radius: 4px; color: white; transition: 0.2s; }
+        .btn-play { background-color: #4CAF50; } .btn-play:hover { background-color: #45a049; }
+        .btn-reset { background-color: #F44336; } .btn-reset:hover { background-color: #da190b; }
+            /* Keep the canvas in the space left after controls and navigation. */
+        #zero-scroll-layout { justify-content: flex-start; }
+        #zero-scroll-layout > .sim-container { flex: 1 1 0; overflow: hidden; }
+        #zero-scroll-layout canvas { flex: 1 1 0; min-width: 0; min-height: 0; width: 100% !important; height: 100% !important; }
+        #zero-scroll-layout .controls, #zero-scroll-layout .controls-row { max-height: none; overflow: visible; flex-shrink: 0; }
+        #zero-scroll-layout .chapter-navigation { max-height: none; overflow: hidden; flex-shrink: 0; line-height: 1.35; }
+    </style>
+</head>
+<body>
+<div id="zero-scroll-layout">
+    <div class="sim-container">
+        <div class="sim-title">單擺與小球完全非彈性碰撞</div>
+        <canvas id="canvas" width="800" height="400"></canvas>
+        <div class="controls">
+            <div>擺錘質量: 
+                <select id="m1">
+                    <option value="1">1m</option><option value="2">2m</option><option value="3">3m</option><option value="4">4m</option><option value="5">5m</option>
+                </select>
+            </div>
+            <div>靜止小球質量: 
+                <select id="m2">
+                    <option value="1">1m</option><option value="2" selected>2m</option><option value="3">3m</option><option value="4">4m</option><option value="5">5m</option>
+                </select>
+            </div>
+            <button id="playBtn" class="btn-play">播放</button>
+            <button id="resetBtn" class="btn-reset">重置</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let isPlaying = false, reqId = null;
+        
+        const sim = {
+            L: 250, pivotX: 400, pivotY: 40, g: 0.2,
+            init() {
+                this.m1 = parseInt(document.getElementById('m1').value);
+                this.m2 = parseInt(document.getElementById('m2').value);
+                this.r1 = 15 + this.m1 * 3;
+                this.r2 = 15 + this.m2 * 3;
+                this.theta = -Math.PI / 3; 
+                this.omega = 0;
+                this.state = 'falling';
+                this.draw();
+            },
+            update() {
+                if (!isPlaying) return;
+                let alpha = -(this.g / this.L) * Math.sin(this.theta);
+                this.omega += alpha;
+                this.theta += this.omega;
+
+                if (this.state === 'falling' && this.theta >= 0) {
+                    this.theta = 0;
+                    this.omega = this.omega * (this.m1 / (this.m1 + this.m2));
+                    this.state = 'swinging';
+                }
+            },
+            draw() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                ctx.fillStyle = '#C4C4C4';
+                ctx.fillRect(300, 20, 200, 20);
+                ctx.fillRect(0, this.pivotY + this.L + this.r2, canvas.width, 20);
+
+                let bx1 = this.pivotX + this.L * Math.sin(this.theta);
+                let by1 = this.pivotY + this.L * Math.cos(this.theta);
+
+                ctx.beginPath();
+                ctx.moveTo(this.pivotX, this.pivotY);
+                ctx.lineTo(bx1, by1);
+                ctx.strokeStyle = '#8C5C3D';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                if (this.state === 'falling') {
+                    let bx2 = this.pivotX + this.r1 + this.r2; 
+                    let by2 = this.pivotY + this.L;
+                    // 將球上的文字改為動態連動的變數
+                    this.drawSphere(bx2, by2, this.r2, '#3CA6D8', this.m2 + 'm');
+                    this.drawSphere(bx1, by1, this.r1, '#3CA6D8', this.m1 + 'm');
+                } else {
+                    let bx2 = this.pivotX + this.L * Math.sin(this.theta) + (this.r1 + this.r2) * Math.cos(this.theta);
+                    let by2 = this.pivotY + this.L * Math.cos(this.theta) - (this.r1 + this.r2) * Math.sin(this.theta);
+                    this.drawSphere(bx1, by1, this.r1, '#3CA6D8', this.m1 + 'm');
+                    this.drawSphere(bx2, by2, this.r2, '#3CA6D8', this.m2 + 'm');
+                }
+            },
+            drawSphere(x, y, r, color, text) {
+                let grad = ctx.createRadialGradient(x - r/3, y - r/3, r/4, x, y, r);
+                grad.addColorStop(0, '#88D4F8');
+                grad.addColorStop(1, '#207BB0');
+                ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2);
+                ctx.fillStyle = grad; ctx.fill();
+                ctx.fillStyle = '#fff'; ctx.font = '16px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText(text, x, y);
+            },
+            loop() {
+                this.update(); this.draw();
+                if (isPlaying) reqId = requestAnimationFrame(() => this.loop());
+            }
+        };
+
+        document.getElementById('playBtn').onclick = function() {
+            isPlaying = !isPlaying;
+            this.textContent = isPlaying ? '暫停' : '播放';
+            this.style.backgroundColor = isPlaying ? '#FF9800' : '#4CAF50';
+            if (isPlaying) sim.loop();
+            else cancelAnimationFrame(reqId);
+        };
+        document.getElementById('resetBtn').onclick = function() {
+            isPlaying = false; cancelAnimationFrame(reqId);
+            document.getElementById('playBtn').textContent = '播放';
+            document.getElementById('playBtn').style.backgroundColor = '#4CAF50';
+            sim.init();
+        };
+        ['m1', 'm2'].forEach(id => document.getElementById(id).onchange = () => { 
+            sim.init();
+            if(!isPlaying) document.getElementById('resetBtn').click(); 
+        });
+        
+        sim.init();
+    </script>
+    <nav class="chapter-navigation" aria-label="例題導覽" style="max-width: 900px; margin: 24px auto; padding: 12px 20px; text-align: center; font-family: sans-serif;">
+        <a href="javascript:history.back()">回上一頁</a> · <a href="index.html">回第三章例題列表</a> · <a href="elastic_ex3.html">彈性碰撞例題 3</a> · <a href="elastic_ex4.html">彈性碰撞例題 4</a> · <a href="non_elastic_ex1.html">完全非彈性碰撞例題 1</a> · <a href="non_elastic_ex2.html">完全非彈性碰撞例題 2</a>
+    </nav>
+</div>
+</body>
+</html>
