@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>理想氣體模擬｜速率分布｜可調粒子數</title>
+  <style>
+    :root {
+      --bg: #0b0f14;
+      --panel: #0f1720;
+      --ink: #e6e6e6;
+      --muted: #93a2b2;
+      --accent: #9ad1ff;
+      --border: #253246;
+    }
+    html, body { width: 100%; height: 100%; height: 100dvh; margin: 0; overflow: hidden; }
+    body {
+      box-sizing: border-box; padding: 8px; background: var(--bg); color: var(--ink);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Noto Sans, Arial, "Noto Sans TC", "PingFang TC", "Heiti TC", sans-serif;
+      user-select: none; display: grid; place-items: start center;
+    }
+    #wrap {
+      width: min(70vw, 1120px); height: min(70dvh, 850px);
+      min-width: 0; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 400px;
+      gap: 10px; align-items: stretch;
+    }
+    .scene { min-width: 0; min-height: 0; position: relative; display: grid; place-items: center; }
+    canvas {
+      background: var(--panel);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4), inset 0 0 0 2px var(--border);
+      border-radius: 8px;
+    }
+    #sim { width: min(100%, 720px); height: min(100%, 720px); object-fit: contain; }
+    #hist { width: 100%; height: auto; max-height: 100%; min-width: 0; min-height: 0; object-fit: contain; align-self: end; }
+    #ui {
+      display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8px; width: 400px; height: 100%; box-sizing: border-box; min-width: 0; min-height: 0;
+    }
+    .card {
+      background: var(--panel);
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      padding: 9px; min-width: 0; min-height: 0;
+    }
+    .control-card { display: grid; grid-template-columns: auto minmax(0, 1fr); align-content: center; align-items: center; gap: 9px 10px; }
+    .segment-control { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3px; width: 100%; padding: 3px; border: 1px solid #52677b; border-radius: 9px; background: #101a25; box-sizing: border-box; }
+    .segment-control button { min-width: 0; padding: 6px 3px; border: 0; border-radius: 6px; background: transparent; color: var(--muted); font-weight: 700; }
+    .segment-control button[aria-pressed="true"] { background: #1976bd; color: white; }
+    .temp-value { text-align: right; white-space: nowrap; }
+    .hist-card { display: grid; grid-template-rows: auto auto minmax(0, 1fr); gap: 5px; }
+    .row { display: flex; gap: 7px; align-items: center; justify-content: space-between; min-width: 0; }
+    .small { font-size: 11px; color: var(--muted); }
+    .legend { display: none; }
+    input[type="range"] { width: 100%; min-width: 0; }
+    select { min-width: 0; width: 100%; background: #172333; border: 1px solid #52677b; color: white; padding: 5px 7px; border-radius: 7px; }
+    button {
+      background: #1f2a3a;
+      border: 1px solid #52677b; color: var(--ink); padding: 6px 10px; border-radius: 8px; cursor: pointer;
+    }
+    button:hover { filter: brightness(1.1); }
+    .scene-controls { position: absolute; top: 8px; right: 8px; display: flex; gap: 6px; z-index: 2; }
+    .icon-btn { width: 38px; height: 38px; padding: 0; font-size: 18px; font-weight: 700; background: #172333; }
+    #stats { display: none; }
+    .speed-color-key { display: flex; align-items: center; }
+    .speed-color-gradient { width: 100%; height: 7px; border: 1px solid #9aabba; border-radius: 999px; background: linear-gradient(90deg, #3155d9, #18b8d1, #25b85a, #ffd32a, #ff8526, #d92332); }
+    .help-dialog { width: min(440px, calc(100vw - 32px)); max-height: min(80dvh, 600px); overflow: auto; box-sizing: border-box; border: 1px solid #60758a; border-radius: 12px; padding: 20px; background: #101a25; color: #e6e6e6; font: 14px/1.6 system-ui, sans-serif; box-shadow: 0 12px 36px #0009; }
+    .help-dialog::backdrop { background: #0009; }
+    .help-dialog h2 { margin: 0 0 10px; font-size: 19px; }
+    .help-dialog ul { margin: 0; padding-left: 20px; }
+    .help-dialog li + li { margin-top: 8px; }
+    .help-dialog form { display: flex; justify-content: flex-end; margin-top: 16px; }
+    @media (max-width: 700px) and (orientation: portrait) {
+      body { padding: 5px; }
+      #wrap { width: 100%; height: 100%; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1.08fr) minmax(0, .92fr); gap: 5px; }
+      #ui { width: 100%; grid-template-columns: minmax(106px, .72fr) minmax(0, 1.28fr); grid-template-rows: minmax(0, 1fr); gap: 5px; }
+      .card { padding: 6px; border-radius: 8px; }
+      .control-card { gap: 6px 5px; }
+      .hist-card { gap: 3px; }
+      #stats { font-size: 9px; }
+      .scene-controls { top: 5px; right: 5px; }
+      .icon-btn { width: 34px; height: 34px; }
+    }
+    @media (max-width: 900px) and (orientation: landscape) {
+      body { padding: 4px; }
+      #wrap { width: 100%; height: 100%; grid-template-columns: minmax(0, 1fr) minmax(230px, 30vw); gap: 6px; }
+      #ui { width: 100%; grid-template-rows: auto minmax(0, 1fr); gap: 5px; }
+      .card { padding: 6px; }
+      .scene-controls { top: 4px; right: 4px; }
+    }
+    @media (min-width: 701px) and (max-height: 520px) {
+      body { padding: 4px; }
+      #wrap { width: 100%; height: 100%; grid-template-columns: minmax(0, 1fr) 300px; gap: 6px; }
+      #ui { width: 100%; grid-template-rows: auto minmax(0, 1fr); gap: 5px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="wrap">
+    <div class="scene">
+      <canvas id="sim" width="720" height="720"></canvas>
+      <div class="scene-controls">
+        <button id="playPauseBtn" class="icon-btn" type="button" aria-label="暫停" title="暫停" aria-pressed="false">Ⅱ</button>
+        <button id="helpBtn" class="icon-btn" type="button" aria-label="說明" title="說明">?</button>
+      </div>
+    </div>
+
+    <div id="ui">
+      <div class="card control-card">
+        <span>N</span>
+        <div class="segment-control" role="group" aria-label="粒子數">
+          <button type="button" data-count="10" aria-pressed="false">10</button>
+          <button type="button" data-count="100" aria-pressed="true">100</button>
+          <button type="button" data-count="1000" aria-pressed="false">1k</button>
+        </div>
+        <label for="temperatureRange">T</label>
+        <span id="temperatureLabel" class="small temp-value"></span>
+        <span></span><input id="temperatureRange" type="range" min="100" max="1000" step="50" value="300" aria-label="溫度" />
+        <span></span><button id="colorModeBtn" class="icon-btn" type="button" aria-label="開啟彩色分組" title="開啟彩色分組" aria-pressed="false">🌈</button>
+      </div>
+
+      <div class="card hist-card">
+        <div class="row"><strong>速率</strong><div id="stats" class="small"></div></div>
+        <div class="speed-color-key"><div class="speed-color-gradient" role="img" aria-label="彩虹色階：低速藍色，高速紅色"></div></div>
+        <canvas id="hist" width="340" height="260"></canvas>
+      </div>
+    </div>
+    <dialog id="helpDialog" class="help-dialog" aria-labelledby="helpTitle">
+      <h2 id="helpTitle">理想氣體｜說明</h2>
+      <ul>
+        <li>選擇粒子數；變更後會重新配置粒子。粒子較多時碰撞半徑會縮小，粒子圖示不是實際分子尺寸。</li>
+        <li>調整溫度時，速度按 √T 縮放；二維模型的平均動能與 T 成正比，碰撞保持彈性。</li>
+        <li>彩色模式是彩虹色階：低速藍色，經青、綠、黃、橘，至高速紅色；分子顏色與直方圖分組一致。</li>
+        <li>黃色虛線標示測得的 v_rms；綠線是二維 Maxwell 理論分布。綠線與長條使用相同的頻數刻度，最右側一組包含超過橫軸上限的速率；粒子數少時，抽樣起伏會比較明顯。</li>
+        <li>右上角按鈕可暫停／播放；右壁碰撞音效需先點擊一次以啟用。</li>
+        <li>300 K 的參考 v_rms 為 110 像素／秒。</li>
+      </ul>
+      <form method="dialog"><button type="submit" aria-label="關閉說明">關閉</button></form>
+    </dialog>
+  </div>
+
+  <script>
+    // ==== 基本參數（固定，不提供 UI） ====
+    let R = 4;
+    const REFERENCE_TEMPERATURE = 300;
+    const REFERENCE_RMS_SPEED = 110; // 300 K 時的模型參考速率（像素/秒）
+    const SPEED_AXIS_MAX = REFERENCE_RMS_SPEED * Math.sqrt(1000 / REFERENCE_TEMPERATURE) * 2.5;
+    const CANVAS_SIZE = 720;
+    const DT_TARGET = 1/120;     // 目標模擬步長
+    const SUBSTEPS = 1;
+    const binsCount = 20;
+    const HISTOGRAM_WIDTH = 340;
+    const HISTOGRAM_HEIGHT = 260;
+    const RENDER_SCALE = 2;
+    let colorMode = false;
+    let isRunning = true;
+    let animationId = null;
+    let temperatureK = REFERENCE_TEMPERATURE;
+    let rightWallFlashUntil = 0;
+
+    // ==== 畫布 ====
+    const sim = document.getElementById('sim');
+    const ctx = sim.getContext('2d');
+    const hist = document.getElementById('hist');
+    const hctx = hist.getContext('2d');
+    sim.width = CANVAS_SIZE * RENDER_SCALE;
+    sim.height = CANVAS_SIZE * RENDER_SCALE;
+    hist.width = HISTOGRAM_WIDTH * RENDER_SCALE;
+    hist.height = HISTOGRAM_HEIGHT * RENDER_SCALE;
+    ctx.setTransform(RENDER_SCALE, 0, 0, RENDER_SCALE, 0, 0);
+    hctx.setTransform(RENDER_SCALE, 0, 0, RENDER_SCALE, 0, 0);
+
+    // ==== UI：粒子數量 ====
+    const countButtons = [...document.querySelectorAll('[data-count]')];
+    const temperatureRange = document.getElementById('temperatureRange');
+    const temperatureLabel = document.getElementById('temperatureLabel');
+    const colorModeBtn = document.getElementById('colorModeBtn');
+    const playPauseBtn = document.getElementById('playPauseBtn');
+    function updateTemperatureLabel() { temperatureLabel.textContent = `${temperatureK} K`; }
+    function gaussianRandom() {
+      const u1 = Math.max(Number.EPSILON, Math.random());
+      const u2 = Math.random();
+      return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+    }
+    function speedBinIndex(speed) {
+      const binWidth = SPEED_AXIS_MAX / binsCount;
+      return Math.min(binsCount - 1, Math.floor(speed / binWidth));
+    }
+    function speedGroupColor(index) {
+      const t = (index + 0.5) / binsCount;
+      return `hsl(${Math.round(240 * (1 - t))} 85% 55%)`;
+    }
+    const speedGroupColors = Array.from({ length: binsCount }, (_, i) => speedGroupColor(i));
+
+    // ==== 音效：右壁撞擊 ====
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    let audioCtx = null;
+    let canBeep = true;
+    const BEEP_COOLDOWN_MS = 20;
+    function beep() {
+      if (!audioCtx || audioCtx.state !== 'running' || !canBeep) return;
+      canBeep = false; setTimeout(()=>canBeep=true, BEEP_COOLDOWN_MS);
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(1200, now);
+      osc.frequency.exponentialRampToValueAtTime(300, now + 0.06);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(0.2, now + 0.005);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.08);
+      osc.connect(gain); gain.connect(audioCtx.destination);
+      osc.start(now); osc.stop(now + 0.09);
+    }
+    window.addEventListener('pointerdown', () => {
+      if (!AudioCtx) return;
+      audioCtx = new AudioCtx();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+    }, { once: true });
+
+    // ==== 工具 ====
+    class Particle {
+      constructor(x, y, vx, vy) { this.x=x; this.y=y; this.vx=vx; this.vy=vy; }
+      speed() { return Math.hypot(this.vx, this.vy); }
+    }
+
+    let N = 100;
+    let particles = [];
+
+    // ==== 初始化（避免重疊） ====
+    function initParticles() {
+      particles = [];
+      R = N >= 1000 ? 3 : 4;
+      const columns = Math.ceil(Math.sqrt(N));
+      const rows = Math.ceil(N / columns);
+      const spacingX = (CANVAS_SIZE - 2 * (R + 1)) / columns;
+      const spacingY = (CANVAS_SIZE - 2 * (R + 1)) / rows;
+      for (let i = 0; i < N; i++) {
+        const column = i % columns;
+        const row = Math.floor(i / columns);
+        const x = R + 1 + (column + 0.5) * spacingX;
+        const y = R + 1 + (row + 0.5) * spacingY;
+        // 2D Maxwell–Boltzmann: independent Gaussian velocity components.
+        const sigma = REFERENCE_RMS_SPEED * Math.sqrt(temperatureK / REFERENCE_TEMPERATURE) / Math.sqrt(2);
+        const vx = gaussianRandom() * sigma;
+        const vy = gaussianRandom() * sigma;
+        particles.push(new Particle(x,y,vx,vy));
+      }
+      // 移除整體漂移並校正總動能，使初始 v_rms 對應所選溫度。
+      const meanVx = particles.reduce((sum, p) => sum + p.vx, 0) / N;
+      const meanVy = particles.reduce((sum, p) => sum + p.vy, 0) / N;
+      for (const p of particles) { p.vx -= meanVx; p.vy -= meanVy; }
+      const sampledRms = Math.sqrt(particles.reduce((sum, p) => sum + p.vx*p.vx + p.vy*p.vy, 0) / N);
+      const targetRms = REFERENCE_RMS_SPEED * Math.sqrt(temperatureK / REFERENCE_TEMPERATURE);
+      const rmsScale = targetRms / (sampledRms || 1);
+      for (const p of particles) { p.vx *= rmsScale; p.vy *= rmsScale; }
+    }
+
+    // ==== 物理更新 ====
+    function step(dt) {
+      let maxSpeed = 0;
+      for (const p of particles) maxSpeed = Math.max(maxSpeed, p.speed());
+      // 兩顆粒子相向移動時，相對位移可達單顆粒子位移的兩倍。
+      const substeps = Math.min(8, Math.max(1, Math.ceil(maxSpeed * dt / R)));
+      const subDt = dt / substeps;
+      for (let i = 0; i < substeps; i++) stepSingle(subDt);
+    }
+
+    function stepSingle(dt) {
+      const w = CANVAS_SIZE, h = CANVAS_SIZE;
+      // 位置
+      for (let p of particles) { p.x += p.vx * dt; p.y += p.vy * dt; }
+      // 牆
+      for (let p of particles) {
+        if (p.x < R) { p.x = R; p.vx = -p.vx; }
+        else if (p.x > w - R) { p.x = w - R; p.vx = -p.vx; rightWallFlashUntil = performance.now() + 120; beep(); }
+        if (p.y < R) { p.y = R; p.vy = -p.vy; }
+        else if (p.y > h - R) { p.y = h - R; p.vy = -p.vy; }
+      }
+      // 空間分格將粒子碰撞比較限制在相鄰格。
+      const cellSize = 2 * R;
+      const cells = new Map();
+      for (const p of particles) {
+        const cx = Math.floor(p.x / cellSize), cy = Math.floor(p.y / cellSize);
+        const key = `${cx},${cy}`;
+        let cell = cells.get(key);
+        if (!cell) { cell = { cx, cy, items: [] }; cells.set(key, cell); }
+        cell.items.push(p);
+      }
+      const collide = (a, b) => {
+        const dx = b.x - a.x, dy = b.y - a.y;
+        const minD = 2*R;
+        const d2 = dx*dx + dy*dy;
+        if (d2 < minD*minD) {
+          const dist = Math.sqrt(d2) || 1e-6;
+          const nx = d2 > 0 ? dx/dist : 1, ny = d2 > 0 ? dy/dist : 0;
+          // 推開
+          const overlap = (minD - dist) * 0.5;
+          a.x -= nx*overlap; a.y -= ny*overlap;
+          b.x += nx*overlap; b.y += ny*overlap;
+          // 速度沿法向分量交換（等質量）
+          const dvx = b.vx - a.vx, dvy = b.vy - a.vy;
+          const rel = dvx*nx + dvy*ny;
+          if (rel < 0) {
+            a.vx += nx*rel; a.vy += ny*rel;
+            b.vx -= nx*rel; b.vy -= ny*rel;
+          }
+        }
+      };
+      const forwardNeighbors = [[1, 0], [-1, 1], [0, 1], [1, 1]];
+      for (const cell of cells.values()) {
+        for (let i = 0; i < cell.items.length; i++) {
+          for (let j = i + 1; j < cell.items.length; j++) collide(cell.items[i], cell.items[j]);
+        }
+        for (const [ox, oy] of forwardNeighbors) {
+          const neighbor = cells.get(`${cell.cx + ox},${cell.cy + oy}`);
+          if (!neighbor) continue;
+          for (const a of cell.items) for (const b of neighbor.items) collide(a, b);
+        }
+      }
+    }
+
+    // ==== 繪製 ====
+    function drawSim() {
+      const w = CANVAS_SIZE, h = CANVAS_SIZE;
+      ctx.clearRect(0,0,w,h);
+      ctx.fillStyle = '#0f1720'; ctx.fillRect(0,0,w,h);
+      // 右壁碰撞時短暫亮起，與碰撞音效同步。
+      ctx.fillStyle = performance.now() < rightWallFlashUntil ? '#75ddff' : '#1b2a44';
+      ctx.fillRect(w-4, 0, 4, h);
+      // 粒子顏色與直方圖速率分組同步。
+      for (let p of particles) {
+        ctx.beginPath(); ctx.arc(p.x, p.y, R, 0, Math.PI*2);
+        ctx.fillStyle = colorMode ? speedGroupColors[speedBinIndex(p.speed())] : '#45d5ff';
+        ctx.fill();
+        ctx.strokeStyle = '#e8fbff'; ctx.lineWidth = 1; ctx.stroke();
+      }
+    }
+
+    // ==== 速率分布直方圖 ====
+    function drawHistogram() {
+      const n = particles.length;
+      if (n === 0) return;
+      const vmax = SPEED_AXIS_MAX;
+      const bins = new Array(binsCount).fill(0);
+      let sum = 0, sum2 = 0, vMax = 0;
+      for (const p of particles) {
+        const v = p.speed();
+        const idx = speedBinIndex(v);
+        bins[idx]++;
+        sum += v; sum2 += v*v; if (v > vMax) vMax = v;
+      }
+      const mean = sum / n;
+      const rms = Math.sqrt(sum2 / n);
+      // 每組的理論預期頻數；最後一組也包含超過橫軸上限的粒子。
+      const theoreticalRms = REFERENCE_RMS_SPEED * Math.sqrt(temperatureK / REFERENCE_TEMPERATURE);
+      const binWidth = vmax / binsCount;
+      const expectedCounts = Array.from({ length: binsCount }, (_, i) => {
+        const lower = i * binWidth;
+        const upper = (i + 1) * binWidth;
+        return n * (Math.exp(-lower * lower / (theoreticalRms * theoreticalRms))
+          - (i === binsCount - 1 ? 0 : Math.exp(-upper * upper / (theoreticalRms * theoreticalRms))));
+      });
+
+      // 畫布
+      const W = HISTOGRAM_WIDTH, H = HISTOGRAM_HEIGHT;
+      hctx.clearRect(0,0,W,H);
+      // 邊框與背景
+      hctx.fillStyle = '#0f1720'; hctx.fillRect(0,0,W,H);
+      hctx.strokeStyle = '#586b7d'; hctx.lineWidth = 1.5; hctx.strokeRect(0.75,0.75,W-1.5,H-1.5);
+
+      const maxCount = Math.max(1, ...bins, ...expectedCounts);
+      const margin = 28;
+      const plotW = W - margin*2;
+      const plotH = H - margin*2;
+      const barW = plotW / binsCount * 0.9;
+
+      // 軸線
+      hctx.strokeStyle = '#9aabba';
+      hctx.lineWidth = 1.5;
+      hctx.beginPath();
+      hctx.moveTo(margin, H - margin); hctx.lineTo(W - margin, H - margin); // x 軸
+      hctx.moveTo(margin, margin); hctx.lineTo(margin, H - margin);         // y 軸
+      hctx.stroke();
+
+      // 長條
+      for (let i=0;i<binsCount;i++) {
+        const c = bins[i];
+        const x = margin + i * (plotW / binsCount) + (plotW/binsCount - barW)/2;
+        const h = (c / maxCount) * plotH;
+        const y = H - margin - h;
+        hctx.fillStyle = colorMode ? speedGroupColors[i] : '#35c7f4';
+        hctx.fillRect(x, y, barW, h);
+        hctx.strokeStyle = colorMode ? 'rgba(255,255,255,.72)' : '#d5f7ff';
+        hctx.lineWidth = 1;
+        hctx.strokeRect(x + 0.5, y + 0.5, Math.max(0, barW - 1), Math.max(0, h - 1));
+      }
+
+      // 二維 Maxwell 速率分布：f(v)=2v/v_rms² exp(-v²/v_rms²)。
+      hctx.save();
+      hctx.beginPath();
+      hctx.strokeStyle = '#b6ff78';
+      hctx.lineWidth = 2.5;
+      hctx.setLineDash([6, 3]);
+      expectedCounts.forEach((count, i) => {
+        const x = margin + (i + 0.5) * (plotW / binsCount);
+        const y = H - margin - (count / maxCount) * plotH;
+        if (i === 0) hctx.moveTo(x, y);
+        else hctx.lineTo(x, y);
+      });
+      hctx.stroke();
+      hctx.setLineDash([]);
+      hctx.fillStyle = '#b6ff78';
+      hctx.font = 'bold 10px system-ui, -apple-system, Segoe UI, Roboto, Noto Sans, Arial, "Noto Sans TC"';
+      hctx.textAlign = 'right';
+      hctx.textBaseline = 'top';
+      hctx.fillText('2D Maxwell 理論', W - margin - 2, margin + 2);
+      hctx.restore();
+
+      // 以高對比虛線標出 v_rms 的速率位置。
+      const rmsX = margin + (rms / vmax) * plotW;
+      hctx.save();
+      hctx.beginPath();
+      hctx.setLineDash([5, 4]);
+      hctx.strokeStyle = '#fff176';
+      hctx.lineWidth = 2.5;
+      hctx.moveTo(rmsX, margin);
+      hctx.lineTo(rmsX, H - margin);
+      hctx.stroke();
+      hctx.setLineDash([]);
+      hctx.fillStyle = '#fff176';
+      hctx.font = 'bold 12px system-ui, -apple-system, Segoe UI, Roboto, Noto Sans, Arial, "Noto Sans TC"';
+      hctx.textAlign = rmsX > W - margin - 48 ? 'right' : 'left';
+      hctx.textBaseline = 'top';
+      hctx.fillText('v_rms', rmsX + (rmsX > W - margin - 48 ? -4 : 4), margin + 2);
+      hctx.restore();
+
+      // 標註（平均、RMS 以及最大速率）
+      hctx.fillStyle = '#d7e3ed';
+      hctx.font = '12px system-ui, -apple-system, Segoe UI, Roboto, Noto Sans, Arial, "Noto Sans TC"';
+      const statsText = `μ${mean.toFixed(0)} · rms ${rms.toFixed(0)}/${theoreticalRms.toFixed(0)} · max ${vMax.toFixed(0)}`;
+      document.getElementById('stats').textContent = statsText;
+
+      // Keep axis lines and titles; omit numeric readouts and tick values.
+      hctx.textAlign = 'left';
+      hctx.fillText('速率 |v|（像素/秒）', margin, 16);
+      hctx.save();
+      hctx.translate(10, H/2);
+      hctx.rotate(-Math.PI/2);
+      hctx.textAlign = 'center';
+      hctx.fillText('頻數', 0, 0);
+      hctx.restore();
+    }
+
+    // ==== 主迴圈 ====
+    let last = performance.now();
+    let lastDraw = 0;
+    let lastHistogramDraw = 0;
+    function loop(now) {
+      if (!isRunning) return;
+      const dtReal = (now - last) / 1000;
+      last = now;
+      let acc = Math.min(dtReal, 0.05);
+      while (acc > 0) {
+        const use = Math.min(acc, DT_TARGET);
+        for (let s=0;s<SUBSTEPS;s++) step(use/SUBSTEPS);
+        acc -= use;
+      }
+      const drawInterval = N >= 1000 ? 1000 / 40 : 1000 / 60;
+      if (now - lastDraw >= drawInterval) {
+        drawSim();
+        lastDraw = now;
+      }
+      if (now - lastHistogramDraw >= 100) {
+        drawHistogram();
+        lastHistogramDraw = now;
+      }
+      animationId = requestAnimationFrame(loop);
+    }
+    function renderFrame() { drawSim(); drawHistogram(); }
+
+    // ==== UI event ====
+    countButtons.forEach(button => button.addEventListener('click', () => {
+      N = parseInt(button.dataset.count, 10);
+      countButtons.forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+      initParticles();
+      renderFrame();
+    }));
+
+    temperatureRange.addEventListener('input', () => {
+      const nextTemperature = parseInt(temperatureRange.value, 10);
+      const velocityScale = Math.sqrt(nextTemperature / temperatureK);
+      for (const p of particles) {
+        p.vx *= velocityScale;
+        p.vy *= velocityScale;
+      }
+      temperatureK = nextTemperature;
+      updateTemperatureLabel();
+      renderFrame();
+    });
+
+    colorModeBtn.addEventListener('click', () => {
+      colorMode = !colorMode;
+      colorModeBtn.setAttribute('aria-pressed', String(colorMode));
+      colorModeBtn.setAttribute('aria-label', colorMode ? '關閉彩色分組' : '開啟彩色分組');
+      colorModeBtn.title = colorMode ? '關閉彩色分組' : '開啟彩色分組';
+      renderFrame();
+    });
+
+    playPauseBtn.addEventListener('click', () => {
+      isRunning = !isRunning;
+      playPauseBtn.textContent = isRunning ? 'Ⅱ' : '▶';
+      playPauseBtn.setAttribute('aria-label', isRunning ? '暫停' : '播放');
+      playPauseBtn.title = isRunning ? '暫停' : '播放';
+      playPauseBtn.setAttribute('aria-pressed', String(!isRunning));
+      if (isRunning) {
+        last = performance.now();
+        lastDraw = 0;
+        lastHistogramDraw = 0;
+        animationId = requestAnimationFrame(loop);
+      } else {
+        cancelAnimationFrame(animationId);
+      }
+    });
+
+    const helpDialog = document.getElementById('helpDialog');
+    document.getElementById('helpBtn').addEventListener('click', () => helpDialog.showModal());
+
+    // 启动
+    initParticles();
+    updateTemperatureLabel();
+    renderFrame();
+    animationId = requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
