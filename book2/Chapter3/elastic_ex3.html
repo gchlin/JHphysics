@@ -79,7 +79,7 @@
             <button id="resetBtn" class="btn-reset">↺ 重置</button>
             <div class="divider"></div>
             <span class="control-label">倍速:</span>
-            <select id="speedSelect">
+            <select id="speedSelect" value="0.25">
                 <option value="1">1.0x</option>
                 <option value="0.5">0.5x</option>
                 <option value="0.25">0.25x</option>
@@ -113,7 +113,7 @@
             cartW: 90,    
             cartH: 60,    
             floorY: 280,  
-            timeSpeed: 1, 
+            timeSpeed: 0.25, 
             snapshots: {},
 
             init() {
@@ -343,6 +343,8 @@
         document.getElementById('speedSelect').addEventListener('change', function() {
             sim.timeSpeed = parseFloat(this.value);
         });
+
+        document.getElementById('speedSelect').value = String(sim.timeSpeed);
 
         function pauseSimulation() {
             isPlaying = false;
