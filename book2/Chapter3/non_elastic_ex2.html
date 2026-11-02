@@ -39,6 +39,18 @@
         #zero-scroll-layout canvas { flex: 1 1 0; min-width: 0; min-height: 0; width: 100% !important; height: 100% !important; }
         #zero-scroll-layout .controls, #zero-scroll-layout .controls-row { max-height: none; overflow: visible; flex-shrink: 0; }
         #zero-scroll-layout .chapter-navigation { max-height: none; overflow: hidden; flex-shrink: 0; line-height: 1.35; }
+        body { padding: 8px; background: #f4f7f6; }
+        #zero-scroll-layout { justify-content: flex-start; }
+        #zero-scroll-layout > .sim-container { width: 100%; max-width: none; height: 100%; min-width: 0; min-height: 0; box-sizing: border-box; padding: 8px; display: flex; flex-direction: row; align-items: stretch; gap: 2px; overflow: hidden; }
+        #zero-scroll-layout canvas { flex: 1 1 auto; min-width: 0; min-height: 0; width: 100% !important; height: 100% !important; object-fit: contain; }
+        #zero-scroll-layout .sim-title, #zero-scroll-layout .chapter-navigation { display: none !important; }
+        #zero-scroll-layout .controls { flex: 0 0 78px; min-width: 0; box-sizing: border-box; margin: 0; padding: 5px; display: flex; flex-direction: column; justify-content: center; align-items: stretch; gap: 5px; }
+        #zero-scroll-layout .controls > div { display: flex; flex-direction: column; align-items: stretch; gap: 2px; font-size: 10px; }
+        #zero-scroll-layout select { width: 100%; min-width: 0; box-sizing: border-box; min-height: 30px; padding: 3px 0; font-size: 11px; touch-action: manipulation; }
+        #zero-scroll-layout button { width: 100%; min-width: 0; min-height: 30px; padding: 3px 0; font-size: 11px; touch-action: manipulation; }
+        #zero-scroll-layout .btn-play { background: #68727d; } #zero-scroll-layout .btn-play:hover { background: #56616c; }
+        #zero-scroll-layout .btn-reset { background: #89939d; } #zero-scroll-layout .btn-reset:hover { background: #737e89; }
+        @media (max-width: 600px) { body { padding: 4px; } #zero-scroll-layout > .sim-container { padding: 4px; gap: 1px; } #zero-scroll-layout .controls { flex-basis: 73px; padding: 3px; } }
     </style>
 </head>
 <body>
@@ -57,8 +69,8 @@
                     <option value="1">1m</option><option value="2" selected>2m</option><option value="3">3m</option><option value="4">4m</option><option value="5">5m</option>
                 </select>
             </div>
-            <button id="playBtn" class="btn-play">播放</button>
-            <button id="resetBtn" class="btn-reset">重置</button>
+            <button id="playBtn" class="btn-play" aria-label="播放" title="播放">▶</button>
+            <button id="resetBtn" class="btn-reset" aria-label="重置" title="重置">↻</button>
         </div>
     </div>
 
@@ -138,15 +150,19 @@
 
         document.getElementById('playBtn').onclick = function() {
             isPlaying = !isPlaying;
-            this.textContent = isPlaying ? '暫停' : '播放';
-            this.style.backgroundColor = isPlaying ? '#FF9800' : '#4CAF50';
+            this.textContent = isPlaying ? 'Ⅱ' : '▶';
+            this.setAttribute('aria-label', isPlaying ? '暫停' : '播放');
+            this.title = isPlaying ? '暫停' : '播放';
+            this.style.backgroundColor = isPlaying ? '#56616c' : '#68727d';
             if (isPlaying) sim.loop();
             else cancelAnimationFrame(reqId);
         };
         document.getElementById('resetBtn').onclick = function() {
             isPlaying = false; cancelAnimationFrame(reqId);
-            document.getElementById('playBtn').textContent = '播放';
-            document.getElementById('playBtn').style.backgroundColor = '#4CAF50';
+            document.getElementById('playBtn').textContent = '▶';
+            document.getElementById('playBtn').setAttribute('aria-label', '播放');
+            document.getElementById('playBtn').title = '播放';
+            document.getElementById('playBtn').style.backgroundColor = '#68727d';
             sim.init();
         };
         ['m1', 'm2'].forEach(id => document.getElementById(id).onchange = () => { 

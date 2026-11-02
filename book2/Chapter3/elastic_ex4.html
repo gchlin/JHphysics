@@ -74,6 +74,18 @@
         #zero-scroll-layout canvas { flex: 1 1 0; min-width: 0; min-height: 0; width: 100% !important; height: 100% !important; }
         #zero-scroll-layout .controls, #zero-scroll-layout .controls-row { max-height: none; overflow: visible; flex-shrink: 0; }
         #zero-scroll-layout .chapter-navigation { max-height: none; overflow: hidden; flex-shrink: 0; line-height: 1.35; }
+        body { padding: 8px; background: #f4f7f6; }
+        #zero-scroll-layout { display: flex; flex-direction: row; align-items: stretch; gap: 2px; }
+        #zero-scroll-layout > canvas { flex: 1 1 auto; min-width: 0; min-height: 0; width: 100% !important; height: 100% !important; object-fit: contain; }
+        #zero-scroll-layout > .controls { flex: 0 0 78px; min-width: 0; box-sizing: border-box; margin: 0; padding: 5px; display: flex; flex-direction: column; justify-content: center; align-items: stretch; gap: 5px; }
+        #zero-scroll-layout .control-group { min-width: 0; flex-direction: column; align-items: stretch; gap: 2px; font-size: 11px; }
+        #zero-scroll-layout select, #zero-scroll-layout button { box-sizing: border-box; width: 100%; min-width: 0; min-height: 30px; padding: 3px 0; font-size: 11px; touch-action: manipulation; }
+        #zero-scroll-layout button { background: #68727d; }
+        #zero-scroll-layout button:hover { background: #56616c; }
+        #zero-scroll-layout .reset { background: #89939d; }
+        #zero-scroll-layout .reset:hover { background: #737e89; }
+        #zero-scroll-layout .chapter-navigation { display: none !important; }
+        @media (max-width: 600px) { body { padding: 4px; } #zero-scroll-layout { gap: 1px; } #zero-scroll-layout > .controls { flex-basis: 73px; padding: 3px; } }
     </style>
 </head>
 <body>
@@ -112,8 +124,8 @@
                 <option value="5">5</option>
             </select>
         </div>
-        <button id="playBtn">播放</button>
-        <button id="resetBtn" class="reset">重置</button>
+        <button id="playBtn" aria-label="播放" title="播放">▶</button>
+        <button id="resetBtn" class="reset" aria-label="重置" title="重置">↻</button>
     </div>
 
     <script>
@@ -224,14 +236,18 @@
         // UI 事件綁定
         document.getElementById('playBtn').addEventListener('click', function() {
             isPlaying = !isPlaying;
-            this.textContent = isPlaying ? '暫停' : '播放';
-            this.style.backgroundColor = isPlaying ? '#FF9800' : '#4CAF50';
+            this.textContent = isPlaying ? 'Ⅱ' : '▶';
+            this.setAttribute('aria-label', isPlaying ? '暫停' : '播放');
+            this.title = isPlaying ? '暫停' : '播放';
+            this.style.backgroundColor = isPlaying ? '#56616c' : '#68727d';
         });
 
         document.getElementById('resetBtn').addEventListener('click', function() {
             isPlaying = false;
-            document.getElementById('playBtn').textContent = '播放';
-            document.getElementById('playBtn').style.backgroundColor = '#4CAF50';
+            document.getElementById('playBtn').textContent = '▶';
+            document.getElementById('playBtn').setAttribute('aria-label', '播放');
+            document.getElementById('playBtn').title = '播放';
+            document.getElementById('playBtn').style.backgroundColor = '#68727d';
             blocks.forEach(b => b.reset());
             drawScene();
         });
