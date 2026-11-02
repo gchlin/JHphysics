@@ -8,7 +8,7 @@
         html, body { width: 100%; height: 100%; height: 100dvh; margin: 0; overflow: hidden; }
         body { box-sizing: border-box; padding: 8px; background-color: #f4f7f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         #zero-scroll-layout { width: 100%; height: 100%; min-height: 0; }
-        #zero-scroll-layout > .sim-container { width: 100%; height: 100%; min-width: 0; min-height: 0; box-sizing: border-box; padding: 8px; display: flex; flex-direction: row; align-items: stretch; gap: 2px; background: #fff; border-radius: 12px; box-shadow: 0 8px 16px rgba(0,0,0,0.1); }
+        #zero-scroll-layout > .sim-container { position: relative; width: 100%; height: 100%; min-width: 0; min-height: 0; box-sizing: border-box; padding: 8px; display: flex; flex-direction: row; align-items: stretch; gap: 0; background: #fff; border-radius: 12px; box-shadow: 0 8px 16px rgba(0,0,0,0.1); }
         #zero-scroll-layout canvas { flex: 1 1 auto; min-width: 0; min-height: 0; width: 100%; height: 100%; object-fit: contain; }
         #zero-scroll-layout .sim-title, #zero-scroll-layout .chapter-navigation { display: none !important; }
         .sim-title {
@@ -19,10 +19,7 @@
             background-color: #EBF1F4; border-radius: 8px; border: 1px solid #dcdcdc; display: block;
             width: 800px; height: 340px; 
         }
-        .controls-row {
-            margin: 0; display: flex; flex: 0 0 78px; flex-direction: column; gap: 5px; align-items: stretch; justify-content: center;
-            background: #fafafa; padding: 5px; border-radius: 8px; border: 1px solid #e0e0e0; box-sizing: border-box;
-        }
+        .playback-controls { position: absolute; right: 18px; bottom: 18px; z-index: 2; display: flex; gap: 8px; }
         button, select {
             font-size: 14px; padding: 6px 12px; cursor: pointer; border: none; border-radius: 6px; 
             font-weight: 600; transition: background 0.2s, transform 0.1s; outline: none;
@@ -30,21 +27,20 @@
         button:active { transform: scale(0.96); }
         select { border: 1px solid #ccc; background: white; color: #333; }
         
-        .btn-play { background-color: #68727d; color: white; min-width: 0; }
-        .btn-play:hover { background-color: #56616c; }
-        .btn-reset { background-color: #89939d; color: white; }
-        .btn-reset:hover { background-color: #737e89; }
-        .btn-stage { background-color: #0288D1; color: white; }
-        .btn-stage:hover { background-color: #0277BD; }
-        .divider { border-top: 2px solid #ddd; width: 100%; height: 0; margin: 2px 0; }
-        .control-label { font-weight: bold; color: #555; font-size: 14px; margin-right: 2px; }
+        .btn-play, .btn-reset, .btn-help { width: 44px; height: 42px; min-width: 44px; padding: 0; color: white; background: #0878d1; font-size: 19px; box-shadow: 0 2px 5px rgba(0,0,0,.24); }
+        .btn-play:hover, .btn-reset:hover, .btn-help:hover { background: #005bb5; }
+        .help-dialog { width: min(420px, calc(100vw - 40px)); box-sizing: border-box; border: 0; border-radius: 12px; padding: 22px 24px; color: #263746; box-shadow: 0 8px 28px rgba(0,0,0,.28); font: 15px/1.65 'Segoe UI', sans-serif; }
+        .help-dialog::backdrop { background: rgba(24, 37, 48, .45); }
+        .help-dialog h2 { margin: 0 0 12px; font-size: 20px; }
+        .help-dialog ul { margin: 0; padding-left: 22px; }
+        .help-dialog li + li { margin-top: 8px; }
+        .help-dialog button { display: block; margin: 18px 0 0 auto; min-width: 72px; min-height: 38px; color: white; background: #0878d1; }
         @media (max-width: 600px) {
             body { padding: 4px; }
             #zero-scroll-layout > .sim-container { padding: 4px; gap: 1px; }
-            .controls-row { flex-basis: 73px; gap: 4px; padding: 3px; }
-            #zero-scroll-layout button, #zero-scroll-layout select { min-height: 30px; padding: 4px 0; font-size: 10px; touch-action: manipulation; }
-            .btn-play { min-width: 0; }
-            .control-label { font-size: 12px; }
+            #zero-scroll-layout button { min-height: 40px; touch-action: manipulation; }
+            .playback-controls { right: 10px; bottom: 14px; gap: 6px; }
+            .btn-play, .btn-reset, .btn-help { width: 42px; height: 40px; min-width: 42px; }
         }
     </style>
 </head>
@@ -54,22 +50,21 @@
     <div class="sim-container">
         <canvas id="simCanvas"></canvas>
         
-        <div class="controls-row">
+        <div class="playback-controls" aria-label="動畫播放控制">
             <button id="playBtn" class="btn-play" aria-label="播放" title="播放">▶</button>
             <button id="resetBtn" class="btn-reset" aria-label="重置" title="重置">↻</button>
-            <div class="divider"></div>
-            <span class="control-label">倍速:</span>
-            <select id="speedSelect" value="0.25">
-                <option value="1">1.0x</option>
-                <option value="0.5">0.5x</option>
-                <option value="0.25">0.25x</option>
-            </select>
-            <div class="divider"></div>
-            <span class="control-label">階段:</span>
-            <button class="btn-stage" onclick="jumpToStage('before')">碰撞前</button>
-            <button class="btn-stage" onclick="jumpToStage('closest')">最接近</button>
-            <button class="btn-stage" onclick="jumpToStage('after')">碰撞後</button>
+            <button id="helpBtn" class="btn-help" aria-label="使用說明" title="使用說明">?</button>
         </div>
+        <dialog id="helpDialog" class="help-dialog" aria-labelledby="helpTitle">
+            <h2 id="helpTitle">操作說明</h2>
+            <ul>
+                <li>點左側眼睛圖示，顯示或隱藏能量圖表、動量圖示。</li>
+                <li>週期鐘的小圈代表正常播放；點大圈的階段區段，可單獨慢動作播放該階段。</li>
+                <li>慢動作時點小圈，可恢復正常播放。</li>
+                <li>點週期鐘的「最大壓縮」標記，可查看彈簧壓縮最大的狀態。</li>
+            </ul>
+            <button id="closeHelpBtn" type="button">關閉</button>
+        </dialog>
     </div>
 
     <script>
@@ -80,10 +75,17 @@
 
         const displayWidth = 800;
         const displayHeight = 340; 
-        const dpr = window.devicePixelRatio || 1;
-        canvas.width = displayWidth * dpr;
-        canvas.height = displayHeight * dpr;
-        ctx.scale(dpr, dpr);
+        function resizeCanvasResolution() {
+            const rect = canvas.getBoundingClientRect();
+            if (!rect.width || !rect.height) return;
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+            const pixelWidth = Math.max(1, Math.round(rect.width * dpr));
+            const pixelHeight = Math.max(1, Math.round(rect.height * dpr));
+            if (canvas.width !== pixelWidth) canvas.width = pixelWidth;
+            if (canvas.height !== pixelHeight) canvas.height = pixelHeight;
+            ctx.setTransform(canvas.width / displayWidth, 0, 0, canvas.height / displayHeight, 0, 0);
+        }
+        resizeCanvasResolution();
 
         const sim = {
             m: 10,        
@@ -95,10 +97,18 @@
             floorY: 280,  
             timeSpeed: 0.25, 
             snapshots: {},
+            phaseIndex: 0,
+            phaseElapsed: 0,
+            phaseClockDone: false,
+            showEnergy: true,
+            showMomentum: true,
+            replayPhase: null,
+            savedTimeSpeed: 0.25,
 
             init() {
                 this.xA = 50; this.xB = 450;
                 this.vA = this.v0; this.vB = 0;
+                this.phaseIndex = 0; this.phaseElapsed = 0; this.phaseClockDone = false;
                 this.totalE = 0.5 * this.m * this.v0 * this.v0; 
                 this.totalP = this.m * this.v0; 
                 // 質心速度 V_c = (m1*v1 + m2*v2) / (m1 + m2)
@@ -142,10 +152,33 @@
                 const steps = 10;
                 const dt = (1 / steps) * this.timeSpeed;
                 for (let i = 0; i < steps; i++) {
+                    const gap = (this.xB - this.L0) - (this.xA + this.cartW);
+                    if (this.phaseIndex === 0 && gap <= 0) {
+                        this.phaseIndex = 1;
+                        this.phaseElapsed = 0;
+                    } else if (this.phaseIndex === 1 && gap > 0 && this.phaseElapsed > 0) {
+                        this.phaseIndex = 2;
+                        this.phaseElapsed = 0;
+                    }
+                    if (this.phaseIndex === 2) {
+                        this.phaseElapsed = Math.min(8, this.phaseElapsed + dt);
+                        if (this.phaseElapsed >= 8) this.phaseClockDone = true;
+                    } else {
+                        this.phaseElapsed += dt;
+                    }
                     let force = 0;
                     if (this.xA + this.cartW > this.xB - this.L0) force = this.k * ((this.xA + this.cartW) - (this.xB - this.L0));
                     this.vA += (-force / this.m) * dt; this.vB += (force / this.m) * dt;
                     this.xA += this.vA * dt; this.xB += this.vB * dt;
+                    if ((this.replayPhase === 0 && this.phaseIndex === 1) ||
+                        (this.replayPhase === 1 && this.phaseIndex === 2)) {
+                        finishPhaseReplay();
+                        break;
+                    }
+                    if (this.replayPhase === 2 && this.phaseClockDone) {
+                        finishPhaseReplay();
+                        break;
+                    }
                 }
             },
 
@@ -245,59 +278,164 @@
             },
 
             drawCharts() {
-                // 動能與位能長條圖
+                // 左側 70% 顯示動能與彈力位能兩列；右上角以三段圓環顯示碰撞進程。
                 let ekA = 0.5 * this.m * this.vA * this.vA;
                 let ekB = 0.5 * this.m * this.vB * this.vB;
                 let compression = Math.max(0, (this.xA + this.cartW) - (this.xB - this.L0));
                 let uSpring = 0.5 * this.k * compression * compression;
 
-                let barMaxWidth = 500; let barX = 130; let barY = 30; let barHeight = 24;
-                let wA = (ekA / this.totalE) * barMaxWidth;
-                let wB = (ekB / this.totalE) * barMaxWidth;
-                let wS = (uSpring / this.totalE) * barMaxWidth;
+                const labelX = 38, barX = 142, barWidth = 425, barHeight = 26;
+                ctx.fillStyle = '#56616c';
+                ctx.font = '12px "Segoe UI", sans-serif';
+                ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+                const energyRows = [
+                    { label: 'K₁ + K₂', y: 25, total: ekA + ekB, parts: [[ekA, '#1A5276', 'K₁'], [ekB, '#5DADE2', 'K₂']] },
+                    { label: 'U', y: 67, total: uSpring, parts: [[uSpring, '#222222']] }
+                ];
+                if (this.showEnergy) energyRows.forEach(row => {
+                    ctx.fillStyle = '#263746';
+                    ctx.font = 'bold 19px "Segoe UI", sans-serif';
+                    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+                    ctx.fillText(row.label, labelX, row.y + barHeight / 2);
+                    ctx.fillStyle = '#eef2f5';
+                    ctx.fillRect(barX, row.y, barWidth, barHeight);
+                    let offset = 0;
+                    row.parts.forEach(([value, color, partLabel]) => {
+                        const width = Math.max(0, Math.min(barWidth - offset, (value / this.totalE) * barWidth));
+                        ctx.fillStyle = color;
+                        ctx.fillRect(barX + offset, row.y, width, barHeight);
+                        if (partLabel && width >= 34) {
+                            ctx.fillStyle = '#fff';
+                            ctx.font = 'bold 13px "Segoe UI", sans-serif';
+                            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                            ctx.fillText(partLabel, barX + offset + width / 2, row.y + barHeight / 2);
+                        }
+                        offset += width;
+                    });
+                    ctx.strokeStyle = '#87939d'; ctx.lineWidth = 1;
+                    ctx.strokeRect(barX, row.y, barWidth, barHeight);
+                    ctx.fillStyle = '#263746'; ctx.font = 'bold 15px "Segoe UI", sans-serif';
+                    ctx.textAlign = 'right';
+                    ctx.fillText(`${Math.round(row.total / this.totalE * 100)}%`, barX + barWidth - 7, row.y + barHeight / 2);
+                });
+                this.drawEyeIcon(14, 58, this.showEnergy);
 
-                ctx.strokeStyle = '#aaa'; ctx.lineWidth = 1;
-                ctx.strokeRect(barX - 1, barY - 1, barMaxWidth + 2, barHeight + 2);
-
-                ctx.fillStyle = '#1A5276'; ctx.fillRect(barX, barY, wA, barHeight); 
-                ctx.fillStyle = '#5DADE2'; ctx.fillRect(barX + wA, barY, wB, barHeight);
-                ctx.fillStyle = '#222222'; ctx.fillRect(barX + wA + wB, barY, wS, barHeight);
-
-                ctx.font = '14px "Segoe UI", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                if (wA > 40) { ctx.fillStyle = '#fff'; ctx.fillText('m1 動能', barX + wA / 2, barY + barHeight / 2); }
-                if (wB > 40) { ctx.fillStyle = '#fff'; ctx.fillText('m2 動能', barX + wA + wB / 2, barY + barHeight / 2); }
-                if (wS > 45) { ctx.fillStyle = '#fff'; ctx.fillText('彈力位能', barX + wA + wB + wS / 2, barY + barHeight / 2); }
-
-                ctx.fillStyle = '#444'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'right';
-                ctx.fillText('能量分布', barX - 15, barY + barHeight / 2);
+                this.drawPhaseClock(690, 78, 38, 58);
 
                 // 動量向量圖表
-                let pY = 85; let pX = 130; 
+                let pY = 119; let pX = 142;
                 let pScale = 250 / this.totalP; 
                 let pTotalLen = this.totalP * pScale;
                 let pALen = (this.m * this.vA) * pScale;
                 let pBLen = (this.m * this.vB) * pScale;
 
-                ctx.fillText('動量向量', barX - 15, pY + 12);
-                ctx.textAlign = 'left';
-                
-                // 系統總動量 P
-                this.drawArrow(pX, pY, pX + pTotalLen, pY, '#000000', 4);
-                ctx.fillStyle = '#000'; ctx.fillText('P (系統總動量)', pX + pTotalLen + 8, pY);
-                
-                // A車動量 p1 
-                if (pALen > 2) {
-                    this.drawArrow(pX, pY + 22, pX + pALen, pY + 22, '#1A5276', 4);
-                    ctx.textAlign = 'center';
-                    ctx.fillStyle = '#1A5276'; ctx.fillText('p₁', pX + pALen / 2, pY + 38);
+                if (this.showMomentum) {
+                    ctx.fillStyle = '#263746'; ctx.font = 'bold 17px "Segoe UI", sans-serif';
+                    ctx.textAlign = 'left'; ctx.fillText('動量', labelX, pY + 12);
+                    ctx.textAlign = 'left';
+                    this.drawArrow(pX, pY, pX + pTotalLen, pY, '#000000', 4);
+                    ctx.fillStyle = '#000'; ctx.fillText('P (系統總動量)', pX + pTotalLen + 8, pY);
+                    if (pALen > 2) {
+                        this.drawArrow(pX, pY + 22, pX + pALen, pY + 22, '#1A5276', 4);
+                        ctx.textAlign = 'center';
+                        ctx.fillStyle = '#1A5276'; ctx.fillText('p₁', pX + pALen / 2, pY + 38);
+                    }
+                    if (pBLen > 2) {
+                        this.drawArrow(pX + pALen, pY + 22, pX + pALen + pBLen, pY + 22, '#5DADE2', 4);
+                        ctx.textAlign = 'center';
+                        ctx.fillStyle = '#5DADE2'; ctx.fillText('p₂', pX + pALen + pBLen / 2, pY + 38);
+                    }
                 }
-                
-                // B車動量 p2
-                if (pBLen > 2) {
-                    this.drawArrow(pX + pALen, pY + 22, pX + pALen + pBLen, pY + 22, '#5DADE2', 4);
-                    ctx.textAlign = 'center';
-                    ctx.fillStyle = '#5DADE2'; ctx.fillText('p₂', pX + pALen + pBLen / 2, pY + 38);
+                this.drawEyeIcon(14, pY + 12, this.showMomentum);
+            },
+
+            drawEyeIcon(x, y, isVisible) {
+                ctx.save();
+                ctx.strokeStyle = '#52616d'; ctx.fillStyle = '#52616d'; ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(x - 9, y);
+                ctx.quadraticCurveTo(x, y - 8, x + 9, y);
+                ctx.quadraticCurveTo(x, y + 8, x - 9, y);
+                ctx.stroke();
+                if (isVisible) {
+                    ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fill();
+                } else {
+                    ctx.beginPath(); ctx.moveTo(x - 9, y + 9); ctx.lineTo(x + 9, y - 9); ctx.stroke();
                 }
+                ctx.restore();
+            },
+
+            isSlowMotion() {
+                return this.timeSpeed < this.savedTimeSpeed;
+            },
+
+            drawPhaseClock(x, y, normalRadius, slowRadius) {
+                const startAngle = -Math.PI / 2;
+                const sector = Math.PI * 2 / 3;
+                const colors = ['#5DADE2', '#E9A23B', '#58A987'];
+                const labels = ['碰撞前到接觸', '接觸到分離', '分離後'];
+                const expected = [
+                    Math.max(1, ((450 - this.L0) - (50 + this.cartW)) / this.v0),
+                    Math.PI / Math.sqrt(2 * this.k / this.m),
+                    8
+                ];
+                const fraction = this.phaseClockDone ? 1 : Math.min(1, this.phaseElapsed / expected[this.phaseIndex]);
+                const maxCompressionAngle = startAngle + sector + sector / 2;
+                const activeRadius = isPlaying ? (this.isSlowMotion() ? slowRadius : normalRadius) : null;
+                ctx.save();
+                ctx.lineWidth = 10;
+                ctx.lineCap = 'butt';
+                [normalRadius, slowRadius].forEach(radius => {
+                    for (let i = 0; i < 3; i++) {
+                        const a0 = startAngle + i * sector + 0.035;
+                        const a1 = startAngle + (i + 1) * sector - 0.035;
+                        ctx.beginPath(); ctx.arc(x, y, radius, a0, a1);
+                        ctx.strokeStyle = '#dce3e8'; ctx.stroke();
+                        if (radius === activeRadius) {
+                            if (this.phaseClockDone || i < this.phaseIndex) {
+                                ctx.beginPath(); ctx.arc(x, y, radius, a0, a1);
+                                ctx.strokeStyle = colors[i]; ctx.stroke();
+                            } else if (i === this.phaseIndex && fraction > 0) {
+                                ctx.beginPath(); ctx.arc(x, y, radius, a0, a0 + Math.max(0.01, fraction * (a1 - a0)));
+                                ctx.strokeStyle = colors[i]; ctx.stroke();
+                            }
+                        }
+                    }
+                    ctx.beginPath();
+                    ctx.moveTo(x + Math.cos(maxCompressionAngle) * (radius - 7), y + Math.sin(maxCompressionAngle) * (radius - 7));
+                    ctx.lineTo(x + Math.cos(maxCompressionAngle) * (radius + 7), y + Math.sin(maxCompressionAngle) * (radius + 7));
+                    ctx.strokeStyle = '#8a4b08'; ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.stroke();
+                });
+                ctx.beginPath();
+                const handAngle = this.phaseClockDone ? startAngle : startAngle + this.phaseIndex * sector + fraction * sector;
+                const handRadius = activeRadius || normalRadius;
+                ctx.moveTo(x, y);
+                ctx.lineTo(x + Math.cos(handAngle) * (handRadius - 9), y + Math.sin(handAngle) * (handRadius - 9));
+                ctx.strokeStyle = colors[this.phaseIndex]; ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.stroke();
+                ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2);
+                ctx.fillStyle = '#34495e'; ctx.fill();
+                ctx.restore();
+                this.drawClockLabels(x, y, slowRadius + 17, labels, startAngle, sector);
+                ctx.save();
+                ctx.fillStyle = '#8a4b08'; ctx.font = 'bold 10px "Segoe UI", sans-serif';
+                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText('最大壓縮', x + slowRadius + 20, y + slowRadius - 8);
+                ctx.restore();
+            },
+
+            drawClockLabels(x, y, labelRadius, labels, startAngle, sector) {
+                const radius = labelRadius - 17;
+                ctx.save();
+                ctx.fillStyle = '#46545f';
+                ctx.font = '11px "Segoe UI", sans-serif';
+                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText(labels[0], x + radius * 0.6 + 18, y - radius * 0.7);
+                ctx.fillText(labels[1], x, y + labelRadius + 4);
+                ctx.fillText(labels[2], x - radius - 27, y);
+                ctx.font = '12px "Segoe UI", sans-serif';
+                ctx.fillStyle = '#56616c';
+                ctx.font = '10px "Segoe UI", sans-serif';
+                ctx.restore();
             },
 
             loop() {
@@ -309,10 +447,14 @@
         const playBtn = document.getElementById('playBtn');
         playBtn.addEventListener('click', function() {
             isPlaying = !isPlaying;
+            if (!isPlaying && sim.replayPhase !== null) {
+                sim.timeSpeed = sim.savedTimeSpeed;
+                sim.replayPhase = null;
+            }
             this.innerHTML = isPlaying ? 'Ⅱ' : '▶';
             this.setAttribute('aria-label', isPlaying ? '暫停' : '播放');
             this.title = isPlaying ? '暫停' : '播放';
-            this.style.backgroundColor = isPlaying ? '#56616c' : '#68727d';
+            this.style.backgroundColor = isPlaying ? '#005bb5' : '#0878d1';
             if (isPlaying) sim.loop();
             else cancelAnimationFrame(animationId);
         });
@@ -322,31 +464,132 @@
             sim.init();
         });
 
-        document.getElementById('speedSelect').addEventListener('change', function() {
-            sim.timeSpeed = parseFloat(this.value);
-        });
-
-        document.getElementById('speedSelect').value = String(sim.timeSpeed);
+        const helpDialog = document.getElementById('helpDialog');
+        document.getElementById('helpBtn').addEventListener('click', () => helpDialog.showModal());
+        document.getElementById('closeHelpBtn').addEventListener('click', () => helpDialog.close());
 
         function pauseSimulation() {
             isPlaying = false;
             cancelAnimationFrame(animationId);
+            if (sim.replayPhase !== null) {
+                sim.timeSpeed = sim.savedTimeSpeed;
+                sim.replayPhase = null;
+            }
             playBtn.innerHTML = '▶';
             playBtn.setAttribute('aria-label', '播放');
             playBtn.title = '播放';
-            playBtn.style.backgroundColor = '#68727d';
+            playBtn.style.backgroundColor = '#0878d1';
         }
 
-        window.jumpToStage = function(stageName) {
+        function finishPhaseReplay() {
+            isPlaying = false;
+            cancelAnimationFrame(animationId);
+            sim.timeSpeed = sim.savedTimeSpeed;
+            sim.replayPhase = null;
+            playBtn.innerHTML = '▶';
+            playBtn.setAttribute('aria-label', '播放');
+            playBtn.title = '播放';
+            playBtn.style.backgroundColor = '#0878d1';
+        }
+
+        function startSlowPhase(phaseIndex) {
             pauseSimulation();
-            const snap = sim.snapshots[stageName];
-            if (snap) {
+            sim.savedTimeSpeed = sim.timeSpeed;
+            sim.timeSpeed = Math.max(0.02, sim.savedTimeSpeed / 4);
+            sim.phaseClockDone = false;
+            sim.replayPhase = phaseIndex;
+
+            if (phaseIndex === 0) {
+                sim.init();
+            } else {
+                const snap = sim.snapshots[phaseIndex === 1 ? 'before' : 'after'];
                 sim.xA = snap.xA; sim.xB = snap.xB;
                 sim.vA = snap.vA; sim.vB = snap.vB;
+                sim.phaseIndex = phaseIndex;
+                sim.phaseElapsed = 0;
                 sim.draw();
             }
-        };
+            isPlaying = true;
+            playBtn.innerHTML = 'Ⅱ';
+            playBtn.setAttribute('aria-label', '暫停');
+            playBtn.title = '暫停';
+            playBtn.style.backgroundColor = '#005bb5';
+            sim.loop();
+        }
 
+        function showClosestSnapshot() {
+            pauseSimulation();
+            const snap = sim.snapshots.closest;
+            if (!snap) return;
+            sim.xA = snap.xA; sim.xB = snap.xB;
+            sim.vA = snap.vA; sim.vB = snap.vB;
+            sim.phaseClockDone = false;
+            sim.phaseIndex = 1;
+            sim.phaseElapsed = Math.PI / (2 * Math.sqrt(2 * sim.k / sim.m));
+            sim.draw();
+        }
+
+        function resumeAtNormalSpeed() {
+            if (sim.replayPhase !== null) pauseSimulation();
+            else if (sim.isSlowMotion()) sim.timeSpeed = sim.savedTimeSpeed;
+            if (isPlaying) return;
+            isPlaying = true;
+            playBtn.innerHTML = 'Ⅱ';
+            playBtn.setAttribute('aria-label', '暫停');
+            playBtn.title = '暫停';
+            playBtn.style.backgroundColor = '#005bb5';
+            sim.loop();
+        }
+
+        canvas.addEventListener('click', event => {
+            const rect = canvas.getBoundingClientRect();
+            const x = (event.clientX - rect.left) * displayWidth / rect.width;
+            const y = (event.clientY - rect.top) * displayHeight / rect.height;
+            if (x <= 28 && y >= 38 && y <= 78) {
+                sim.showEnergy = !sim.showEnergy;
+                sim.draw();
+                return;
+            }
+            if (x <= 28 && y >= 116 && y <= 149) {
+                sim.showMomentum = !sim.showMomentum;
+                sim.draw();
+                return;
+            }
+            const clockX = 690, clockY = 78;
+            const dx = x - clockX, dy = y - clockY;
+            const distance = Math.hypot(dx, dy);
+            const smallRingHit = Math.abs(distance - 38) <= 10;
+            const largeRingHit = Math.abs(distance - 58) <= 10;
+            if (!smallRingHit && !largeRingHit) return;
+            let angle = Math.atan2(dy, dx) + Math.PI / 2;
+            angle = (angle + Math.PI * 2) % (Math.PI * 2);
+            const maxCompressionAngle = Math.PI;
+            const markerAngleDelta = Math.atan2(Math.sin(angle - maxCompressionAngle), Math.cos(angle - maxCompressionAngle));
+            if (Math.abs(markerAngleDelta) < 0.18) {
+                showClosestSnapshot();
+                return;
+            }
+            const phaseIndex = Math.floor(angle / (Math.PI * 2 / 3));
+            if (largeRingHit && (!smallRingHit || Math.abs(distance - 58) < Math.abs(distance - 38))) {
+                startSlowPhase(phaseIndex);
+            } else {
+                resumeAtNormalSpeed();
+            }
+        });
+
+        canvas.addEventListener('pointermove', event => {
+            const rect = canvas.getBoundingClientRect();
+            const x = (event.clientX - rect.left) * displayWidth / rect.width;
+            const y = (event.clientY - rect.top) * displayHeight / rect.height;
+            const clockDistance = Math.hypot(x - 690, y - 78);
+            const overIcon = x <= 28 && ((y >= 38 && y <= 78) || (y >= 116 && y <= 149));
+            const overClockRing = Math.abs(clockDistance - 38) <= 10 || Math.abs(clockDistance - 58) <= 10;
+            canvas.style.cursor = overIcon || overClockRing ? 'pointer' : 'default';
+        });
+
+        const canvasResizeObserver = 'ResizeObserver' in window ? new ResizeObserver(() => { resizeCanvasResolution(); sim.draw(); }) : null;
+        if (canvasResizeObserver) canvasResizeObserver.observe(canvas);
+        else window.addEventListener('resize', () => { resizeCanvasResolution(); sim.draw(); });
         sim.init();
     </script>
 </div>

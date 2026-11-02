@@ -49,6 +49,8 @@
         #zero-scroll-layout button { width: 100%; min-width: 0; min-height: 30px; padding: 3px 0; font-size: 11px; touch-action: manipulation; }
         #zero-scroll-layout .btn-play { background: #68727d; } #zero-scroll-layout .btn-play:hover { background: #56616c; }
         #zero-scroll-layout .btn-reset { background: #89939d; } #zero-scroll-layout .btn-reset:hover { background: #737e89; }
+        #zero-scroll-layout .ratio-control { display: flex; flex-direction: column; gap: 2px; font-size: 10px; }
+        #zero-scroll-layout .ratio-control select { width: 100%; min-height: 30px; box-sizing: border-box; padding: 3px 0; font-size: 10px; }
         @media (max-width: 600px) { body { padding: 4px; } #zero-scroll-layout > .sim-container { padding: 4px; gap: 1px; } #zero-scroll-layout .controls { flex-basis: 73px; padding: 3px; } }
     </style>
 </head>
@@ -58,8 +60,15 @@
         <div class="sim-title">子彈打木塊 (彈道擺)</div>
         <canvas id="canvas" width="800" height="450"></canvas>
         <div class="controls">
-            <div>子彈質量 (m): <span class="fixed-val">5</span></div>
-            <div>木塊質量 (M): <span class="fixed-val">1995</span></div>
+            <div>子彈質量 (m): <span id="bulletMass" class="fixed-val">5</span></div>
+            <div>木塊質量 (M): <span id="blockMass" class="fixed-val">1995</span></div>
+            <label class="ratio-control" for="massRatio">質量比
+                <select id="massRatio" aria-label="子彈與木塊質量比例">
+                    <option value="1:5" selected>1:5</option>
+                    <option value="1:3">1:3</option>
+                    <option value="1:1">1:1</option>
+                </select>
+            </label>
             <button id="playBtn" class="btn-play" aria-label="播放" title="播放">▶</button>
             <button id="resetBtn" class="btn-reset" aria-label="重置" title="重置">↻</button>
         </div>
@@ -68,18 +77,34 @@
     <script>
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
+        const sceneWidth = 800;
+        const sceneHeight = 450;
+        function resizeCanvasResolution() {
+            const rect = canvas.getBoundingClientRect();
+            if (!rect.width || !rect.height) return;
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+            const pixelWidth = Math.max(1, Math.round(rect.width * dpr));
+            const pixelHeight = Math.max(1, Math.round(rect.height * dpr));
+            if (canvas.width !== pixelWidth) canvas.width = pixelWidth;
+            if (canvas.height !== pixelHeight) canvas.height = pixelHeight;
+            ctx.setTransform(canvas.width / sceneWidth, 0, 0, canvas.height / sceneHeight, 0, 0);
+        }
         let isPlaying = false, reqId = null;
         
         const sim = {
             L: 250, pivotX: 400, pivotY: 40, g: 0.15,
             init() {
-                this.m1 = 5;       
-                this.m2 = 1995;    
+                [this.m1, this.m2] = document.getElementById('massRatio').value.split(':').map(Number);
+                document.getElementById('bulletMass').textContent = this.m1;
+                document.getElementById('blockMass').textContent = this.m2;
                 this.bw = 20; 
                 this.bh = 10;  
                 this.size = 70; 
                 this.theta = 0;
                 this.omega = 0;
+                const postImpactSpeed = 15 * this.m1 / (this.m1 + this.m2);
+                this.targetH = postImpactSpeed * postImpactSpeed / (2 * this.g);
+                this.maxHeightReached = false;
                 this.state = 'shooting';
                 this.bulletX = 50;
                 // 木塊中心的 Y 座標
@@ -97,11 +122,9 @@
                     if (this.bulletX >= this.pivotX) {
                         this.bulletX = this.pivotX;
                         
-                        // 目標高度：使木塊中心上升繩長 (L) 的 20%
-                        let targetH = this.L * 0.2; 
-                        
-                        // 力學能守恆計算初速 v = sqrt(2gh)
-                        let v_bottom = Math.sqrt(2 * this.g * targetH);
+                        // 子彈以固定速度撞擊，依完全非彈性碰撞的動量守恆計算共同速度。
+                        const bulletSpeed = 15;
+                        let v_bottom = bulletSpeed * this.m1 / (this.m1 + this.m2);
                         
                         // 轉換為角速度 omega = v / R
                         this.omega = v_bottom / R; 
@@ -109,13 +132,17 @@
                     }
                 } else if (this.state === 'swinging') {
                     // 使用真實半徑 R 更新物理狀態
+                    const previousOmega = this.omega;
                     let alpha = -(this.g / R) * Math.sin(this.theta);
                     this.omega += alpha;
                     this.theta += this.omega;
+                    if (previousOmega * this.omega <= 0 && Math.abs(this.theta) > 0.03) {
+                        this.maxHeightReached = true;
+                    }
                 }
             },
             draw() {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.clearRect(0, 0, sceneWidth, sceneHeight);
                 
                 ctx.fillStyle = '#C4C4C4';
                 ctx.fillRect(350, 20, 100, 20);
@@ -124,19 +151,20 @@
                 ctx.setLineDash([5, 5]);
                 ctx.beginPath();
                 ctx.moveTo(0, this.initialBlockY);
-                ctx.lineTo(canvas.width, this.initialBlockY);
+                ctx.lineTo(sceneWidth, this.initialBlockY);
                 ctx.strokeStyle = '#999'; ctx.stroke();
                 
-                // 畫出目標高度 0.2L 基準線 (對齊木塊中心最高點)
-                let targetY = this.initialBlockY - (this.L * 0.2);
-                ctx.beginPath();
-                ctx.moveTo(this.pivotX, targetY);
-                ctx.lineTo(canvas.width, targetY);
-                ctx.strokeStyle = '#4CAF50'; ctx.stroke();
+                // 撞前起始高度使用深色虛線；撞後最高點到達後才顯示。
+                if (this.maxHeightReached) {
+                    let targetY = this.initialBlockY - this.targetH;
+                    ctx.beginPath();
+                    ctx.moveTo(this.pivotX, targetY);
+                    ctx.lineTo(sceneWidth, targetY);
+                    ctx.strokeStyle = '#9BC9B0'; ctx.lineWidth = 2; ctx.stroke();
+                    ctx.fillStyle = '#59866d'; ctx.font = '14px sans-serif';
+                    ctx.fillText('撞後最高', sceneWidth - 200, targetY - 10);
+                }
                 ctx.setLineDash([]);
-                
-                ctx.fillStyle = '#4CAF50'; ctx.font = '14px sans-serif';
-                ctx.fillText('最高點', canvas.width - 200, targetY - 10);
 
                 if (this.state === 'shooting') {
                     this.drawRope(this.pivotX, this.pivotY, this.pivotX, this.pivotY + this.L);
@@ -228,7 +256,12 @@
             document.getElementById('playBtn').style.backgroundColor = '#68727d';
             sim.init();
         };
+        document.getElementById('massRatio').addEventListener('change', () => document.getElementById('resetBtn').click());
         
+        resizeCanvasResolution();
+        const canvasResizeObserver = 'ResizeObserver' in window ? new ResizeObserver(() => { resizeCanvasResolution(); sim.draw(); }) : null;
+        if (canvasResizeObserver) canvasResizeObserver.observe(canvas);
+        else window.addEventListener('resize', () => { resizeCanvasResolution(); sim.draw(); });
         sim.init();
     </script>
     <nav class="chapter-navigation" aria-label="例題導覽" style="max-width: 900px; margin: 24px auto; padding: 12px 20px; text-align: center; font-family: sans-serif;">

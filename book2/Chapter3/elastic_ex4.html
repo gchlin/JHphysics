@@ -85,6 +85,12 @@
         #zero-scroll-layout .reset { background: #89939d; }
         #zero-scroll-layout .reset:hover { background: #737e89; }
         #zero-scroll-layout .chapter-navigation { display: none !important; }
+        #zero-scroll-layout .view-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+        #zero-scroll-layout .view-toggle button { min-height: 28px; padding: 2px 0; border-radius: 0; }
+        #zero-scroll-layout .view-toggle button:first-child { border-radius: 4px 0 0 4px; }
+        #zero-scroll-layout .view-toggle button:last-child { border-radius: 0 4px 4px 0; }
+        #zero-scroll-layout .view-toggle button[aria-pressed="true"] { background: #1479b8; }
+        #zero-scroll-layout .view-toggle button[aria-pressed="false"] { background: #89939d; }
         @media (max-width: 600px) { body { padding: 4px; } #zero-scroll-layout { gap: 1px; } #zero-scroll-layout > .controls { flex-basis: 73px; padding: 3px; } }
     </style>
 </head>
@@ -94,6 +100,10 @@
     <canvas id="simCanvas" width="900" height="300"></canvas>
 
     <div class="controls">
+        <div class="view-toggle" role="group" aria-label="視野遠近">
+            <button id="nearViewBtn" type="button" aria-pressed="true" title="近距離視野">近</button>
+            <button id="farViewBtn" type="button" aria-pressed="false" title="遠距離視野">遠</button>
+        </div>
         <div class="control-group">
             甲質量: 
             <select id="m1">
@@ -131,6 +141,18 @@
     <script>
         const canvas = document.getElementById('simCanvas');
         const ctx = canvas.getContext('2d');
+        const sceneWidth = 900;
+        const sceneHeight = 300;
+        function resizeCanvasResolution() {
+            const rect = canvas.getBoundingClientRect();
+            if (!rect.width || !rect.height) return;
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+            const pixelWidth = Math.max(1, Math.round(rect.width * dpr));
+            const pixelHeight = Math.max(1, Math.round(rect.height * dpr));
+            if (canvas.width !== pixelWidth) canvas.width = pixelWidth;
+            if (canvas.height !== pixelHeight) canvas.height = pixelHeight;
+            ctx.setTransform(canvas.width / sceneWidth, 0, 0, canvas.height / sceneHeight, 0, 0);
+        }
 
         // 控制狀態
         let isPlaying = false;
@@ -189,6 +211,12 @@
         const blockC = new Block('丙', 550, 'm3');
         const blocks = [blockA, blockB, blockC];
 
+        function positionBlocks() {
+            blockA.x = 50;
+            blockB.x = blockA.x + blockA.size + 200 * 0.7;
+            blockC.x = blockB.x + blockB.size + 190 * 0.7;
+        }
+
         // 碰撞計算 (一維彈性碰撞公式)
         function checkCollision(b1, b2) {
             // 檢查是否接觸且兩者正在互相靠近 (相對速度 > 0)
@@ -207,14 +235,19 @@
         }
 
         function drawScene() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
+            ctx.clearRect(0, 0, sceneWidth, sceneHeight);
+            const zoom = document.getElementById('farViewBtn').getAttribute('aria-pressed') === 'true' ? 0.65 : 1;
+            ctx.save();
+            ctx.translate(sceneWidth / 2, sceneHeight / 2);
+            ctx.scale(zoom, zoom);
+            ctx.translate(-sceneWidth / 2, -sceneHeight / 2);
             // 畫地板
             ctx.fillStyle = '#C4C4C4';
-            ctx.fillRect(0, floorY, canvas.width, canvas.height - floorY);
+            ctx.fillRect(-sceneWidth * 2, floorY, sceneWidth * 5, sceneHeight - floorY);
 
             // 畫物體
             blocks.forEach(b => b.draw());
+            ctx.restore();
         }
 
         function loop() {
@@ -249,6 +282,7 @@
             document.getElementById('playBtn').title = '播放';
             document.getElementById('playBtn').style.backgroundColor = '#68727d';
             blocks.forEach(b => b.reset());
+            positionBlocks();
             drawScene();
         });
 
@@ -258,8 +292,25 @@
                 if (!isPlaying) document.getElementById('resetBtn').click();
             });
         });
+        const nearViewBtn = document.getElementById('nearViewBtn');
+        const farViewBtn = document.getElementById('farViewBtn');
+        nearViewBtn.addEventListener('click', () => {
+            nearViewBtn.setAttribute('aria-pressed', 'true');
+            farViewBtn.setAttribute('aria-pressed', 'false');
+            drawScene();
+        });
+        farViewBtn.addEventListener('click', () => {
+            nearViewBtn.setAttribute('aria-pressed', 'false');
+            farViewBtn.setAttribute('aria-pressed', 'true');
+            drawScene();
+        });
 
         // 初始化
+        resizeCanvasResolution();
+        const canvasResizeObserver = 'ResizeObserver' in window ? new ResizeObserver(() => { resizeCanvasResolution(); drawScene(); }) : null;
+        if (canvasResizeObserver) canvasResizeObserver.observe(canvas);
+        else window.addEventListener('resize', () => { resizeCanvasResolution(); drawScene(); });
+        positionBlocks();
         drawScene();
         loop();
     </script>
