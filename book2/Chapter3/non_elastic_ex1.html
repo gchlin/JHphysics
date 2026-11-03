@@ -9,7 +9,7 @@
         body { box-sizing: border-box; padding: 8px; display: flex; flex-direction: column; align-items: stretch; justify-content: center; gap: 6px; }
         #zero-scroll-layout { width: 100%; height: 100%; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
         #zero-scroll-layout > .sim-container { width: 100%; max-width: 900px; max-height: 100%; min-height: 0; box-sizing: border-box; padding: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
-        #zero-scroll-layout canvas { width: auto !important; height: auto !important; max-width: 100%; max-height: 100%; object-fit: contain; flex: 0 1 auto; }
+        #zero-scroll-layout canvas { max-width: 100%; max-height: 100%; object-fit: contain; }
         #zero-scroll-layout .sim-title { margin: 0; padding: 2px 0 5px; font-size: clamp(14px, 3vh, 20px); }
         #zero-scroll-layout .controls, #zero-scroll-layout .controls-row { flex: 0 0 auto; max-width: 100%; max-height: 30%; overflow: auto; box-sizing: border-box; margin: 0; padding: 5px 8px; gap: 6px; flex-wrap: wrap; justify-content: center; font-size: 12px; }
         #zero-scroll-layout button, #zero-scroll-layout select { min-height: 36px; padding: 6px 9px; font-size: 13px; touch-action: manipulation; }
@@ -36,13 +36,13 @@
             /* Keep the canvas in the space left after controls and navigation. */
         #zero-scroll-layout { justify-content: flex-start; }
         #zero-scroll-layout > .sim-container { flex: 1 1 0; overflow: hidden; }
-        #zero-scroll-layout canvas { flex: 1 1 0; min-width: 0; min-height: 0; width: 100% !important; height: 100% !important; }
+        #zero-scroll-layout canvas { min-width: 0; min-height: 0; }
         #zero-scroll-layout .controls, #zero-scroll-layout .controls-row { max-height: none; overflow: visible; flex-shrink: 0; }
         #zero-scroll-layout .chapter-navigation { max-height: none; overflow: hidden; flex-shrink: 0; line-height: 1.35; }
         body { padding: 8px; background: #f4f7f6; }
         #zero-scroll-layout { justify-content: flex-start; }
         #zero-scroll-layout > .sim-container { width: 100%; max-width: none; height: 100%; min-width: 0; min-height: 0; box-sizing: border-box; padding: 8px; display: flex; flex-direction: row; align-items: stretch; gap: 2px; overflow: hidden; }
-        #zero-scroll-layout canvas { flex: 1 1 auto; min-width: 0; min-height: 0; width: 100% !important; height: 100% !important; object-fit: contain; }
+        #zero-scroll-layout canvas { min-width: 0; min-height: 0; object-fit: contain; }
         #zero-scroll-layout .sim-title, #zero-scroll-layout .chapter-navigation { display: none !important; }
         #zero-scroll-layout .controls { flex: 0 0 78px; min-width: 0; box-sizing: border-box; margin: 0; padding: 5px; display: flex; flex-direction: column; justify-content: center; align-items: stretch; gap: 5px; font-size: 10px; }
         #zero-scroll-layout .fixed-val { font-size: 12px; }
@@ -52,6 +52,9 @@
         #zero-scroll-layout .ratio-control { display: flex; flex-direction: column; gap: 2px; font-size: 10px; }
         #zero-scroll-layout .ratio-control select { width: 100%; min-height: 30px; box-sizing: border-box; padding: 3px 0; font-size: 10px; }
         @media (max-width: 600px) { body { padding: 4px; } #zero-scroll-layout > .sim-container { padding: 4px; gap: 1px; } #zero-scroll-layout .controls { flex-basis: 73px; padding: 3px; } }
+        #zero-scroll-layout > .sim-container { align-items: center; }
+        #zero-scroll-layout canvas { flex: 0 0 auto; width: auto; height: auto; }
+        #zero-scroll-layout .controls { overflow: auto; }
     </style>
 </head>
 <body>
@@ -79,15 +82,29 @@
         const ctx = canvas.getContext('2d');
         const sceneWidth = 800;
         const sceneHeight = 450;
+        const container = canvas.parentElement;
+        const controls = container.querySelector('.controls');
+        let viewScale = 1;
         function resizeCanvasResolution() {
-            const rect = canvas.getBoundingClientRect();
-            if (!rect.width || !rect.height) return;
+            const style = getComputedStyle(container);
+            const paddingX = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
+            const paddingY = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
+            const gap = parseFloat(style.columnGap || style.gap) || 0;
+            const availableWidth = container.clientWidth - paddingX - controls.offsetWidth - gap;
+            const availableHeight = container.clientHeight - paddingY;
+            if (availableWidth <= 0 || availableHeight <= 0) return false;
+            viewScale = Math.min(availableWidth / sceneWidth, availableHeight / sceneHeight);
+            const cssWidth = sceneWidth * viewScale;
+            const cssHeight = sceneHeight * viewScale;
+            canvas.style.width = `${cssWidth}px`;
+            canvas.style.height = `${cssHeight}px`;
             const dpr = Math.min(window.devicePixelRatio || 1, 2);
-            const pixelWidth = Math.max(1, Math.round(rect.width * dpr));
-            const pixelHeight = Math.max(1, Math.round(rect.height * dpr));
+            const pixelWidth = Math.max(1, Math.round(cssWidth * dpr));
+            const pixelHeight = Math.max(1, Math.round(cssHeight * dpr));
             if (canvas.width !== pixelWidth) canvas.width = pixelWidth;
             if (canvas.height !== pixelHeight) canvas.height = pixelHeight;
-            ctx.setTransform(canvas.width / sceneWidth, 0, 0, canvas.height / sceneHeight, 0, 0);
+            ctx.setTransform(dpr * viewScale, 0, 0, dpr * viewScale, 0, 0);
+            return true;
         }
         let isPlaying = false, reqId = null;
         
@@ -259,9 +276,11 @@
         document.getElementById('massRatio').addEventListener('change', () => document.getElementById('resetBtn').click());
         
         resizeCanvasResolution();
-        const canvasResizeObserver = 'ResizeObserver' in window ? new ResizeObserver(() => { resizeCanvasResolution(); sim.draw(); }) : null;
-        if (canvasResizeObserver) canvasResizeObserver.observe(canvas);
-        else window.addEventListener('resize', () => { resizeCanvasResolution(); sim.draw(); });
+        const resizeAndDraw = () => { if (resizeCanvasResolution()) sim.draw(); };
+        const canvasResizeObserver = 'ResizeObserver' in window ? new ResizeObserver(resizeAndDraw) : null;
+        if (canvasResizeObserver) { canvasResizeObserver.observe(container); canvasResizeObserver.observe(controls); }
+        window.addEventListener('resize', resizeAndDraw);
+        if (window.visualViewport) window.visualViewport.addEventListener('resize', resizeAndDraw);
         sim.init();
     </script>
     <nav class="chapter-navigation" aria-label="例題導覽" style="max-width: 900px; margin: 24px auto; padding: 12px 20px; text-align: center; font-family: sans-serif;">

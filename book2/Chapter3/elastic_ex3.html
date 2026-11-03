@@ -9,7 +9,7 @@
         body { box-sizing: border-box; padding: 8px; background-color: #f4f7f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         #zero-scroll-layout { width: 100%; height: 100%; min-height: 0; }
         #zero-scroll-layout > .sim-container { position: relative; width: 100%; height: 100%; min-width: 0; min-height: 0; box-sizing: border-box; padding: 8px; display: flex; flex-direction: row; align-items: stretch; gap: 0; background: #fff; border-radius: 12px; box-shadow: 0 8px 16px rgba(0,0,0,0.1); }
-        #zero-scroll-layout canvas { flex: 1 1 auto; min-width: 0; min-height: 0; width: 100%; height: 100%; object-fit: contain; }
+        #zero-scroll-layout canvas { flex: 0 0 auto; min-width: 0; min-height: 0; object-fit: contain; }
         #zero-scroll-layout .sim-title, #zero-scroll-layout .chapter-navigation { display: none !important; }
         .sim-title {
             font-size: 20px; font-weight: bold; color: #333; margin-bottom: 12px; 
@@ -19,7 +19,7 @@
             background-color: #EBF1F4; border-radius: 8px; border: 1px solid #dcdcdc; display: block;
             width: 800px; height: 340px; 
         }
-        .playback-controls { position: absolute; right: 18px; bottom: 18px; z-index: 2; display: flex; gap: 8px; }
+        .playback-controls { flex: 0 0 auto; display: flex; flex-wrap: wrap; align-content: center; gap: 8px; }
         button, select {
             font-size: 14px; padding: 6px 12px; cursor: pointer; border: none; border-radius: 6px; 
             font-weight: 600; transition: background 0.2s, transform 0.1s; outline: none;
@@ -39,7 +39,7 @@
             body { padding: 4px; }
             #zero-scroll-layout > .sim-container { padding: 4px; gap: 1px; }
             #zero-scroll-layout button { min-height: 40px; touch-action: manipulation; }
-            .playback-controls { right: 10px; bottom: 14px; gap: 6px; }
+            .playback-controls { gap: 6px; }
             .btn-play, .btn-reset, .btn-help { width: 42px; height: 40px; min-width: 42px; }
         }
     </style>
@@ -75,15 +75,29 @@
 
         const displayWidth = 800;
         const displayHeight = 340; 
+        const container = canvas.parentElement;
+        const controls = container.querySelector('.playback-controls');
+        let viewScale = 1;
         function resizeCanvasResolution() {
-            const rect = canvas.getBoundingClientRect();
-            if (!rect.width || !rect.height) return;
+            const style = getComputedStyle(container);
+            const paddingX = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
+            const paddingY = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
+            const gap = parseFloat(style.columnGap || style.gap) || 0;
+            const availableWidth = container.clientWidth - paddingX - controls.offsetWidth - gap;
+            const availableHeight = container.clientHeight - paddingY;
+            if (availableWidth <= 0 || availableHeight <= 0) return false;
+            viewScale = Math.min(availableWidth / displayWidth, availableHeight / displayHeight);
+            const cssWidth = displayWidth * viewScale;
+            const cssHeight = displayHeight * viewScale;
+            canvas.style.width = `${cssWidth}px`;
+            canvas.style.height = `${cssHeight}px`;
             const dpr = Math.min(window.devicePixelRatio || 1, 2);
-            const pixelWidth = Math.max(1, Math.round(rect.width * dpr));
-            const pixelHeight = Math.max(1, Math.round(rect.height * dpr));
+            const pixelWidth = Math.max(1, Math.round(cssWidth * dpr));
+            const pixelHeight = Math.max(1, Math.round(cssHeight * dpr));
             if (canvas.width !== pixelWidth) canvas.width = pixelWidth;
             if (canvas.height !== pixelHeight) canvas.height = pixelHeight;
-            ctx.setTransform(canvas.width / displayWidth, 0, 0, canvas.height / displayHeight, 0, 0);
+            ctx.setTransform(dpr * viewScale, 0, 0, dpr * viewScale, 0, 0);
+            return true;
         }
         resizeCanvasResolution();
 
@@ -543,8 +557,8 @@
 
         canvas.addEventListener('click', event => {
             const rect = canvas.getBoundingClientRect();
-            const x = (event.clientX - rect.left) * displayWidth / rect.width;
-            const y = (event.clientY - rect.top) * displayHeight / rect.height;
+            const x = (event.clientX - rect.left) / viewScale;
+            const y = (event.clientY - rect.top) / viewScale;
             if (x <= 28 && y >= 38 && y <= 78) {
                 sim.showEnergy = !sim.showEnergy;
                 sim.draw();
@@ -579,17 +593,19 @@
 
         canvas.addEventListener('pointermove', event => {
             const rect = canvas.getBoundingClientRect();
-            const x = (event.clientX - rect.left) * displayWidth / rect.width;
-            const y = (event.clientY - rect.top) * displayHeight / rect.height;
+            const x = (event.clientX - rect.left) / viewScale;
+            const y = (event.clientY - rect.top) / viewScale;
             const clockDistance = Math.hypot(x - 690, y - 78);
             const overIcon = x <= 28 && ((y >= 38 && y <= 78) || (y >= 116 && y <= 149));
             const overClockRing = Math.abs(clockDistance - 38) <= 10 || Math.abs(clockDistance - 58) <= 10;
             canvas.style.cursor = overIcon || overClockRing ? 'pointer' : 'default';
         });
 
-        const canvasResizeObserver = 'ResizeObserver' in window ? new ResizeObserver(() => { resizeCanvasResolution(); sim.draw(); }) : null;
-        if (canvasResizeObserver) canvasResizeObserver.observe(canvas);
-        else window.addEventListener('resize', () => { resizeCanvasResolution(); sim.draw(); });
+        const resizeAndDraw = () => { if (resizeCanvasResolution()) sim.draw(); };
+        const canvasResizeObserver = 'ResizeObserver' in window ? new ResizeObserver(resizeAndDraw) : null;
+        if (canvasResizeObserver) { canvasResizeObserver.observe(container); canvasResizeObserver.observe(controls); }
+        window.addEventListener('resize', resizeAndDraw);
+        if (window.visualViewport) window.visualViewport.addEventListener('resize', resizeAndDraw);
         sim.init();
     </script>
 </div>
