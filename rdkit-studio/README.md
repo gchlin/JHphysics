@@ -2,7 +2,7 @@
 
 此目錄是主網站首頁連結的靜態部署副本。`index.html`、`styles.css`、`script.js`、`renderer.js`、`compound-aliases.json` 與範例圖檔來自 `../RDKit/RDKit/`；RDKit.js 2025.3.3-1.0.0 的 JavaScript、WebAssembly 和授權文件存放於 `vendor/`。樣式控制區的「結構美化」預設開啟，使用 CoordGen 產生 2D 座標；關閉後使用 RDKit 原生排版。
 
-頁面提供旋轉、化學組態保真的鏡射、立體標註、SVG 與 300/600 DPI PNG。鏡射前後會核對 RDKit 的 R/S 和 E/Z 標記。ACS 預設僅作樣式參考；芳香環圓圈和 PDF/EPS 尚未實作。形式電荷始終顯示。
+頁面提供旋轉、化學組態保真的鏡射、立體標註、SVG 與 300/600 DPI PNG。立體鍵可選楔形鍵、楔形鍵加文字、文字，或不顯示楔形鍵與文字的一般線條。鏡射前後會核對 RDKit 的 R/S 和 E/Z 標記。ACS 預設僅作樣式參考；芳香環圓圈和 PDF/EPS 尚未實作。形式電荷始終顯示。
 
 輸出區預設固定畫布高度（2、5、10 cm 或自訂），也可改用固定鍵長比例。SVG 以 cm 寫入實際尺寸，PNG 依寬高輸出像素並標記 300/600 DPI。透明背景位於輸出區，預覽會顯示格紋。實作方法與跨程式貼上的限制見 [尺寸控制筆記](SIZING-NOTES.md)。
 

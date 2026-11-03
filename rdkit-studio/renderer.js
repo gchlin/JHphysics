@@ -114,7 +114,7 @@ function drawingOptions(atoms, options) {
     addAtomIndices: !!options.add_atom_indices,
     explicitMethyl: !options.show_hydrogens && !!(options.explicit_methyl || options.show_carbons),
     addStereoAnnotation: !!options.add_stereo_annotation,
-    wedgeBonds: options.stereo_bond_mode !== 'labels',
+    wedgeBonds: options.stereo_bond_mode === 'wedge' || options.stereo_bond_mode === 'both',
     clearBackground: !options.transparent_background
   };
   if (options.size_mode === 'bond') {
