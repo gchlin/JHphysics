@@ -98,7 +98,11 @@
           <input id="bondInput" type="hidden" value="1.4"><output id="bondOutput" hidden>1.4</output>
           <input id="colorInput" type="checkbox" checked hidden>
           <input id="carbonInput" type="checkbox" hidden>
-          <div class="control-row extra-row"><strong>附加</strong><label class="mini-switch" title="試用咖啡因，在原子旁標出編號"><input id="indexInput" type="checkbox"><i></i> 原子編號</label></div>
+          <div class="control-row extra-row"><strong>編號</strong><div class="segmented" role="group" aria-label="原子編號方式">
+            <button type="button" data-numbering="none" aria-pressed="true">不顯示</button>
+            <button type="button" data-numbering="index" aria-pressed="false" title="從 0 開始的 RDKit 內部原子索引，不是化學命名編號">RDKit 索引</button>
+            <button type="button" data-numbering="steroid" aria-pressed="false" title="依類固醇骨架標出 C1–C27；支鏈可標到 C29">類固醇 C 編號</button>
+          </div></div>
         </section>
         </div>
 
@@ -187,6 +191,7 @@
     </aside>
   </div>
   <script src="vendor/RDKit_minimal.js"></script>
+  <script src="steroid-numbering.js"></script>
   <script src="renderer.js"></script>
   <script src="script.js"></script>
 </body>

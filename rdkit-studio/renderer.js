@@ -237,6 +237,9 @@ async function drawMolecule(smiles, options = {}) {
     const formula = moleculeFormula(atoms);
     const descriptors = JSON.parse(mol.get_descriptors());
     const stereoTags = JSON.parse(mol.get_stereo_tags());
+    const sterolLabels = options.steroid_numbering ? sterolAtomLabels(rdkit, mol) : null;
+    if (options.steroid_numbering && !sterolLabels)
+      throw new Error('無法可靠辨認此分子的類固醇編號；請改用 RDKit 索引或關閉編號。');
     if (options.show_hydrogens) mol.add_hs_in_place();
     mol.set_new_coords(!!options.use_coordgen);
     const molblock = transformedMolblock(mol.get_molblock(), options);
@@ -256,7 +259,9 @@ async function drawMolecule(smiles, options = {}) {
     if (!transformed || !sameStereo(JSON.parse(mol.get_stereo_tags()), JSON.parse(transformed.get_stereo_tags()))) {
       throw new Error('旋轉或翻轉後立體組態無法驗證，已停止輸出。');
     }
-    const rawSvg = transformed.get_svg_with_highlights(JSON.stringify(drawingOptions(atoms, outputOptions)));
+    const drawOptions = drawingOptions(moleculeAtoms(transformed), outputOptions);
+    const rawSvg = sterolLabels ? svgWithSterolNumbers(transformed, sterolLabels, drawOptions)
+      : transformed.get_svg_with_highlights(JSON.stringify(drawOptions));
     if (!rawSvg || !rawSvg.includes('<svg')) throw new Error('無法產生分子結構圖。');
     const fitted = options.size_mode ? fitSvgToArtwork(rawSvg, {
       mode: options.size_mode, heightCm: options.height_cm, bondPx

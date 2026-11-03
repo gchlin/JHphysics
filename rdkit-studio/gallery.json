@@ -60,5 +60,8 @@
   {"name":"D-\u4e19\u80fa\u9178","english":"D-Alanine","subject":"\u6709\u6a5f","category":"\u624b\u6027\u5206\u5b50","smiles":"C[C@H](C(=O)O)N","file":null},
   {"name":"L-\u534a\u80f1\u80fa\u9178","english":"L-Cysteine","subject":"\u6709\u6a5f","category":"\u624b\u6027\u5206\u5b50","smiles":"N[C@@H](CS)C(=O)O","file":null},
   {"name":"(R)-\u4e73\u9178","english":"Lactic acid","subject":"\u6709\u6a5f","category":"\u624b\u6027\u5206\u5b50","smiles":"C[C@@H](O)C(=O)O","file":null},
-  {"name":"(S)-\u4e73\u9178","english":"Lactic acid","subject":"\u6709\u6a5f","category":"\u624b\u6027\u5206\u5b50","smiles":"C[C@H](O)C(=O)O","file":null}
+  {"name":"(S)-\u4e73\u9178","english":"Lactic acid","subject":"\u6709\u6a5f","category":"\u624b\u6027\u5206\u5b50","smiles":"C[C@H](O)C(=O)O","file":null},
+  {"name":"膽固醇","english":"Cholesterol","subject":"有機","category":"固醇","smiles":"C[C@H](CCCC(C)C)[C@H]1CC[C@@H]2[C@@]1(CC[C@H]3[C@H]2CC=C4[C@@]3(CC[C@@H](C4)O)C)C","file":null},
+  {"name":"β-穀固醇","english":"β-Sitosterol","subject":"有機","category":"固醇","smiles":"CC[C@H](CC[C@@H](C)[C@H]1CC[C@@H]2[C@@]1(CC[C@H]3[C@H]2CC=C4[C@@]3(CC[C@@H](C4)O)C)C)C(C)C","file":null},
+  {"name":"麥角固醇","english":"Ergosterol","subject":"有機","category":"固醇","smiles":"C[C@H](/C=C/[C@H](C)C(C)C)[C@H]1CC[C@@H]2[C@@]1(CC[C@H]3C2=CC=C4[C@@]3(CC[C@@H](C4)O)C)C","file":null}
 ]

@@ -16,6 +16,7 @@ let flipX = false;
 let flipY = false;
 let hydrogenMode = 'hetero';
 let stereoMode = 'wedge';
+let numberingMode = 'none';
 let explicitMethyl = false;
 let sizeMode = 'height';
 let gallery = [];
@@ -96,7 +97,8 @@ function options() {
     explicit_methyl: explicitMethyl,
     add_stereo_annotation: stereoMode === 'both' || stereoMode === 'labels',
     stereo_bond_mode: stereoMode,
-    add_atom_indices: document.querySelector('#indexInput').checked
+    add_atom_indices: numberingMode === 'index',
+    steroid_numbering: numberingMode === 'steroid'
   };
 }
 async function refreshTransform() {
@@ -529,6 +531,11 @@ document.querySelectorAll('[data-carbons]').forEach(button => button.addEventLis
 document.querySelectorAll('[data-stereo]').forEach(button => button.addEventListener('click', () => {
   stereoMode = button.dataset.stereo;
   document.querySelectorAll('[data-stereo]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+  scheduleStyleRender();
+}));
+document.querySelectorAll('[data-numbering]').forEach(button => button.addEventListener('click', () => {
+  numberingMode = button.dataset.numbering;
+  document.querySelectorAll('[data-numbering]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
   scheduleStyleRender();
 }));
 document.querySelectorAll('[data-methyl]').forEach(button => button.addEventListener('click', () => {
