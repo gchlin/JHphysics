@@ -54,13 +54,18 @@ function sterolAtomLabels(rdkit, mol) {
 
 // Keep the original RDKit molecule for drawing. Re-parsing annotated CXSMILES
 // can make RDKit choose different wedge bonds despite identical stereochemistry.
-function svgWithSterolNumbers(mol, labels, options) {
+function svgWithNumberLabels(mol, labels, options, size = 'small') {
   const indexOptions = {...options, addAtomIndices:true};
   const base = mol.get_svg_with_highlights(JSON.stringify(indexOptions));
   const positions = mol.get_svg_with_highlights(JSON.stringify({
     ...indexOptions, addStereoAnnotation:false, noFreetype:true
   }));
   const noteTags = [...positions.matchAll(/<text\b[^>]*class='note'[^>]*>\d+<\/text>/g)];
+  const noteFont = Number(noteTags[0]?.[0].match(/font-size:([\d.]+)px/)?.[1]);
+  const elementFont = Number(positions.match(/<text\b[^>]*class='atom-\d+'[^>]*font-size:([\d.]+)px/)?.[1]) || noteFont * 2;
+  if (!Number.isFinite(noteFont) || !Number.isFinite(elementFont))
+    throw new Error('Cannot determine RDKit annotation font size.');
+  const fontSize = Math.round(elementFont * ({small:0.72, medium:1, large:1.25}[size] || 0.72) * 10) / 10;
   let cursor = 0;
   const locants = Array.from({length:mol.get_num_atoms()}, (_, index) => {
     const digits = String(index);
@@ -68,8 +73,19 @@ function svgWithSterolNumbers(mol, labels, options) {
     cursor += digits.length;
     if (group.map(tag => tag.match(/>(\d+)<\/text>$/)?.[1]).join('') !== digits)
       throw new Error(`Cannot locate steroid atom index ${index} in RDKit SVG.`);
-    const label = labels[index];
-    return label ? group[0].replace(/>\d+<\/text>$/, `>${label.slice(1)}</text>`) : '';
+    const value = labels ? labels[index]?.slice(1) : digits;
+    if (!value) return '';
+    const first = group[0];
+    const oldX = Number(first.match(/\bx='([\d.-]+)'/)?.[1]);
+    const oldY = Number(first.match(/\by='([\d.-]+)'/)?.[1]);
+    if (!Number.isFinite(oldX) || !Number.isFinite(oldY))
+      throw new Error(`Cannot locate steroid atom index ${index} in RDKit SVG.`);
+    const x = oldX + (digits.length * noteFont - value.length * fontSize) * 0.29;
+    const y = oldY + (fontSize - noteFont) * 0.35;
+    return first.replace(/\bx='[\d.-]+'/, `x='${x.toFixed(1)}'`)
+      .replace(/\by='[\d.-]+'/, `y='${y.toFixed(1)}'`)
+      .replace(/font-size:[\d.]+px/, `font-size:${fontSize}px`)
+      .replace(/>\d+<\/text>$/, `>${value}</text>`);
   }).join('');
   if (options.addStereoAnnotation) {
     const unindexed = mol.get_svg_with_highlights(JSON.stringify({...options, addAtomIndices:false}));
@@ -79,5 +95,9 @@ function svgWithSterolNumbers(mol, labels, options) {
     .replace('</svg>', `${locants}</svg>`);
 }
 
+function svgWithSterolNumbers(mol, labels, options, size = 'small') {
+  return svgWithNumberLabels(mol, labels, options, size);
+}
+
 if (typeof module !== 'undefined' && module.exports)
-  module.exports = {sterolAtomLabels, svgWithSterolNumbers};
+  module.exports = {sterolAtomLabels, svgWithNumberLabels, svgWithSterolNumbers};

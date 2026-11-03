@@ -260,7 +260,8 @@ async function drawMolecule(smiles, options = {}) {
       throw new Error('旋轉或翻轉後立體組態無法驗證，已停止輸出。');
     }
     const drawOptions = drawingOptions(moleculeAtoms(transformed), outputOptions);
-    const rawSvg = sterolLabels ? svgWithSterolNumbers(transformed, sterolLabels, drawOptions)
+    const rawSvg = sterolLabels ? svgWithSterolNumbers(transformed, sterolLabels, drawOptions, options.numbering_size)
+      : options.add_atom_indices ? svgWithNumberLabels(transformed, null, drawOptions, options.numbering_size)
       : transformed.get_svg_with_highlights(JSON.stringify(drawOptions));
     if (!rawSvg || !rawSvg.includes('<svg')) throw new Error('無法產生分子結構圖。');
     const fitted = options.size_mode ? fitSvgToArtwork(rawSvg, {
