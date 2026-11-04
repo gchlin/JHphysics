@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>週期圈素材</title>
+    <style>
+        :root { --ink: #263746; --muted: #687783; --line: #dce4e8; --blue: #0878d1; }
+        * { box-sizing: border-box; }
+        body { margin: 0; padding: 40px 24px; color: var(--ink); background: #f4f7f6; font: 15px/1.6 "Segoe UI", "Noto Sans TC", sans-serif; }
+        .material { width: min(1120px, 100%); margin: 0 auto; }
+        .page-header { margin-bottom: 24px; }
+        h1 { margin: 0 0 6px; font-size: 26px; }
+        .description { margin: 0; color: var(--muted); font-size: 14px; }
+        .library-layout { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; align-items: start; }
+        .clock-card { min-width: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: #fff; }
+        .card-header { padding: 20px 24px 16px; }
+        .card-header h2 { margin: 0; font-size: 18px; }
+        .material-id { display: block; margin-top: 4px; color: var(--muted); font: 12px/1.6 Consolas, monospace; overflow-wrap: anywhere; }
+        .clock-stage { position: relative; margin: 0 20px; aspect-ratio: 440 / 300; overflow: hidden; border-radius: 10px; background: #edf3f5; }
+        canvas { display: block; width: 100%; height: 100%; }
+        button { border: 0; cursor: pointer; font: inherit; font-weight: 600; transition: background .15s; }
+        button:focus-visible, summary:focus-visible { outline: 3px solid #0878d1; outline-offset: 3px; }
+        #playBtn { position: absolute; left: 50%; top: 46.6667%; width: 38px; height: 38px; padding: 0; transform: translate(-50%, -50%); border: 2px solid #fff; border-radius: 50%; color: #fff; background: var(--blue); font-size: 18px; }
+        #playBtn:hover, #playBtn.is-playing { background: #005bb5; }
+        #maxBtn { position: absolute; left: 69.09%; top: 76.7%; padding: 4px 9px; transform: translate(-50%, -50%); border: 1px solid #b47a1a; border-radius: 7px; color: #70470b; background: #f6d68c; font-size: 12px; }
+        #maxBtn:hover { background: #f0c96d; }
+        .demo-controls { display: flex; align-items: center; gap: 8px; min-height: 60px; padding: 12px 24px; }
+        .demo-controls button { padding: 5px 10px; border: 1px solid var(--line); border-radius: 6px; background: #fff; color: var(--ink); font-size: 13px; }
+        .demo-controls button:hover { background: #edf3f5; }
+        .demo-controls span { margin-left: auto; color: var(--muted); font-size: 12px; }
+        .card-footer { padding: 16px 24px 20px; border-top: 1px solid var(--line); }
+        .prompt-actions { display: flex; align-items: center; gap: 12px; }
+        .copy-prompt { padding: 8px 14px; color: #fff; background: var(--blue); border-radius: 7px; font-size: 13px; }
+        .copy-prompt:hover { background: #005bb5; }
+        .prompt-actions span { color: var(--muted); font-size: 12px; }
+        details { margin-top: 12px; }
+        summary { width: fit-content; color: var(--muted); cursor: pointer; font-size: 13px; }
+        .prompt-text { display: block; width: 100%; height: 240px; margin-top: 10px; resize: vertical; padding: 12px; border: 1px solid var(--line); border-radius: 8px; color: #334b58; background: #f7fafb; font: 12px/1.7 Consolas, "Noto Sans TC", monospace; }
+        @media (max-width: 700px) { body { padding: 24px 16px; } .library-layout { grid-template-columns: 1fr; gap: 20px; } .card-header { padding: 16px 20px; } .clock-stage { margin: 0 16px; } .demo-controls { padding: 12px 20px; } .card-footer { padding: 16px 20px; } }
+    </style>
+</head>
+<body>
+<main class="material">
+    <header class="page-header">
+        <h1>週期圈素材</h1>
+        <p class="description">點選階段播放；內圈正常速度，外圈慢速。</p>
+    </header>
+    <div class="library-layout">
+        <!-- MATERIAL_ID: PHASE-CLOCK-CURRENT -->
+        <section class="clock-card" aria-labelledby="currentTitle">
+            <header class="card-header">
+                <h2 id="currentTitle">弧形按鈕</h2>
+                <span class="material-id">PHASE-CLOCK-CURRENT</span>
+            </header>
+            <div class="clock-stage">
+                <canvas id="phaseClock" width="440" height="300" aria-label="弧形按鈕週期圈：碰撞前、碰撞期間、碰撞後"></canvas>
+                <button id="playBtn" type="button" aria-label="播放" title="播放">▶</button>
+                <button id="maxBtn" type="button" aria-label="查看最大壓縮狀態">最大壓縮</button>
+            </div>
+            <div class="demo-controls"><span>中央播放／暫停</span></div>
+            <footer class="card-footer">
+                <div class="prompt-actions"><button class="copy-prompt" id="copyCurrentPrompt" type="button">複製 Prompt</button><span id="copyCurrentStatus" role="status"></span></div>
+                <details>
+                    <summary>查看 Prompt</summary>
+                    <textarea class="prompt-text" id="promptCurrent" aria-label="弧形按鈕素材 Prompt" readonly>素材名稱：週期圈弧形按鈕
+素材編號：PHASE-CLOCK-CURRENT
+素材檔案：material/phase-control-styles.html
+定位標記：MATERIAL_ID: PHASE-CLOCK-CURRENT
+
+- 碰撞前／碰撞期間／碰撞後三階段可個別點擊
+- 內圈正常速度、外圈慢速
+- 點擊後從該階段起點播放
+- 播放／暫停控制位於週期圈中心
+- 可跳至最大壓縮狀態</textarea>
+                </details>
+            </footer>
+        </section>
+        <!-- MATERIAL_ID: 0206004 -->
+        <section class="clock-card" aria-labelledby="legacyTitle">
+            <header class="card-header">
+                <h2 id="legacyTitle">細線週期圈</h2>
+                <span class="material-id">0206004</span>
+            </header>
+            <div class="clock-stage">
+                <canvas id="legacyClock" width="440" height="300" aria-label="細線週期圈：碰撞前、碰撞期間、碰撞後"></canvas>
+            </div>
+            <div class="demo-controls"><button id="legacyPlayBtn" type="button" aria-label="播放">▶ 播放</button><button id="legacyResetBtn" type="button">↻ 重置</button><span id="legacyStatus" aria-live="polite">碰撞前</span></div>
+            <footer class="card-footer">
+                <div class="prompt-actions"><button class="copy-prompt" id="copyLegacyPrompt" type="button">複製 Prompt</button><span id="copyLegacyStatus" role="status"></span></div>
+                <details>
+                    <summary>查看 Prompt</summary>
+                    <textarea class="prompt-text" id="promptLegacy" aria-label="細線週期圈素材 Prompt" readonly>素材名稱：細線週期圈
+素材編號：0206004
+素材檔案：material/phase-control-styles.html
+定位標記：MATERIAL_ID: 0206004
+
+- 碰撞前／碰撞期間／碰撞後三階段可個別點擊
+- 內圈正常速度、外圈慢速
+- 點擊後從該階段起點播放
+- 保留簡潔細線週期圈
+- 點選外圈最大壓縮標記可跳至該狀態</textarea>
+                </details>
+            </footer>
+        </section>
+    </div>
+</main>
+
+<script>
+    const canvas = document.getElementById('phaseClock');
+    const ctx = canvas.getContext('2d');
+    const playBtn = document.getElementById('playBtn');
+    const maxBtn = document.getElementById('maxBtn');
+    const clock = { x: 220, y: 140, normalRadius: 44, slowRadius: 70 };
+    const startAngle = -Math.PI / 2;
+    const sector = Math.PI * 2 / 3;
+    const colors = ['#5DADE2', '#E9A23B', '#58A987'];
+    const baseColors = ['#D8EAF4', '#F8E7C7', '#DDEDE6'];
+    const labels = ['碰撞前', '碰撞期間', '碰撞後'];
+    const expected = [2.2, 2.4, 2.4];
+    const state = { phaseIndex: 0, progress: 0, playing: false, slow: false, lastTime: 0, frame: 0, hoverRing: null, hoverPhase: null };
+
+    function drawArc(start, end, radius, width, color, shadowColor = 'transparent', shadowBlur = 0, shadowOffsetY = 0) {
+        ctx.save();
+        ctx.beginPath(); ctx.arc(clock.x, clock.y, radius, start, end);
+        ctx.lineWidth = width; ctx.lineCap = 'butt'; ctx.strokeStyle = color;
+        ctx.shadowColor = shadowColor; ctx.shadowBlur = shadowBlur; ctx.shadowOffsetY = shadowOffsetY;
+        ctx.stroke(); ctx.restore();
+    }
+
+    function drawArcButton(radius, a0, a1, baseColor, activeColor, progress, hovered) {
+        const width = hovered ? 17 : 15;
+        drawArc(a0, a1, radius, width + 3, 'rgba(49,64,75,.34)', 'rgba(32,44,54,.28)', 3, 2);
+        drawArc(a0, a1, radius, width, baseColor);
+        if (progress > 0) {
+            const end = a0 + Math.max(.01, progress * (a1 - a0));
+            drawArc(a0, end, radius, width - 1, activeColor, 'rgba(32,44,54,.18)', 2, 1);
+        }
+    }
+
+    function roundRect(left, top, width, height, radius) {
+        ctx.beginPath();
+        ctx.moveTo(left + radius, top);
+        ctx.arcTo(left + width, top, left + width, top + height, radius);
+        ctx.arcTo(left + width, top + height, left, top + height, radius);
+        ctx.arcTo(left, top + height, left, top, radius);
+        ctx.arcTo(left, top, left + width, top, radius);
+        ctx.closePath();
+    }
+
+    function drawLabels() {
+        ctx.save();
+        ctx.fillStyle = '#46545f'; ctx.font = '12px "Segoe UI", "Noto Sans TC", sans-serif';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(labels[0], clock.x + 58, clock.y - 57);
+        ctx.fillText(labels[1], clock.x, clock.y + 94);
+        ctx.fillText(labels[2], clock.x - 104, clock.y + 3);
+        ctx.restore();
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const activeRadius = state.playing ? (state.slow ? clock.slowRadius : clock.normalRadius) : null;
+        for (const [radius, ring] of [[clock.normalRadius, 'normal'], [clock.slowRadius, 'slow']]) {
+            for (let i = 0; i < 3; i++) {
+                const a0 = startAngle + i * sector + .035;
+                const a1 = startAngle + (i + 1) * sector - .035;
+                let progress = 0;
+                if (radius === activeRadius) {
+                    if (state.phaseIndex > i) progress = 1;
+                    else if (state.phaseIndex === i) progress = state.progress;
+                }
+                drawArcButton(radius, a0, a1, baseColors[i], colors[i], progress, state.hoverRing === ring && state.hoverPhase === i);
+            }
+        }
+        const handFraction = state.progress;
+        const handAngle = startAngle + state.phaseIndex * sector + handFraction * sector;
+        const handRadius = state.playing ? (state.slow ? clock.slowRadius : clock.normalRadius) : clock.normalRadius;
+        ctx.save();
+        ctx.beginPath(); ctx.moveTo(clock.x, clock.y);
+        ctx.lineTo(clock.x + Math.cos(handAngle) * (handRadius - 9), clock.y + Math.sin(handAngle) * (handRadius - 9));
+        ctx.strokeStyle = colors[state.phaseIndex]; ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.stroke();
+        ctx.beginPath(); ctx.arc(clock.x, clock.y, 4, 0, Math.PI * 2); ctx.fillStyle = '#34495e'; ctx.fill();
+        ctx.restore();
+        drawLabels();
+    }
+
+    function setPlaying(playing) {
+        state.playing = playing;
+        state.lastTime = 0;
+        playBtn.textContent = playing ? 'Ⅱ' : '▶';
+        playBtn.setAttribute('aria-label', playing ? '暫停' : '播放');
+        playBtn.title = playing ? '暫停' : '播放';
+        playBtn.classList.toggle('is-playing', playing);
+        if (playing) state.frame = requestAnimationFrame(tick);
+        else cancelAnimationFrame(state.frame);
+        draw();
+    }
+
+    function tick(now) {
+        if (!state.playing) return;
+        if (!state.lastTime) state.lastTime = now;
+        const speed = state.slow ? .25 : 1;
+        state.progress += (now - state.lastTime) / 1000 / expected[state.phaseIndex] * speed;
+        state.lastTime = now;
+        if (state.progress >= 1) {
+            if (state.phaseIndex < 2) { state.phaseIndex++; state.progress = 0; }
+            else { state.progress = 1; setPlaying(false); return; }
+        }
+        draw(); state.frame = requestAnimationFrame(tick);
+    }
+
+    function startPhase(index, slow) {
+        state.phaseIndex = index; state.progress = 0; state.slow = slow;
+        setPlaying(true);
+    }
+
+    playBtn.addEventListener('click', () => setPlaying(!state.playing));
+    maxBtn.addEventListener('click', () => {
+        setPlaying(false); state.phaseIndex = 1; state.progress = .5; state.slow = false; draw();
+    });
+
+    // MATERIAL_ID: PHASE-CLOCK-CURRENT
+    // 注意：內外圈使用不重疊的環帶命中區；點弧段一定從該階段起點重新播放。
+    // 「最大壓縮」是圈外文字按鈕，圖中的標記線不是按鈕；弧形按鈕不要補白色中線。
+    canvas.addEventListener('click', event => {
+        const rect = canvas.getBoundingClientRect();
+        const x = (event.clientX - rect.left) * canvas.width / rect.width;
+        const y = (event.clientY - rect.top) * canvas.height / rect.height;
+        const distance = Math.hypot(x - clock.x, y - clock.y);
+        const boundary = (clock.normalRadius + clock.slowRadius) / 2;
+        const inner = distance >= 34 && distance <= boundary;
+        const outer = distance > boundary && distance <= 80;
+        if (!inner && !outer) return;
+        let angle = (Math.atan2(y - clock.y, x - clock.x) - startAngle + Math.PI * 2) % (Math.PI * 2);
+        const phase = Math.min(2, Math.floor(angle / sector));
+        startPhase(phase, outer);
+    });
+
+    canvas.addEventListener('pointermove', event => {
+        const rect = canvas.getBoundingClientRect();
+        const x = (event.clientX - rect.left) * canvas.width / rect.width;
+        const y = (event.clientY - rect.top) * canvas.height / rect.height;
+        const distance = Math.hypot(x - clock.x, y - clock.y);
+        const boundary = (clock.normalRadius + clock.slowRadius) / 2;
+        const inner = distance >= 34 && distance <= boundary;
+        const outer = distance > boundary && distance <= 80;
+        let ring = null, phase = null;
+        if (inner || outer) {
+            const angle = (Math.atan2(y - clock.y, x - clock.x) - startAngle + Math.PI * 2) % (Math.PI * 2);
+            ring = outer ? 'slow' : 'normal'; phase = Math.min(2, Math.floor(angle / sector));
+        }
+        if (ring !== state.hoverRing || phase !== state.hoverPhase) {
+            state.hoverRing = ring; state.hoverPhase = phase; draw();
+        }
+        canvas.style.cursor = inner || outer ? 'pointer' : 'default';
+    });
+    canvas.addEventListener('pointerleave', () => {
+        state.hoverRing = null; state.hoverPhase = null; canvas.style.cursor = 'default'; draw();
+    });
+
+    // MATERIAL_ID: 0206004
+    // 注意：外圈刻意保留 4px 細線，命中區仍要貼合細線；最大壓縮標記只在標記角度附近可點。
+    // 點擊內圈＝正常速度、外圈＝慢動作，三個階段皆從自己的 phaseElapsed = 0 開始。
+    const legacyCanvas = document.getElementById('legacyClock');
+    const legacyCtx = legacyCanvas.getContext('2d');
+    const legacyPlayBtn = document.getElementById('legacyPlayBtn');
+    const legacyResetBtn = document.getElementById('legacyResetBtn');
+    const legacyStatus = document.getElementById('legacyStatus');
+    const legacyClock = { x: 220, y: 140, normalRadius: 44, slowRadius: 70 };
+    const legacyInnerLineWidth = 10;
+    const legacyOuterLineWidth = 4;
+    const legacyLabels = labels;
+    const legacyExpected = [2.2, 2.4, 2.4];
+    const legacyState = { phaseIndex: 0, phaseElapsed: 0, playing: false, slow: false, lastTime: 0, frame: 0 };
+
+    function drawLegacyArc(radius, start, end, color, width = 10) {
+        legacyCtx.beginPath(); legacyCtx.arc(legacyClock.x, legacyClock.y, radius, start, end);
+        legacyCtx.strokeStyle = color; legacyCtx.lineWidth = width; legacyCtx.lineCap = 'butt'; legacyCtx.stroke();
+    }
+
+    function drawLegacy() {
+        legacyCtx.clearRect(0, 0, legacyCanvas.width, legacyCanvas.height);
+        const fraction = Math.min(1, legacyState.phaseElapsed / legacyExpected[legacyState.phaseIndex]);
+        const activeRadius = legacyState.playing ? (legacyState.slow ? legacyClock.slowRadius : legacyClock.normalRadius) : null;
+        legacyCtx.save();
+        for (const [radius, lineWidth] of [[legacyClock.normalRadius, legacyInnerLineWidth], [legacyClock.slowRadius, legacyOuterLineWidth]]) {
+            for (let i = 0; i < 3; i++) {
+                const a0 = startAngle + i * sector + .035;
+                const a1 = startAngle + (i + 1) * sector - .035;
+                drawLegacyArc(radius, a0, a1, '#dce3e8', lineWidth);
+                if (radius === activeRadius) {
+                    if (i < legacyState.phaseIndex) drawLegacyArc(radius, a0, a1, colors[i], lineWidth);
+                    else if (i === legacyState.phaseIndex && fraction > 0) drawLegacyArc(radius, a0, a0 + fraction * (a1 - a0), colors[i], lineWidth);
+                }
+            }
+            const markerAngle = startAngle + sector + sector / 2;
+            legacyCtx.beginPath();
+            legacyCtx.moveTo(legacyClock.x + Math.cos(markerAngle) * (radius - 7), legacyClock.y + Math.sin(markerAngle) * (radius - 7));
+            legacyCtx.lineTo(legacyClock.x + Math.cos(markerAngle) * (radius + 7), legacyClock.y + Math.sin(markerAngle) * (radius + 7));
+            legacyCtx.strokeStyle = '#8a4b08'; legacyCtx.lineWidth = 2.5; legacyCtx.lineCap = 'round'; legacyCtx.stroke();
+        }
+        const handAngle = startAngle + legacyState.phaseIndex * sector + fraction * sector;
+        const handRadius = activeRadius || legacyClock.normalRadius;
+        legacyCtx.beginPath(); legacyCtx.moveTo(legacyClock.x, legacyClock.y);
+        legacyCtx.lineTo(legacyClock.x + Math.cos(handAngle) * (handRadius - 9), legacyClock.y + Math.sin(handAngle) * (handRadius - 9));
+        legacyCtx.strokeStyle = colors[legacyState.phaseIndex]; legacyCtx.lineWidth = 3; legacyCtx.lineCap = 'round'; legacyCtx.stroke();
+        legacyCtx.beginPath(); legacyCtx.arc(legacyClock.x, legacyClock.y, 4, 0, Math.PI * 2);
+        legacyCtx.fillStyle = '#34495e'; legacyCtx.fill();
+        legacyCtx.restore();
+
+        legacyCtx.save();
+        legacyCtx.fillStyle = '#46545f'; legacyCtx.font = '12px "Segoe UI", "Noto Sans TC", sans-serif';
+        legacyCtx.textAlign = 'center'; legacyCtx.textBaseline = 'middle';
+        legacyCtx.fillText(legacyLabels[0], legacyClock.x + 58, legacyClock.y - 57);
+        legacyCtx.fillText(legacyLabels[1], legacyClock.x, legacyClock.y + 94);
+        legacyCtx.fillText(legacyLabels[2], legacyClock.x - 104, legacyClock.y + 3);
+        legacyCtx.fillStyle = '#8a4b08'; legacyCtx.font = 'bold 10px "Segoe UI", "Noto Sans TC", sans-serif';
+        legacyCtx.fillText('最大壓縮', legacyClock.x + legacyClock.slowRadius + 20, legacyClock.y + legacyClock.slowRadius - 8);
+        legacyCtx.restore();
+        legacyStatus.textContent = `${legacyLabels[legacyState.phaseIndex]}${legacyState.playing ? '（播放中）' : ''}`;
+        legacyPlayBtn.textContent = legacyState.playing ? 'Ⅱ 暫停' : '▶ 播放';
+        legacyPlayBtn.setAttribute('aria-label', legacyState.playing ? '暫停' : '播放');
+        legacyPlayBtn.classList.toggle('is-playing', legacyState.playing);
+    }
+
+    function setLegacyPlaying(playing) {
+        legacyState.playing = playing;
+        legacyState.lastTime = 0;
+        if (playing) legacyState.frame = requestAnimationFrame(tickLegacy);
+        else cancelAnimationFrame(legacyState.frame);
+        drawLegacy();
+    }
+
+    function tickLegacy(now) {
+        if (!legacyState.playing) return;
+        if (!legacyState.lastTime) legacyState.lastTime = now;
+        const speed = legacyState.slow ? .25 : 1;
+        legacyState.phaseElapsed += (now - legacyState.lastTime) / 1000 * speed;
+        legacyState.lastTime = now;
+        if (legacyState.phaseElapsed >= legacyExpected[legacyState.phaseIndex]) {
+            if (legacyState.phaseIndex < 2) {
+                legacyState.phaseIndex++;
+                legacyState.phaseElapsed = 0;
+            } else {
+                legacyState.phaseElapsed = legacyExpected[legacyState.phaseIndex];
+                setLegacyPlaying(false);
+                return;
+            }
+        }
+        drawLegacy();
+        legacyState.frame = requestAnimationFrame(tickLegacy);
+    }
+
+    function startLegacyPhase(index, slow) {
+        legacyState.phaseIndex = index;
+        legacyState.phaseElapsed = 0;
+        legacyState.slow = slow;
+        setLegacyPlaying(true);
+    }
+
+    legacyPlayBtn.addEventListener('click', () => setLegacyPlaying(!legacyState.playing));
+    legacyResetBtn.addEventListener('click', () => {
+        legacyState.phaseIndex = 0; legacyState.phaseElapsed = 0; legacyState.slow = false;
+        setLegacyPlaying(false);
+    });
+
+    legacyCanvas.addEventListener('click', event => {
+        const rect = legacyCanvas.getBoundingClientRect();
+        const x = (event.clientX - rect.left) * legacyCanvas.width / rect.width;
+        const y = (event.clientY - rect.top) * legacyCanvas.height / rect.height;
+        const dx = x - legacyClock.x, dy = y - legacyClock.y;
+        const distance = Math.hypot(dx, dy);
+        let angle = (Math.atan2(dy, dx) - startAngle + Math.PI * 2) % (Math.PI * 2);
+        const markerAngle = Math.PI;
+        const markerDelta = Math.atan2(Math.sin(angle - markerAngle), Math.cos(angle - markerAngle));
+        if (Math.abs(markerDelta) < .18 && distance >= 60 && distance <= 80) {
+            setLegacyPlaying(false);
+            legacyState.phaseIndex = 1; legacyState.phaseElapsed = legacyExpected[1] / 2; drawLegacy(); return;
+        }
+        const inner = distance >= legacyClock.normalRadius - 7 && distance <= legacyClock.normalRadius + 7;
+        const outer = distance >= legacyClock.slowRadius - 5 && distance <= legacyClock.slowRadius + 5;
+        if (!inner && !outer) return;
+        startLegacyPhase(Math.min(2, Math.floor(angle / sector)), outer);
+    });
+
+    legacyCanvas.addEventListener('pointermove', event => {
+        const rect = legacyCanvas.getBoundingClientRect();
+        const x = (event.clientX - rect.left) * legacyCanvas.width / rect.width;
+        const y = (event.clientY - rect.top) * legacyCanvas.height / rect.height;
+        const distance = Math.hypot(x - legacyClock.x, y - legacyClock.y);
+        const onInner = distance >= legacyClock.normalRadius - 7 && distance <= legacyClock.normalRadius + 7;
+        const onOuter = distance >= legacyClock.slowRadius - 5 && distance <= legacyClock.slowRadius + 5;
+        const angle = (Math.atan2(y - legacyClock.y, x - legacyClock.x) - startAngle + Math.PI * 2) % (Math.PI * 2);
+        const markerAngle = Math.PI;
+        const markerDelta = Math.atan2(Math.sin(angle - markerAngle), Math.cos(angle - markerAngle));
+        const onMarker = Math.abs(markerDelta) < .18 && distance >= 60 && distance <= 80;
+        legacyCanvas.style.cursor = onInner || onOuter || onMarker ? 'pointer' : 'default';
+    });
+    legacyCanvas.addEventListener('pointerleave', () => { legacyCanvas.style.cursor = 'default'; });
+
+    async function copyPrompt(textareaId, statusId) {
+        const promptText = document.getElementById(textareaId);
+        const copyStatus = document.getElementById(statusId);
+        try {
+            await navigator.clipboard.writeText(promptText.value);
+        } catch {
+            const details = promptText.closest('details');
+            const wasOpen = details.open;
+            const focused = document.activeElement;
+            details.open = true;
+            promptText.focus(); promptText.select();
+            const copied = document.execCommand('copy');
+            details.open = wasOpen;
+            focused?.focus();
+            if (!copied) {
+                details.open = true;
+                promptText.focus(); promptText.select();
+                copyStatus.textContent = '請手動複製';
+                return;
+            }
+        }
+        copyStatus.textContent = '已複製';
+        setTimeout(() => { copyStatus.textContent = ''; }, 2200);
+    }
+    document.getElementById('copyCurrentPrompt').addEventListener('click', () => copyPrompt('promptCurrent', 'copyCurrentStatus'));
+    document.getElementById('copyLegacyPrompt').addEventListener('click', () => copyPrompt('promptLegacy', 'copyLegacyStatus'));
+
+    draw();
+    drawLegacy();
+</script>
+</body>
+</html>
