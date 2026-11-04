@@ -119,6 +119,19 @@
     const labels = ['碰撞前', '碰撞期間', '碰撞後'];
     const expected = [2.2, 2.4, 2.4];
     const state = { phaseIndex: 0, progress: 0, playing: false, slow: false, lastTime: 0, frame: 0, hoverRing: null, hoverPhase: null };
+    const view = { width: 440, height: 300 };
+
+    function resizeCanvas(target, context) {
+        const rect = target.getBoundingClientRect();
+        const ratio = window.devicePixelRatio || 1;
+        const width = Math.max(1, Math.round(rect.width * ratio));
+        const height = Math.max(1, Math.round(rect.height * ratio));
+        if (target.width !== width || target.height !== height) {
+            target.width = width;
+            target.height = height;
+        }
+        context.setTransform(width / view.width, 0, 0, height / view.height, 0, 0);
+    }
 
     function drawArc(start, end, radius, width, color, shadowColor = 'transparent', shadowBlur = 0, shadowOffsetY = 0) {
         ctx.save();
@@ -159,7 +172,7 @@
     }
 
     function draw() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.clearRect(0, 0, view.width, view.height);
         const activeRadius = state.playing ? (state.slow ? clock.slowRadius : clock.normalRadius) : null;
         for (const [radius, ring] of [[clock.normalRadius, 'normal'], [clock.slowRadius, 'slow']]) {
             for (let i = 0; i < 3; i++) {
@@ -225,8 +238,8 @@
     // 「最大壓縮」是圈外文字按鈕，圖中的標記線不是按鈕；弧形按鈕不要補白色中線。
     canvas.addEventListener('click', event => {
         const rect = canvas.getBoundingClientRect();
-        const x = (event.clientX - rect.left) * canvas.width / rect.width;
-        const y = (event.clientY - rect.top) * canvas.height / rect.height;
+        const x = (event.clientX - rect.left) * view.width / rect.width;
+        const y = (event.clientY - rect.top) * view.height / rect.height;
         const distance = Math.hypot(x - clock.x, y - clock.y);
         const boundary = (clock.normalRadius + clock.slowRadius) / 2;
         const inner = distance >= 34 && distance <= boundary;
@@ -239,8 +252,8 @@
 
     canvas.addEventListener('pointermove', event => {
         const rect = canvas.getBoundingClientRect();
-        const x = (event.clientX - rect.left) * canvas.width / rect.width;
-        const y = (event.clientY - rect.top) * canvas.height / rect.height;
+        const x = (event.clientX - rect.left) * view.width / rect.width;
+        const y = (event.clientY - rect.top) * view.height / rect.height;
         const distance = Math.hypot(x - clock.x, y - clock.y);
         const boundary = (clock.normalRadius + clock.slowRadius) / 2;
         const inner = distance >= 34 && distance <= boundary;
@@ -280,7 +293,7 @@
     }
 
     function drawLegacy() {
-        legacyCtx.clearRect(0, 0, legacyCanvas.width, legacyCanvas.height);
+        legacyCtx.clearRect(0, 0, view.width, view.height);
         const fraction = Math.min(1, legacyState.phaseElapsed / legacyExpected[legacyState.phaseIndex]);
         const activeRadius = legacyState.playing ? (legacyState.slow ? legacyClock.slowRadius : legacyClock.normalRadius) : null;
         legacyCtx.save();
@@ -367,8 +380,8 @@
 
     legacyCanvas.addEventListener('click', event => {
         const rect = legacyCanvas.getBoundingClientRect();
-        const x = (event.clientX - rect.left) * legacyCanvas.width / rect.width;
-        const y = (event.clientY - rect.top) * legacyCanvas.height / rect.height;
+        const x = (event.clientX - rect.left) * view.width / rect.width;
+        const y = (event.clientY - rect.top) * view.height / rect.height;
         const dx = x - legacyClock.x, dy = y - legacyClock.y;
         const distance = Math.hypot(dx, dy);
         let angle = (Math.atan2(dy, dx) - startAngle + Math.PI * 2) % (Math.PI * 2);
@@ -386,8 +399,8 @@
 
     legacyCanvas.addEventListener('pointermove', event => {
         const rect = legacyCanvas.getBoundingClientRect();
-        const x = (event.clientX - rect.left) * legacyCanvas.width / rect.width;
-        const y = (event.clientY - rect.top) * legacyCanvas.height / rect.height;
+        const x = (event.clientX - rect.left) * view.width / rect.width;
+        const y = (event.clientY - rect.top) * view.height / rect.height;
         const distance = Math.hypot(x - legacyClock.x, y - legacyClock.y);
         const onInner = distance >= legacyClock.normalRadius - 7 && distance <= legacyClock.normalRadius + 7;
         const onOuter = distance >= legacyClock.slowRadius - 5 && distance <= legacyClock.slowRadius + 5;
@@ -426,8 +439,17 @@
     document.getElementById('copyCurrentPrompt').addEventListener('click', () => copyPrompt('promptCurrent', 'copyCurrentStatus'));
     document.getElementById('copyLegacyPrompt').addEventListener('click', () => copyPrompt('promptLegacy', 'copyLegacyStatus'));
 
-    draw();
-    drawLegacy();
+    function redrawCanvases() {
+        resizeCanvas(canvas, ctx);
+        resizeCanvas(legacyCanvas, legacyCtx);
+        draw();
+        drawLegacy();
+    }
+    const resizeObserver = new ResizeObserver(redrawCanvases);
+    resizeObserver.observe(canvas);
+    resizeObserver.observe(legacyCanvas);
+    window.addEventListener('resize', redrawCanvases);
+    redrawCanvases();
 </script>
 </body>
 </html>
