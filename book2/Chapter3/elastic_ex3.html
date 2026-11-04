@@ -59,8 +59,7 @@
             <h2 id="helpTitle">操作說明</h2>
             <ul>
                 <li>點左側眼睛圖示，顯示或隱藏能量圖表、動量圖示。</li>
-                <li>週期鐘的小圈代表正常播放；點大圈的階段區段，可單獨慢動作播放該階段。</li>
-                <li>慢動作時點小圈，可恢復正常播放。</li>
+                <li>週期鐘內、外圈的三個階段都可以點選，會從該階段起點開始播放；外圈以慢動作播放。</li>
                 <li>點週期鐘的「最大壓縮」標記，可查看彈簧壓縮最大的狀態。</li>
             </ul>
             <button id="closeHelpBtn" type="button">關閉</button>
@@ -506,10 +505,10 @@
             playBtn.style.backgroundColor = '#0878d1';
         }
 
-        function startSlowPhase(phaseIndex) {
+        function startPhase(phaseIndex, slowMotion) {
             pauseSimulation();
             sim.savedTimeSpeed = sim.timeSpeed;
-            sim.timeSpeed = Math.max(0.02, sim.savedTimeSpeed / 4);
+            sim.timeSpeed = slowMotion ? Math.max(0.02, sim.savedTimeSpeed / 4) : sim.savedTimeSpeed;
             sim.phaseClockDone = false;
             sim.replayPhase = phaseIndex;
 
@@ -517,6 +516,11 @@
                 sim.init();
             } else {
                 const snap = sim.snapshots[phaseIndex === 1 ? 'before' : 'after'];
+                if (!snap) {
+                    sim.replayPhase = null;
+                    sim.timeSpeed = sim.savedTimeSpeed;
+                    return;
+                }
                 sim.xA = snap.xA; sim.xB = snap.xB;
                 sim.vA = snap.vA; sim.vB = snap.vB;
                 sim.phaseIndex = phaseIndex;
@@ -543,18 +547,6 @@
             sim.draw();
         }
 
-        function resumeAtNormalSpeed() {
-            if (sim.replayPhase !== null) pauseSimulation();
-            else if (sim.isSlowMotion()) sim.timeSpeed = sim.savedTimeSpeed;
-            if (isPlaying) return;
-            isPlaying = true;
-            playBtn.innerHTML = 'Ⅱ';
-            playBtn.setAttribute('aria-label', '暫停');
-            playBtn.title = '暫停';
-            playBtn.style.backgroundColor = '#005bb5';
-            sim.loop();
-        }
-
         canvas.addEventListener('click', event => {
             const rect = canvas.getBoundingClientRect();
             const x = (event.clientX - rect.left) / viewScale;
@@ -572,23 +564,26 @@
             const clockX = 690, clockY = 78;
             const dx = x - clockX, dy = y - clockY;
             const distance = Math.hypot(dx, dy);
-            const smallRingHit = Math.abs(distance - 38) <= 10;
-            const largeRingHit = Math.abs(distance - 58) <= 10;
-            if (!smallRingHit && !largeRingHit) return;
-            let angle = Math.atan2(dy, dx) + Math.PI / 2;
-            angle = (angle + Math.PI * 2) % (Math.PI * 2);
-            const maxCompressionAngle = Math.PI;
-            const markerAngleDelta = Math.atan2(Math.sin(angle - maxCompressionAngle), Math.cos(angle - maxCompressionAngle));
-            if (Math.abs(markerAngleDelta) < 0.18) {
+            const normalRadius = 38;
+            const slowRadius = 58;
+            const ringTolerance = 10;
+            const ringBoundary = (normalRadius + slowRadius) / 2;
+            const smallRingHit = distance >= normalRadius - ringTolerance && distance <= ringBoundary;
+            const largeRingHit = distance > ringBoundary && distance <= slowRadius + ringTolerance;
+            const markerLabelHit = distance > slowRadius + ringTolerance &&
+                x >= clockX + slowRadius - 8 && x <= clockX + slowRadius + 48 &&
+                y >= clockY + slowRadius - 22 && y <= clockY + slowRadius + 8;
+            if (markerLabelHit) {
                 showClosestSnapshot();
                 return;
             }
-            const phaseIndex = Math.floor(angle / (Math.PI * 2 / 3));
-            if (largeRingHit && (!smallRingHit || Math.abs(distance - 58) < Math.abs(distance - 38))) {
-                startSlowPhase(phaseIndex);
-            } else {
-                resumeAtNormalSpeed();
-            }
+            if (!smallRingHit && !largeRingHit) return;
+            const startAngle = -Math.PI / 2;
+            const sector = Math.PI * 2 / 3;
+            let angle = Math.atan2(dy, dx) - startAngle;
+            angle = (angle + Math.PI * 2) % (Math.PI * 2);
+            const phaseIndex = Math.min(2, Math.floor(angle / sector));
+            startPhase(phaseIndex, largeRingHit);
         });
 
         canvas.addEventListener('pointermove', event => {
