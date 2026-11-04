@@ -17,13 +17,59 @@
 素材檔案：material/collision-chart-materials.html
 定位標記：MATERIAL_ID: COLLISION-MOMENTUM-VECTORS
 
-重用介面：drawMomentumVectors(ctx, state, layout)。state 接收 p1、p2（可正可負）；總動量 P=p1+p2。layout 接收 x、y、width、rowGap、pxPerMomentum 固定比例尺。所有箭頭使用傳入的同一 pxPerMomentum，不得除以 totalP 或由當前動量自動正規化；正向向右、負向向左。上列畫總動量，下列從同一原點畫 p₁，並由 p₁ 箭頭端點接續畫 p₂，呈現向量首尾相接。
+重用介面：drawMomentumVectors(ctx, state, layout)。state 接收 p1、p2（可正可負）；總動量 P=p1+p2。layout 接收 x、y、width、rowGap、pxPerMomentum 固定比例尺。所有箭頭使用傳入的同一 pxPerMomentum，不得除以 totalP 或由當前動量自動正規化；正向向右、負向向左。上列畫總動量，p₁、p₂ 上下錯開以避免反向箭頭互相覆蓋；用虛線連接 p₁ 終點與 p₂ 起點，兩者水平座標相同，表示首尾相接關係。
 
-不得將負動量改成正值或只用箭頭長度表示大小而丟失方向；p=0 時不畫短線或假箭頭，但保留數值標籤。標籤依箭頭長度及方向錯開，避免彼此和原點／端點重疊。物體動量與系統總動量需保留同一尺度，且 P=p₁+p₂。</textarea></details></footer></section></div></main><script>
+不得將負動量改成正值或只用箭頭長度表示大小而丟失方向；p=0 時不畫短線或假箭頭，但保留數值標籤。標籤依箭頭長度及方向錯開，避免彼此和原點／端點重疊。物體動量與系統總動量需保留同一尺度，且 P=p₁+p₂。</textarea></details></footer></section></div></main><script src="prompt-common.js"></script><script>
 function drawEnergyBars(ctx,state,layout){const {x,y,width,rowHeight}=layout,total=Math.max(0,Number(state.totalEnergy)||0),v1=Math.max(0,Number(state.kinetic1)||0),v2=Math.max(0,Number(state.kinetic2)||0),u=Math.max(0,Number(state.potential)||0);ctx.save();ctx.font='bold 18px "Segoe UI",sans-serif';ctx.textBaseline='middle';const rows=[{label:'K₁ + K₂',values:[[v1,'#1A5276','K₁'],[v2,'#5DADE2','K₂']],sum:v1+v2},{label:'U',values:[[u,'#333333','U']],sum:u}];rows.forEach((row,i)=>{const yy=y+i*(rowHeight+24),ratio=total?Math.min(1,row.sum/total):0;ctx.textAlign='left';ctx.fillStyle='#263746';ctx.fillText(row.label,x,yy+rowHeight/2);const bx=x+92,bw=width-152;ctx.fillStyle='#eef2f5';ctx.fillRect(bx,yy,bw,rowHeight);let off=0;for(const [value,color,label] of row.values){const part=total?Math.min(Math.max(0,bw-off),value/total*bw):0;if(part>0){ctx.fillStyle=color;ctx.fillRect(bx+off,yy,part,rowHeight);if(part>=30){ctx.fillStyle='#fff';ctx.font='bold 12px sans-serif';ctx.textAlign='center';ctx.fillText(label,bx+off+part/2,yy+rowHeight/2);ctx.font='bold 18px "Segoe UI",sans-serif'}off+=part}}ctx.strokeStyle='#87939d';ctx.lineWidth=1;ctx.strokeRect(bx,yy,bw,rowHeight);ctx.fillStyle='#263746';ctx.font='bold 14px sans-serif';ctx.textAlign='left';ctx.fillText(`${Math.round(ratio*100)}%`,bx+bw+9,yy+rowHeight/2)});ctx.fillStyle='#687783';ctx.font='12px sans-serif';ctx.textAlign='left';ctx.fillText(`總能量 ${total.toFixed(0)}（K₁ + K₂ + U）`,x+92,y+2*(rowHeight+24)+5);ctx.restore()}
-function drawMomentumVectors(ctx,state,layout){const {x,y,width,rowGap,pxPerMomentum}=layout,p1=Number(state.p1)||0,p2=Number(state.p2)||0,total=p1+p2,origin=x+width/2,half=width*.43,scale=Number(pxPerMomentum);ctx.save();ctx.font='bold 15px "Segoe UI",sans-serif';ctx.textBaseline='middle';const rows=[{name:'P',value:total,yy:y,label:'系統總動量'},{name:'',value:null,yy:y+rowGap,label:''}];function axis(yy){ctx.strokeStyle='#aab6bd';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(origin-half,yy);ctx.lineTo(origin+half,yy);ctx.stroke();ctx.fillStyle='#87939d';ctx.textAlign='center';ctx.font='11px sans-serif';ctx.fillText('−',origin-half,yy+14);ctx.fillText('+',origin+half,yy+14)}function arrow(a,b,yy,color,label,labelOffset=0){const x1=origin+a*scale,x2=origin+b*scale,delta=x2-x1;if(Math.abs(delta)>=.01){const dir=Math.sign(delta);ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(x1,yy);ctx.lineTo(x2,yy);ctx.lineTo(x2-dir*9,yy-6);ctx.moveTo(x2,yy);ctx.lineTo(x2-dir*9,yy+6);ctx.stroke()}ctx.font='bold 13px sans-serif';ctx.textAlign='center';const mid=Math.abs(delta)<.01?origin:(x1+x2)/2;ctx.fillText(label,mid,yy+labelOffset)}ctx.textAlign='left';ctx.fillStyle='#263746';ctx.font='bold 16px sans-serif';ctx.fillText('P',x,y);ctx.fillText('p₁ + p₂',x,y+rowGap);axis(rows[0].yy);axis(rows[1].yy);arrow(0,total,rows[0].yy,'#111820',`P = ${total>=0?'+':''}${total}`, -15);arrow(0,p1,rows[1].yy,'#1A5276',`p₁ ${p1>=0?'+':''}${p1}`,-17);arrow(p1,total,rows[1].yy,'#5DADE2',`p₂ ${p2>=0?'+':''}${p2}`,18);ctx.restore()}
+function drawMomentumVectors(ctx, state, layout) {
+    const { x, y, width, rowGap, pxPerMomentum } = layout;
+    const p1 = Number(state.p1) || 0, p2 = Number(state.p2) || 0;
+    const total = p1 + p2, scale = Number(pxPerMomentum);
+    if (!(scale > 0)) return;
+    const origin = x + width * .25;
+    const firstEnd = origin + p1 * scale, end = origin + total * scale;
+    const firstY = y + rowGap, secondY = firstY + 50;
+    ctx.save();
+    ctx.font = '13px "Segoe UI", sans-serif';
+    ctx.textBaseline = 'middle';
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = '#c6d1d8';
+    ctx.setLineDash([3, 4]);
+    ctx.beginPath();
+    ctx.moveTo(origin, y - 22); ctx.lineTo(origin, secondY + 19);
+    ctx.moveTo(firstEnd, firstY); ctx.lineTo(firstEnd, secondY);
+    ctx.moveTo(end, y); ctx.lineTo(end, secondY);
+    ctx.stroke(); ctx.setLineDash([]);
+    function arrow(start, finish, rowY, color, text) {
+        const length = Math.abs(finish - start);
+        ctx.fillStyle = color; ctx.strokeStyle = color;
+        if (length > .01) {
+            const direction = Math.sign(finish - start);
+            const head = Math.min(8, length * .4);
+            ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.moveTo(start, rowY); ctx.lineTo(finish, rowY);
+            ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(finish, rowY);
+            ctx.lineTo(finish - direction * head, rowY - head * .6);
+            ctx.lineTo(finish - direction * head, rowY + head * .6);
+            ctx.closePath(); ctx.fill();
+        }
+        ctx.textAlign = 'center';
+        ctx.fillText(text, (start + finish) / 2, rowY - 17);
+    }
+    ctx.fillStyle = '#687783'; ctx.textAlign = 'left';
+    ctx.fillText('P', x, y);
+    ctx.fillText('p\u2081', x, firstY);
+    ctx.fillText('p\u2082', x, secondY);
+    ctx.textAlign = 'center'; ctx.fillText('0', origin, secondY + 32);
+    const signed = value => value > 0 ? '+' + value : String(value);
+    arrow(origin, end, y, '#263746', 'P = ' + signed(total));
+    arrow(origin, firstEnd, firstY, '#1a5276', 'p\u2081 = ' + signed(p1));
+    arrow(firstEnd, end, secondY, '#0878d1', 'p\u2082 = ' + signed(p2));
+    ctx.restore();
+}
 function setupCanvas(canvas,draw){const ctx=canvas.getContext('2d');function resize(){const rect=canvas.getBoundingClientRect(),dpr=window.devicePixelRatio||1;if(!rect.width||!rect.height)return;canvas.width=Math.round(rect.width*dpr);canvas.height=Math.round(rect.height*dpr);ctx.setTransform(canvas.width/440,0,0,canvas.height/260,0,0);draw(ctx)}new ResizeObserver(resize).observe(canvas);window.addEventListener('resize',resize);resize();return draw}
 const compression=document.querySelector('#compression'),compressionValue=document.querySelector('#compressionValue'),energyCanvas=document.querySelector('#energyCanvas');function renderEnergy(ctx){const q=Number(compression.value)/100,total=100,u=total*q*q,k=total-u;ctx.clearRect(0,0,440,260);drawEnergyBars(ctx,{kinetic1:k*.65,kinetic2:k*.35,potential:u,totalEnergy:total},{x:20,y:66,width:400,rowHeight:28});compressionValue.value=`${compression.value}%`;compressionValue.textContent=`${compression.value}%`}const energyDraw=setupCanvas(energyCanvas,ctx=>renderEnergy(ctx));compression.addEventListener('input',()=>energyDraw(energyCanvas.getContext('2d')));
-const momentumSlider=document.querySelector('#momentumSlider'),momentumValue=document.querySelector('#momentumValue'),momentumCanvas=document.querySelector('#momentumCanvas');function renderMomentum(ctx){const p1=70,p2=Number(momentumSlider.value);ctx.clearRect(0,0,440,260);drawMomentumVectors(ctx,{p1,p2},{x:20,y:90,width:400,rowGap:76,pxPerMomentum:0.9});momentumValue.value=`${p2>=0?'+':''}${p2}`;momentumValue.textContent=momentumValue.value}const momentumDraw=setupCanvas(momentumCanvas,ctx=>renderMomentum(ctx));momentumSlider.addEventListener('input',()=>momentumDraw(momentumCanvas.getContext('2d')));
+const momentumSlider=document.querySelector('#momentumSlider'),momentumValue=document.querySelector('#momentumValue'),momentumCanvas=document.querySelector('#momentumCanvas');function renderMomentum(ctx){const p1=70,p2=Number(momentumSlider.value);ctx.clearRect(0,0,440,260);drawMomentumVectors(ctx,{p1,p2},{x:20,y:55,width:400,rowGap:65,pxPerMomentum:1.5});momentumValue.value=`${p2>=0?'+':''}${p2}`;momentumValue.textContent=momentumValue.value}const momentumDraw=setupCanvas(momentumCanvas,ctx=>renderMomentum(ctx));momentumSlider.addEventListener('input',()=>momentumDraw(momentumCanvas.getContext('2d')));
 document.querySelectorAll('.copy').forEach(button=>button.addEventListener('click',async()=>{const textarea=document.getElementById(button.dataset.prompt),details=textarea.closest('details'),status=button.parentElement.querySelector('.status'),oldOpen=details.open,active=document.activeElement;try{await navigator.clipboard.writeText(textarea.value);status.textContent='已複製'}catch{details.open=true;textarea.focus();textarea.select();let copied=false;try{copied=document.execCommand('copy')}catch{}details.open=oldOpen;active?.focus();status.textContent=copied?'已複製':'複製失敗，請手動選取'}setTimeout(()=>status.textContent='',2200)}));
 </script></body></html>

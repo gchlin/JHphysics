@@ -1,0 +1,29 @@
+/* MATERIAL_ID: CLASSROOM-SIMPLE — flat, compact teaching layout. */
+:root { color-scheme: light; --ink: #263746; --muted: #687783; --line: #dce4e8; --accent: #0878d1; }
+* { box-sizing: border-box; }
+body { margin: 0; padding: 28px 24px; background: #fff; color: var(--ink); font: 15px/1.6 "Segoe UI", "Noto Sans TC", sans-serif; }
+main { max-width: 1000px; margin: auto; }
+h1 { margin: 0 0 4px; font-size: 25px; }
+h2 { margin: 0 0 12px; font-size: 17px; }
+p { margin: 0; }
+.muted { color: var(--muted); font-size: 13px; }
+section { padding: 22px 0; border-bottom: 1px solid var(--line); }
+a { color: var(--accent); text-underline-offset: 3px; }
+button, input, textarea { font: inherit; }
+button { padding: 8px 16px; border: 0; border-radius: 5px; background: var(--accent); color: #fff; cursor: pointer; }
+button:disabled { opacity: .5; cursor: default; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.animation-list { display: grid; grid-template-columns: 1fr 1fr; gap: 0 28px; }
+.animation { display: grid; grid-template-columns: 22px 104px 1fr; align-items: center; gap: 10px; padding: 12px 0; border-top: 1px solid var(--line); }
+.animation img { width: 104px; height: 64px; object-fit: contain; }
+.animation label { cursor: pointer; }
+.animation a { display: block; width: fit-content; font-size: 12px; }
+.component-list { display: flex; flex-wrap: wrap; gap: 10px 24px; }
+.component-list label { cursor: pointer; }
+input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); }
+.request { display: block; width: 100%; min-height: 72px; margin: 12px 0; padding: 10px; border: 1px solid var(--line); border-radius: 5px; resize: vertical; }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+details { margin-top: 14px; }
+summary { width: fit-content; color: var(--muted); cursor: pointer; font-size: 13px; }
+#combinedPrompt { width: 100%; min-height: 300px; margin-top: 12px; padding: 12px; border: 1px solid var(--line); font: 12px/1.7 Consolas, "Noto Sans TC", monospace; }
+@media (max-width: 700px) { body { padding: 20px 16px; } .animation-list { grid-template-columns: 1fr; } }

@@ -1,2 +1,60 @@
-﻿<!doctype html>
-<html lang="zh-TW"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>互動素材庫</title><style>body{margin:0;padding:40px 24px;background:#f4f7f6;color:#263746;font:15px/1.6 "Segoe UI","Noto Sans TC",sans-serif}.wrap{width:min(760px,100%);margin:auto}h1{font-size:26px;margin:0 0 8px}p{color:#687783;margin:0 0 24px}.list{display:grid;gap:14px}.item{padding:18px 22px;border:1px solid #dce4e8;border-radius:12px;background:#fff;color:#0878d1;text-decoration:none}.item:hover{border-color:#0878d1}.item strong{display:block;color:#263746;font-size:17px}.item span{color:#687783;font-size:12px;font-family:Consolas,monospace}</style></head><body><main class="wrap"><h1>互動素材庫</h1><p>可獨立預覽、操作並複製素材 Prompt。</p><nav class="list"><a class="item" href="phase-control-styles.html"><strong>週期圈素材</strong><span>PHASE-CLOCK-CURRENT · 0206004</span></a><a class="item" href="collision-chart-materials.html"><strong>碰撞圖表素材</strong><span>COLLISION-ENERGY-BARS · COLLISION-MOMENTUM-VECTORS</span></a></nav></main></body></html>
+<!doctype html>
+<html lang="zh-TW">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>動畫素材庫</title>
+    <link rel="stylesheet" href="classroom-simple.css">
+</head>
+<body>
+<main>
+    <header><h1>動畫素材庫</h1><p class="muted">挑選動畫與元件，複製給 AI 製作。</p></header>
+    <section aria-labelledby="animationTitle">
+        <h2 id="animationTitle">1. 選動畫</h2>
+        <div class="animation-list">
+            <div class="animation">
+                <input type="radio" name="animation" id="spring" value="elastic_ex3" checked>
+                <img src="../book2/chapter3/elastic_ex3.png" alt="" loading="lazy">
+                <div><label for="spring">滑車與彈簧碰撞</label><a href="../book2/chapter3/elastic_ex3.html" target="_blank" rel="noopener">預覽動畫</a></div>
+            </div>
+            <div class="animation">
+                <input type="radio" name="animation" id="multiple" value="elastic_ex4">
+                <img src="../book2/chapter3/elastic_ex4.png" alt="" loading="lazy">
+                <div><label for="multiple">多物體彈性碰撞</label><a href="../book2/chapter3/elastic_ex4.html" target="_blank" rel="noopener">預覽動畫</a></div>
+            </div>
+            <div class="animation">
+                <input type="radio" name="animation" id="inelastic" value="non_elastic_ex1">
+                <img src="../book2/chapter3/non_elastic_ex1.png" alt="" loading="lazy">
+                <div><label for="inelastic">完全非彈性碰撞</label><a href="../book2/chapter3/non_elastic_ex1.html" target="_blank" rel="noopener">預覽動畫</a></div>
+            </div>
+            <div class="animation">
+                <input type="radio" name="animation" id="pendulum" value="non_elastic_ex2">
+                <img src="../book2/chapter3/non_elastic_ex2.png" alt="" loading="lazy">
+                <div><label for="pendulum">單擺與小球碰撞</label><a href="../book2/chapter3/non_elastic_ex2.html" target="_blank" rel="noopener">預覽動畫</a></div>
+            </div>
+        </div>
+    </section>
+    <section aria-labelledby="componentTitle">
+        <h2 id="componentTitle">2. 選元件</h2>
+        <div class="component-list">
+            <label><input type="radio" name="clock" value="none" checked> 不加週期圈</label>
+            <label><input type="radio" name="clock" value="PHASE-CLOCK-CURRENT"> 弧形週期圈</label>
+            <label><input type="radio" name="clock" value="0206004"> 細線週期圈</label>
+            <label><input type="checkbox" name="component" value="COLLISION-ENERGY-BARS"> 能量分配列</label>
+            <label><input type="checkbox" name="component" value="COLLISION-MOMENTUM-VECTORS"> 動量向量</label>
+        </div>
+        <p class="muted" style="margin-top:12px"><a href="phase-control-styles.html" target="_blank" rel="noopener">預覽週期圈</a> · <a href="collision-chart-materials.html" target="_blank" rel="noopener">預覽能量與向量</a></p>
+    </section>
+    <section aria-labelledby="styleTitle">
+        <h2 id="styleTitle">3. 風格與需求</h2>
+        <p>精簡教學頁 <span class="muted">— 沿用本頁的留白與細線分組，動畫優先。</span></p>
+        <label class="muted" for="request">補充教學需求（選填）</label>
+        <textarea id="request" class="request" placeholder="例如：可以調整質量，碰撞時慢速播放。"></textarea>
+        <div class="actions"><button id="copyPrompt" type="button">複製整合 Prompt</button><span id="copyStatus" role="status" class="muted"></span></div>
+        <details id="promptDetails"><summary>查看 Prompt</summary><textarea id="combinedPrompt" readonly aria-label="整合 Prompt"></textarea></details>
+    </section>
+</main>
+<script src="prompt-common.js"></script>
+<script src="catalog.js"></script>
+</body>
+</html>
