@@ -29,6 +29,16 @@
         
         .btn-play, .btn-reset, .btn-help { width: 44px; height: 42px; min-width: 44px; padding: 0; color: white; background: #0878d1; font-size: 19px; box-shadow: 0 2px 5px rgba(0,0,0,.24); }
         .btn-play:hover, .btn-reset:hover, .btn-help:hover { background: #005bb5; }
+        .center-clock-play {
+            position: absolute; z-index: 2; display: flex; align-items: center; justify-content: center;
+            width: 34px; height: 34px; min-width: 34px; padding: 0; border-radius: 50%;
+            border: 2px solid rgba(255,255,255,.85); background: #0878d1; font-size: 17px;
+            box-shadow: 0 3px 0 #07538f, 0 5px 10px rgba(27,45,58,.35);
+            transform: translate(0, 0); transition: background .15s, box-shadow .15s, transform .1s;
+        }
+        .center-clock-play:hover { background: #005bb5; box-shadow: 0 3px 0 #043d69, 0 6px 12px rgba(27,45,58,.4); }
+        .center-clock-play.is-playing { background: #005bb5; }
+        .center-clock-play:active { transform: translateY(2px); box-shadow: 0 1px 0 #043d69, 0 3px 7px rgba(27,45,58,.3); }
         .help-dialog { width: min(420px, calc(100vw - 40px)); box-sizing: border-box; border: 0; border-radius: 12px; padding: 22px 24px; color: #263746; box-shadow: 0 8px 28px rgba(0,0,0,.28); font: 15px/1.65 'Segoe UI', sans-serif; }
         .help-dialog::backdrop { background: rgba(24, 37, 48, .45); }
         .help-dialog h2 { margin: 0 0 12px; font-size: 20px; }
@@ -51,7 +61,7 @@
         <canvas id="simCanvas"></canvas>
         
         <div class="playback-controls" aria-label="動畫播放控制">
-            <button id="playBtn" class="btn-play" aria-label="播放" title="播放">▶</button>
+            <button id="playBtn" class="btn-play center-clock-play" aria-label="播放" title="播放">▶</button>
             <button id="resetBtn" class="btn-reset" aria-label="重置" title="重置">↻</button>
             <button id="helpBtn" class="btn-help" aria-label="使用說明" title="使用說明">?</button>
         </div>
@@ -59,6 +69,7 @@
             <h2 id="helpTitle">操作說明</h2>
             <ul>
                 <li>點左側眼睛圖示，顯示或隱藏能量圖表、動量圖示。</li>
+                <li>點週期鐘中央的按鈕，可播放或暫停動畫。</li>
                 <li>週期鐘內、外圈的三個階段都可以點選，會從該階段起點開始播放；外圈以慢動作播放。</li>
                 <li>點週期鐘的「最大壓縮」標記，可查看彈簧壓縮最大的狀態。</li>
             </ul>
@@ -495,19 +506,33 @@
         };
 
         const playBtn = document.getElementById('playBtn');
-        playBtn.addEventListener('click', function() {
+        function positionPlayButton() {
+            const buttonSize = Math.min(42, Math.max(26, 34 * viewScale));
+            playBtn.style.width = `${buttonSize}px`;
+            playBtn.style.height = `${buttonSize}px`;
+            playBtn.style.minWidth = `${buttonSize}px`;
+            playBtn.style.minHeight = `${buttonSize}px`;
+            playBtn.style.fontSize = `${Math.max(13, 17 * viewScale)}px`;
+            const buttonWidth = playBtn.offsetWidth || 34;
+            const buttonHeight = playBtn.offsetHeight || 34;
+            playBtn.style.left = `${canvas.offsetLeft + 690 * viewScale - buttonWidth / 2}px`;
+            playBtn.style.top = `${canvas.offsetTop + 78 * viewScale - buttonHeight / 2}px`;
+        }
+
+        function togglePlayback() {
             isPlaying = !isPlaying;
             if (!isPlaying && sim.replayPhase !== null) {
                 sim.timeSpeed = sim.savedTimeSpeed;
                 sim.replayPhase = null;
             }
-            this.innerHTML = isPlaying ? 'Ⅱ' : '▶';
-            this.setAttribute('aria-label', isPlaying ? '暫停' : '播放');
-            this.title = isPlaying ? '暫停' : '播放';
-            this.style.backgroundColor = isPlaying ? '#005bb5' : '#0878d1';
+            playBtn.innerHTML = isPlaying ? 'Ⅱ' : '▶';
+            playBtn.setAttribute('aria-label', isPlaying ? '暫停' : '播放');
+            playBtn.title = isPlaying ? '暫停' : '播放';
+            playBtn.classList.toggle('is-playing', isPlaying);
             if (isPlaying) sim.loop();
             else cancelAnimationFrame(animationId);
-        });
+        }
+        playBtn.addEventListener('click', togglePlayback);
 
         document.getElementById('resetBtn').addEventListener('click', function() {
             pauseSimulation();
@@ -528,7 +553,7 @@
             playBtn.innerHTML = '▶';
             playBtn.setAttribute('aria-label', '播放');
             playBtn.title = '播放';
-            playBtn.style.backgroundColor = '#0878d1';
+            playBtn.classList.remove('is-playing');
         }
 
         function finishPhaseReplay() {
@@ -539,7 +564,7 @@
             playBtn.innerHTML = '▶';
             playBtn.setAttribute('aria-label', '播放');
             playBtn.title = '播放';
-            playBtn.style.backgroundColor = '#0878d1';
+            playBtn.classList.remove('is-playing');
         }
 
         function startPhase(phaseIndex, slowMotion) {
@@ -568,7 +593,7 @@
             playBtn.innerHTML = 'Ⅱ';
             playBtn.setAttribute('aria-label', '暫停');
             playBtn.title = '暫停';
-            playBtn.style.backgroundColor = '#005bb5';
+            playBtn.classList.add('is-playing');
             sim.loop();
         }
 
@@ -668,11 +693,17 @@
             canvas.style.cursor = 'default';
         });
 
-        const resizeAndDraw = () => { if (resizeCanvasResolution()) sim.draw(); };
+        const resizeAndDraw = () => {
+            if (resizeCanvasResolution()) {
+                positionPlayButton();
+                sim.draw();
+            }
+        };
         const canvasResizeObserver = 'ResizeObserver' in window ? new ResizeObserver(resizeAndDraw) : null;
         if (canvasResizeObserver) { canvasResizeObserver.observe(container); canvasResizeObserver.observe(controls); }
         window.addEventListener('resize', resizeAndDraw);
         if (window.visualViewport) window.visualViewport.addEventListener('resize', resizeAndDraw);
+        positionPlayButton();
         sim.init();
     </script>
 </div>
