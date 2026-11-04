@@ -117,6 +117,8 @@
             showMomentum: true,
             replayPhase: null,
             savedTimeSpeed: 0.25,
+            hoverRing: null,
+            hoverPhase: null,
 
             init() {
                 this.xA = 50; this.xB = 450;
@@ -382,42 +384,64 @@
                 return this.timeSpeed < this.savedTimeSpeed;
             },
 
+            drawArcButton(x, y, radius, a0, a1, baseColor, activeColor, progress, hovered) {
+                const width = hovered ? 17 : 15;
+                const drawArc = (start, end, lineWidth, strokeStyle, shadowColor = 'transparent', shadowBlur = 0, shadowOffsetY = 0) => {
+                    ctx.save();
+                    ctx.beginPath(); ctx.arc(x, y, radius, start, end);
+                    ctx.lineWidth = lineWidth; ctx.lineCap = 'butt';
+                    ctx.strokeStyle = strokeStyle;
+                    ctx.shadowColor = shadowColor; ctx.shadowBlur = shadowBlur; ctx.shadowOffsetY = shadowOffsetY;
+                    ctx.stroke();
+                    ctx.restore();
+                };
+                drawArc(a0, a1, width + 3, 'rgba(49, 64, 75, .34)', 'rgba(32, 44, 54, .28)', 3, 2);
+                drawArc(a0, a1, width, baseColor);
+                if (progress > 0) {
+                    const end = a0 + Math.max(0.01, progress * (a1 - a0));
+                    drawArc(a0, end, width - 1, activeColor, 'rgba(32, 44, 54, .18)', 2, 1);
+                }
+            },
+
+            drawRoundRect(left, top, width, height, radius) {
+                ctx.beginPath();
+                ctx.moveTo(left + radius, top);
+                ctx.arcTo(left + width, top, left + width, top + height, radius);
+                ctx.arcTo(left + width, top + height, left, top + height, radius);
+                ctx.arcTo(left, top + height, left, top, radius);
+                ctx.arcTo(left, top, left + width, top, radius);
+                ctx.closePath();
+            },
+
             drawPhaseClock(x, y, normalRadius, slowRadius) {
                 const startAngle = -Math.PI / 2;
                 const sector = Math.PI * 2 / 3;
                 const colors = ['#5DADE2', '#E9A23B', '#58A987'];
-                const labels = ['碰撞前到接觸', '接觸到分離', '分離後'];
+                const baseColors = ['#D8EAF4', '#F8E7C7', '#DDEDE6'];
+                const labels = ['碰撞前', '碰撞期間', '碰撞後'];
                 const expected = [
                     Math.max(1, ((450 - this.L0) - (50 + this.cartW)) / this.v0),
                     Math.PI / Math.sqrt(2 * this.k / this.m),
                     8
                 ];
                 const fraction = this.phaseClockDone ? 1 : Math.min(1, this.phaseElapsed / expected[this.phaseIndex]);
-                const maxCompressionAngle = startAngle + sector + sector / 2;
                 const activeRadius = isPlaying ? (this.isSlowMotion() ? slowRadius : normalRadius) : null;
                 ctx.save();
-                ctx.lineWidth = 10;
-                ctx.lineCap = 'butt';
-                [normalRadius, slowRadius].forEach(radius => {
+                [
+                    { radius: normalRadius, ring: 'normal' },
+                    { radius: slowRadius, ring: 'slow' }
+                ].forEach(({ radius, ring }) => {
                     for (let i = 0; i < 3; i++) {
                         const a0 = startAngle + i * sector + 0.035;
                         const a1 = startAngle + (i + 1) * sector - 0.035;
-                        ctx.beginPath(); ctx.arc(x, y, radius, a0, a1);
-                        ctx.strokeStyle = '#dce3e8'; ctx.stroke();
+                        const hovered = this.hoverRing === ring && this.hoverPhase === i;
+                        let progress = 0;
                         if (radius === activeRadius) {
-                            if (this.phaseClockDone || i < this.phaseIndex) {
-                                ctx.beginPath(); ctx.arc(x, y, radius, a0, a1);
-                                ctx.strokeStyle = colors[i]; ctx.stroke();
-                            } else if (i === this.phaseIndex && fraction > 0) {
-                                ctx.beginPath(); ctx.arc(x, y, radius, a0, a0 + Math.max(0.01, fraction * (a1 - a0)));
-                                ctx.strokeStyle = colors[i]; ctx.stroke();
-                            }
+                            if (this.phaseClockDone || i < this.phaseIndex) progress = 1;
+                            else if (i === this.phaseIndex) progress = fraction;
                         }
+                        this.drawArcButton(x, y, radius, a0, a1, baseColors[i], colors[i], progress, hovered);
                     }
-                    ctx.beginPath();
-                    ctx.moveTo(x + Math.cos(maxCompressionAngle) * (radius - 7), y + Math.sin(maxCompressionAngle) * (radius - 7));
-                    ctx.lineTo(x + Math.cos(maxCompressionAngle) * (radius + 7), y + Math.sin(maxCompressionAngle) * (radius + 7));
-                    ctx.strokeStyle = '#8a4b08'; ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.stroke();
                 });
                 ctx.beginPath();
                 const handAngle = this.phaseClockDone ? startAngle : startAngle + this.phaseIndex * sector + fraction * sector;
@@ -429,10 +453,23 @@
                 ctx.fillStyle = '#34495e'; ctx.fill();
                 ctx.restore();
                 this.drawClockLabels(x, y, slowRadius + 17, labels, startAngle, sector);
+                const markerCenterX = x + slowRadius + 12;
+                const markerCenterY = y + slowRadius + 20;
+                const markerText = '最大壓縮';
                 ctx.save();
-                ctx.fillStyle = '#8a4b08'; ctx.font = 'bold 10px "Segoe UI", sans-serif';
+                ctx.font = 'bold 10px "Segoe UI", sans-serif';
                 ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                ctx.fillText('最大壓縮', x + slowRadius + 20, y + slowRadius - 8);
+                const markerWidth = ctx.measureText(markerText).width + 14;
+                const markerHeight = 22;
+                const markerLeft = markerCenterX - markerWidth / 2;
+                const markerTop = markerCenterY - markerHeight / 2;
+                this.drawRoundRect(markerLeft + 1, markerTop + 2, markerWidth, markerHeight, 6);
+                ctx.fillStyle = 'rgba(53, 65, 73, .28)'; ctx.fill();
+                this.drawRoundRect(markerLeft, markerTop, markerWidth, markerHeight, 6);
+                ctx.fillStyle = '#F6D68C'; ctx.fill();
+                ctx.strokeStyle = '#B47A1A'; ctx.lineWidth = 1; ctx.stroke();
+                ctx.fillStyle = '#70470B';
+                ctx.fillText(markerText, markerCenterX, markerCenterY);
                 ctx.restore();
             },
 
@@ -570,9 +607,11 @@
             const ringBoundary = (normalRadius + slowRadius) / 2;
             const smallRingHit = distance >= normalRadius - ringTolerance && distance <= ringBoundary;
             const largeRingHit = distance > ringBoundary && distance <= slowRadius + ringTolerance;
+            const markerCenterX = clockX + slowRadius + 12;
+            const markerCenterY = clockY + slowRadius + 20;
             const markerLabelHit = distance > slowRadius + ringTolerance &&
-                x >= clockX + slowRadius - 8 && x <= clockX + slowRadius + 48 &&
-                y >= clockY + slowRadius - 22 && y <= clockY + slowRadius + 8;
+                x >= markerCenterX - 34 && x <= markerCenterX + 34 &&
+                y >= markerCenterY - 14 && y <= markerCenterY + 14;
             if (markerLabelHit) {
                 showClosestSnapshot();
                 return;
@@ -590,10 +629,43 @@
             const rect = canvas.getBoundingClientRect();
             const x = (event.clientX - rect.left) / viewScale;
             const y = (event.clientY - rect.top) / viewScale;
-            const clockDistance = Math.hypot(x - 690, y - 78);
+            const clockX = 690, clockY = 78;
+            const normalRadius = 38, slowRadius = 58, ringTolerance = 10;
+            const ringBoundary = (normalRadius + slowRadius) / 2;
+            const clockDistance = Math.hypot(x - clockX, y - clockY);
             const overIcon = x <= 28 && ((y >= 38 && y <= 78) || (y >= 116 && y <= 149));
-            const overClockRing = Math.abs(clockDistance - 38) <= 10 || Math.abs(clockDistance - 58) <= 10;
-            canvas.style.cursor = overIcon || overClockRing ? 'pointer' : 'default';
+            const overSmallRing = clockDistance >= normalRadius - ringTolerance && clockDistance <= ringBoundary;
+            const overLargeRing = clockDistance > ringBoundary && clockDistance <= slowRadius + ringTolerance;
+            const markerCenterX = clockX + slowRadius + 12;
+            const markerCenterY = clockY + slowRadius + 20;
+            const overMarker = clockDistance > slowRadius + ringTolerance &&
+                x >= markerCenterX - 34 && x <= markerCenterX + 34 &&
+                y >= markerCenterY - 14 && y <= markerCenterY + 14;
+            let nextRing = null;
+            let nextPhase = null;
+            if (overSmallRing || overLargeRing) {
+                const startAngle = -Math.PI / 2;
+                const sector = Math.PI * 2 / 3;
+                let angle = Math.atan2(y - clockY, x - clockX) - startAngle;
+                angle = (angle + Math.PI * 2) % (Math.PI * 2);
+                nextRing = overLargeRing ? 'slow' : 'normal';
+                nextPhase = Math.min(2, Math.floor(angle / sector));
+            }
+            if (sim.hoverRing !== nextRing || sim.hoverPhase !== nextPhase) {
+                sim.hoverRing = nextRing;
+                sim.hoverPhase = nextPhase;
+                sim.draw();
+            }
+            canvas.style.cursor = overIcon || overSmallRing || overLargeRing || overMarker ? 'pointer' : 'default';
+        });
+
+        canvas.addEventListener('pointerleave', () => {
+            if (sim.hoverRing !== null || sim.hoverPhase !== null) {
+                sim.hoverRing = null;
+                sim.hoverPhase = null;
+                sim.draw();
+            }
+            canvas.style.cursor = 'default';
         });
 
         const resizeAndDraw = () => { if (resizeCanvasResolution()) sim.draw(); };
