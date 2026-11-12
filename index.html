@@ -9,19 +9,22 @@
 <body>
   <div class="wrap">
     <h1>物理教學網站</h1>
-    <p>課程簡介：本網站依使用書籍分為五冊展示互動模擬。現階段先建立第二冊與第三冊。</p>
+    <p>課程簡介：依學科領域整理教學資源與互動模擬。</p>
 
-    <div class="grid">
+    <div class="subject-layout">
+    <section class="subject" aria-labelledby="physics-title">
+      <h2 id="physics-title">物理</h2>
+      <div class="grid physics-grid">
 
-      <!-- RDKit molecular structure studio -->
+      <!-- 第一冊 -->
       <div class="card">
-        <img src="assets/images/angular.svg" alt="分子結構示意圖">
+        <img src="assets/images/beam.svg" alt="第一冊縮圖">
         <div>
-          <div class="badge">化學工具</div>
-          <div><a href="rdkit-studio/">RDKit 分子結構繪圖</a></div>
-          <p>輸入 SMILES 或常見化學名稱，在瀏覽器中產生分子結構圖；可調整樣式、瀏覽範例，並複製或下載 PNG、SVG。</p>
+          <div class="badge">第一冊</div>
+          <div><a href="book1/Chapter3/index.html">第三章：牛頓第二運動定律</a></div>
         </div>
       </div>
+
       <!-- 第二冊 -->
       <div class="card">
         <img src="assets/images/pendulum.svg" alt="第二冊縮圖">
@@ -43,6 +46,59 @@
         </div>
       </div>
 
+      <div class="card planned-card">
+        <img src="assets/images/beam.svg" alt="物理課程圖示">
+        <div>
+          <div class="badge">第四冊</div>
+          <div class="planned-label">內容準備中</div>
+        </div>
+      </div>
+
+      <div class="card planned-card">
+        <img src="assets/images/pendulum.svg" alt="物理課程圖示">
+        <div>
+          <div class="badge">第五冊</div>
+          <div class="planned-label">內容準備中</div>
+        </div>
+      </div>
+
+    </div>
+    </section>
+
+    <section class="subject" aria-labelledby="chemistry-title">
+      <h2 id="chemistry-title">化學</h2>
+      <div class="grid chemistry-grid">
+        <!-- RDKit molecular structure studio -->
+        <div class="card">
+          <img src="assets/images/molecule.svg" alt="分子結構示意圖">
+          <div>
+            <div class="badge">化學工具</div>
+            <div><a href="rdkit-studio/">RDKit 分子結構繪圖</a></div>
+            <p>輸入 SMILES 或常見化學名稱，在瀏覽器中產生分子結構圖；可調整樣式、瀏覽範例，並複製或下載 PNG、SVG。</p>
+          </div>
+        </div>
+
+        <!-- ChemDOC chemistry teaching assistant -->
+        <div class="card">
+          <img src="assets/images/flask.svg" alt="化學燒瓶圖示">
+          <div>
+            <div class="badge">化學教學工具</div>
+            <div><a href="ChemDOC/dist/">ChemDOC 化學反應式速查</a></div>
+            <p>查找 108 課綱化學反應式，依類別篩選並複製 Word 方程式、LaTeX 或含上下標文字。</p>
+          </div>
+        </div>
+
+        <!-- Standalone chemistry lab flowchart builder -->
+        <div class="card">
+          <img src="assets/images/flowchart.svg" alt="實驗流程圖示意圖">
+          <div>
+            <div class="badge">化學教學工具</div>
+            <div><a href="ChemDOC/dist/flowchart.html">實驗流程圖生成器</a></div>
+            <p>編輯實驗步驟、器材與反應條件，並輸出可用於講義或簡報的流程圖。</p>
+          </div>
+        </div>
+      </div>
+    </section>
     </div>
 
     <footer>© 2025 物理教學網站</footer>
