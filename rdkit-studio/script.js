@@ -7,6 +7,32 @@ const structureNotice = document.querySelector('#structureNotice');
 const lookupStatus = document.querySelector('#lookupStatus');
 const lookupSource = document.querySelector('#lookupSource');
 let lookupController = null;
+let lookupState = {kind:'idle', message:'等待輸入或選擇範例。'};
+function setLookupStatus(kind, message) {
+  lookupState = {kind, message};
+  lookupStatus.textContent = message;
+  lookupStatus.setAttribute('data-kind', kind);
+  lookupStatus.hidden = false;
+}
+function candidateLookupStatus(candidate, cached = false) {
+  if (candidate.source) return {kind:'remote-found', message:`已從 ${candidate.source.label} 找到結構${cached ? '（使用本次頁面的成功查詢快取）' : ''}。`};
+  if (/^(raw|smiles):/.test(candidate.id)) return {kind:'smiles', message:'已直接解析 SMILES。'};
+  return {kind:'local-found', message:'已在本機資料找到結構。'};
+}
+function setLookupErrorStatus(error, stage) {
+  if (stage === 'settings') return setLookupStatus('settings-error', '繪圖設定有誤，請檢查下方說明。');
+  if (error.code === 'not-found') return setLookupStatus('not-found', 'OPSIN／PubChem 均未找到對應結構。');
+  if (error.code === 'lookup-failed') {
+    const codes = error.causes?.map(cause => cause.code) || [];
+    if (codes.includes('timeout')) return setLookupStatus('timeout', '名稱查詢逾時，未能完成查詢。');
+    if (codes.includes('network')) return setLookupStatus('connection-error', '名稱服務連線失敗，未能完成查詢。');
+    if (codes.includes('busy')) return setLookupStatus('service-error', '名稱服務忙碌或限流，未能完成查詢。');
+    return setLookupStatus('invalid-response', '名稱服務回傳資料無法使用，未能取得可繪製結構。');
+  }
+  if (error.code === 'formula') return setLookupStatus('needs-structure', '分子式可能有多種結構，請先指定目標。');
+  if (error.code === 'concept') return setLookupStatus('needs-structure', '請指定具體分子、單體或片段。');
+  return setLookupStatus(stage === 'drawing' ? 'drawing-error' : 'idle', stage === 'drawing' ? '繪圖未完成，請檢查下方說明。' : '請輸入結構後按「繪製」。');
+}
 const renderButton = document.querySelector('#renderButton');
 const downloadButton = document.querySelector('#downloadOutput');
 const copyButton = document.querySelector('#copyOutput');
@@ -186,7 +212,11 @@ async function resolveCandidates(value, lookupOptions = {}) {
   if (!key) return [];
   const concept = catalogConcepts.find(item => [item.name, ...(item.aliases || [])]
     .some(alias => normalizeQuery(alias).toLowerCase() === key.toLowerCase()));
-  if (concept) throw new Error(concept.message);
+  if (concept) {
+    const error = new Error(concept.message);
+    error.code = 'concept';
+    throw error;
+  }
   if (selectedChoice?.key === key) return [selectedChoice.compound];
   const records = [
     ...(exactAliases.get(key) || []),
@@ -231,6 +261,7 @@ async function resolveCandidates(value, lookupOptions = {}) {
   if (NameLookup.isFormula(input)) {
     const error = new Error(`「${input}」看起來是未收錄的分子式，可能對應多種結構。請輸入具體化合物名稱或 SMILES，或用下方提示詞先確認目標；不會用分子式推定唯一結構。`);
     error.needsNameHelp = true;
+    error.code = 'formula';
     throw error;
   }
   return nameResolver.lookup(input, lookupOptions);
@@ -318,6 +349,8 @@ async function render() {
   lookupController = new AbortController();
   const controller = lookupController;
   const sequence = ++renderSequence;
+  let stage = 'input';
+  let cachedLookup = false;
   setError('');
   updateSmilesPrompt();
   structureNotice.hidden = true;
@@ -328,25 +361,35 @@ async function render() {
   setLoading(true);
   try {
     if (!structureInput.value.trim()) throw new Error('\u8acb\u5148\u8f38\u5165\u5316\u5b78\u5f0f\u6216\u4fd7\u540d');
+    stage = 'settings';
     options(); // Reject invalid drawing settings before sending a name query.
+    stage = 'resolving';
+    setLookupStatus('resolving', '正在確認輸入…');
     const candidates = await resolveCandidates(structureInput.value, {
       signal: controller.signal,
       onProgress(message) {
         if (sequence !== renderSequence) return;
-        lookupStatus.textContent = message;
-        lookupStatus.hidden = false;
-      }
+        setLookupStatus(message.includes('OPSIN') ? 'querying-opsin' : 'querying-pubchem', message);
+      },
+      onResolved({cached}) { cachedLookup = cached; }
     });
     if (sequence !== renderSequence) return false;
     if (candidates.length > 1 || needsFormulaConfirmation(structureInput.value) ||
         (candidates[0]?.requiresConfirmation && selectedChoice?.compound !== candidates[0])) {
       clearPreview('請從左側候選結構選擇一個。');
       await showCandidates(candidates, sequence);
+      if (sequence === renderSequence) {
+        const source = candidates[0]?.source?.label || '本機資料／SMILES';
+        setLookupStatus('candidates', `待選候選：${source}${cachedLookup ? '（成功查詢快取）' : ''}，請確認後選擇結構。`);
+      }
       return false;
     }
     candidateList.hidden = true;
     candidateList.innerHTML = '';
     const candidate = candidates[0];
+    const foundStatus = candidateLookupStatus(candidate, cachedLookup);
+    setLookupStatus(foundStatus.kind, foundStatus.message);
+    stage = 'drawing';
     const structure = candidate.smiles;
     codeInput.value = itemCode({smiles: structure});
     let data;
@@ -405,13 +448,12 @@ async function render() {
       clearPreview('請修正輸入後再編譯。');
       setError(error.message);
       unknownNamePromptButton.hidden = !error.needsNameHelp;
+      setLookupErrorStatus(error, stage);
     }
     return false;
   } finally {
     if (sequence === renderSequence) {
       setLoading(false);
-      lookupStatus.hidden = true;
-      lookupStatus.textContent = '';
     }
   }
 }
@@ -549,8 +591,7 @@ structureInput.addEventListener('input', () => {
   // Invalidate pending lookups/draws before they can publish an older input.
   ++renderSequence;
   lookupController?.abort();
-  lookupStatus.hidden = true;
-  lookupStatus.textContent = '';
+  setLookupStatus('idle', structureInput.value.trim() ? '尚未繪製，按「繪製」解析目前輸入。' : '等待輸入或選擇範例。');
   lookupSource.hidden = true;
   setLoading(false);
   setError('');

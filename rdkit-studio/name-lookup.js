@@ -69,12 +69,13 @@
         throw failure('invalid-payload', fields.source.label, '回傳的 SMILES 無法由本機 RDKit 解析，已停止使用');
       return {...fields, smiles};
     }
-    async function lookup(name, {signal, onProgress = () => {}} = {}) {
+    async function lookup(name, {signal, onProgress = () => {}, onResolved = () => {}} = {}) {
       const query = name.trim(); // Preserve internal spaces and case sent to services.
       if (signal?.aborted) throw abortError();
       if (cache.has(query)) {
         const result = cache.get(query);
         cache.delete(query); cache.set(query, result);
+        onResolved({cached:true});
         return result;
       }
       const errors = [];
@@ -122,6 +123,7 @@
       }
       cache.set(query, result);
       while (cache.size > maxCache) cache.delete(cache.keys().next().value);
+      onResolved({cached:false});
       return result;
     }
     return {lookup};

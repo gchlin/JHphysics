@@ -28,6 +28,8 @@ node RDKit/RDKit/tests/name-lookup.test.js
 
 ## 狀態、複製與非同步
 
+輸入區只有一個持續可見的查詢狀態列，以 `data-kind` 區分狀態。初始／修改輸入為 `idle`；本機結果為 `local-found`、直接 SMILES 為 `smiles`、連網中為 `querying-opsin`／`querying-pubchem`、線上成功為 `remote-found`、候選待選為 `candidates`。成功來源不會在繪製結束後消失；只有實際命中成功快取才標示「快取」。兩服務都查無為 `not-found`；連線失敗及逾時分為 `connection-error`／`timeout`。尺寸等設定錯誤為 `settings-error`，不當作搜尋失敗。以上狀態、來源及取消後回 idle 已加入自動測試；實機可見性仍需下方瀏覽器驗收。
+
 | 實際步驟 | 預期結果 | 自動 |
 |---|---|---|
 | 輸入 `first query`，開求助，再改為 `second query` | 面板提示詞立即改成新輸入 | 已測 |
