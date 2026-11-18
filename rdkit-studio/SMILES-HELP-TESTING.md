@@ -30,6 +30,8 @@ node RDKit/RDKit/tests/name-lookup.test.js
 
 輸入區只有一個持續可見的查詢狀態列，以 `data-kind` 區分狀態。初始／修改輸入為 `idle`；本機結果為 `local-found`、直接 SMILES 為 `smiles`、連網中為 `querying-opsin`／`querying-pubchem`、線上成功為 `remote-found`、候選待選為 `candidates`。成功來源不會在繪製結束後消失；只有實際命中成功快取才標示「快取」。兩服務都查無為 `not-found`；連線失敗及逾時分為 `connection-error`／`timeout`。尺寸等設定錯誤為 `settings-error`，不當作搜尋失敗。以上狀態、來源及取消後回 idle 已加入自動測試；實機可見性仍需下方瀏覽器驗收。
 
+Gemini 失敗引導依真實服務結果顯示：只有 OPSIN 與 PubChem 都確實查無，才說「可能是 IUPAC 或俗名，繪圖需要 SMILES，已查找但未找到」，並引導取得 SMILES 後貼回。任一服務連線失敗、逾時或回傳資料不可用時，改說「未能完成查詢，尚不能判定」，不把服務故障當成查無或名稱錯誤。未收錄分子式則另說明多解與未送名稱 API，提供「複製分子式的 Gemini 查詢提示詞」。自動測試包含合法名稱 `(2E,4E)-hexa-2,4-dienoic acid` 的模擬查無，不因查無而判定名稱不正確；也涵蓋單服務查無、另一服務網路失敗的混合情境。
+
 | 實際步驟 | 預期結果 | 自動 |
 |---|---|---|
 | 輸入 `first query`，開求助，再改為 `second query` | 面板提示詞立即改成新輸入 | 已測 |

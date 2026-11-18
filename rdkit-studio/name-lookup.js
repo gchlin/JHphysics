@@ -117,7 +117,7 @@
       if (signal?.aborted) throw abortError();
       if (!result) {
         const error = failure(errors.every(item => item.code === 'not-found') ? 'not-found' : 'lookup-failed',
-          '名稱查詢', errors.map(item => item.message).join('；') + '。可用下方 Gemini 提示詞繼續查詢。');
+          '名稱查詢', errors.map(item => item.message).join('；'));
         error.causes = errors;
         throw error;
       }

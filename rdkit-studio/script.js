@@ -150,6 +150,17 @@ async function refreshTransform() {
 function setError(message = '') {
   errorBox.textContent = message;
   unknownNamePromptButton.hidden = true;
+  unknownNamePromptButton.textContent = '複製這個名稱的 Gemini 查詢提示詞';
+}
+function lookupFailureMessage(error, input) {
+  if (error.code === 'not-found') {
+    return `你輸入的「${input.trim()}」可能是 IUPAC 或俗名；繪圖需要 SMILES。已向 OPSIN／PubChem 查找，但未找到對應結構。可請 Gemini 協助產生 SMILES，確認後貼回繪製。`;
+  }
+  if (error.code === 'lookup-failed') {
+    const problems = (error.causes || []).filter(cause => cause.code !== 'not-found').map(cause => cause.message).join('；');
+    return `未能完成「${input.trim()}」的 OPSIN／PubChem 查詢，尚不能判定是否有對應結構。${problems ? `${problems}。` : ''}可稍後重試，或請 Gemini 協助取得 SMILES，確認目標後貼回繪製。`;
+  }
+  return error.message;
 }
 function setStatus(online, text) {
   document.querySelector('#statusDot').className = 'status-dot ' + (online ? 'online' : 'offline');
@@ -259,7 +270,7 @@ async function resolveCandidates(value, lookupOptions = {}) {
     } finally { molecule.delete(); }
   }
   if (NameLookup.isFormula(input)) {
-    const error = new Error(`「${input}」看起來是未收錄的分子式，可能對應多種結構。請輸入具體化合物名稱或 SMILES，或用下方提示詞先確認目標；不會用分子式推定唯一結構。`);
+    const error = new Error(`「${input}」看起來是分子式，可能對應多種結構，不能單憑分子式指定唯一化合物。請輸入具體名稱或 SMILES；也可複製下方提示詞請 Gemini 列出候選，確認目標後再貼回 SMILES。此次未將分子式送至名稱查詢服務。`);
     error.needsNameHelp = true;
     error.code = 'formula';
     throw error;
@@ -392,16 +403,7 @@ async function render() {
     stage = 'drawing';
     const structure = candidate.smiles;
     codeInput.value = itemCode({smiles: structure});
-    let data;
-    try { data = await drawMolecule(structure, options()); }
-    catch (error) {
-      if (candidate.id.startsWith('raw:') && /SMILES 無法解析/.test(error.message)) {
-        const lookupError = new Error(`本機名稱表尚未收錄「${structureInput.value.trim()}」，這段輸入也無法直接作為 SMILES 繪圖。可請 Gemini 協助查詢，再貼回 SMILES。`);
-        lookupError.needsNameHelp = true;
-        throw lookupError;
-      }
-      throw error;
-    }
+    const data = await drawMolecule(structure, options());
     if (sequence !== renderSequence) return false;
     baseSvg = data.svg;
     lastSvg = baseSvg;
@@ -446,7 +448,8 @@ async function render() {
   } catch (error) {
     if (sequence === renderSequence && error.name !== 'AbortError') {
       clearPreview('請修正輸入後再編譯。');
-      setError(error.message);
+      setError(lookupFailureMessage(error, structureInput.value));
+      if (error.code === 'formula') unknownNamePromptButton.textContent = '複製分子式的 Gemini 查詢提示詞';
       unknownNamePromptButton.hidden = !error.needsNameHelp;
       setLookupErrorStatus(error, stage);
     }
