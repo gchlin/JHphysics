@@ -9,6 +9,43 @@ const lookupSource = document.querySelector('#lookupSource');
 const smilesRow = document.querySelector('#smilesRow');
 const renderedSmiles = document.querySelector('#renderedSmiles');
 const copySmilesButton = document.querySelector('#copySmiles');
+const historyButton = document.querySelector('#historyButton');
+const historyPanel = document.querySelector('#historyPanel');
+const historyList = document.querySelector('#historyList');
+const historyStorageStatus = document.querySelector('#historyStorageStatus');
+const historyStore = StructureHistory.createStore({onStatus(message) {
+  historyStorageStatus.textContent = message;
+  historyStorageStatus.hidden = false;
+}});
+let historyChoice = null;
+function updateHistoryList() {
+  historyList.textContent = '';
+  const records = historyStore.list();
+  document.querySelector('#clearHistory').disabled = !records.length;
+  if (!records.length) {
+    const empty = document.createElement('p');
+    empty.textContent = '尚無成功繪製的歷史。';
+    historyList.append(empty);
+    return;
+  }
+  records.forEach((record, index) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.setAttribute('data-history-index', String(index));
+    const name = document.createElement('strong');
+    name.textContent = record.name || record.input || '自訂分子';
+    const smiles = document.createElement('span');
+    smiles.textContent = record.smiles;
+    const time = document.createElement('small');
+    time.textContent = new Date(record.time).toLocaleString('zh-TW');
+    button.append(name, smiles, time);
+    historyList.append(button);
+  });
+}
+function closeHistory() {
+  historyPanel.hidden = true;
+  historyButton.setAttribute('aria-expanded', 'false');
+}
 function clearRenderedSmiles() {
   smilesRow.hidden = true;
   renderedSmiles.value = '';
@@ -23,6 +60,7 @@ function setLookupStatus(kind, message) {
   lookupStatus.hidden = false;
 }
 function candidateLookupStatus(candidate, cached = false) {
+  if (candidate.history) return {kind:'history', message:'已從歷史載入保存的 SMILES，於本機重新繪製。'};
   if (candidate.source) return {kind:'remote-found', message:`已從 ${candidate.source.label} 找到結構${cached ? '（使用本次頁面的成功查詢快取）' : ''}。`};
   if (/^(raw|smiles):/.test(candidate.id)) return {kind:'smiles', message:'已直接解析 SMILES。'};
   return {kind:'local-found', message:'已在本機資料找到結構。'};
@@ -230,6 +268,7 @@ async function resolveCandidates(value, lookupOptions = {}) {
   const input = String(value || '').trim();
   const key = normalizeQuery(input);
   if (!key) return [];
+  if (historyChoice?.smiles === input) return [historyChoice];
   const concept = catalogConcepts.find(item => [item.name, ...(item.aliases || [])]
     .some(alias => normalizeQuery(alias).toLowerCase() === key.toLowerCase()));
   if (concept) {
@@ -455,6 +494,11 @@ async function render() {
       body.append(link);
       lookupSource.hidden = false;
     }
+    const historySource = candidate.history ? candidate.originalSource : candidate.source;
+    historyStore.add({name:document.querySelector('#metaName').textContent,
+      input:candidate.history ? candidate.originalInput : structureInput.value.trim(), smiles:structure,
+      time:Date.now(), ...(historySource ? {source:historySource} : {})});
+    updateHistoryList();
     return true;
   } catch (error) {
     if (sequence === renderSequence && error.name !== 'AbortError') {
@@ -471,7 +515,7 @@ async function render() {
     }
   }
 }
-function loadCode(structure, name = '') { selectedChoice = null; selectedName = name; structureInput.value = structure; return render(); }
+function loadCode(structure, name = '') { historyChoice = null; selectedChoice = null; selectedName = name; structureInput.value = structure; return render(); }
 function safeFilename(value, extension) {
   return String(value).replace(/[\\/:*?"<>|]/g, '_').replace(/\s+/g, '') + '.' + extension;
 }
@@ -602,6 +646,7 @@ candidateList.addEventListener('click', event => {
   return render();
 });
 structureInput.addEventListener('input', () => {
+  historyChoice = null;
   clearRenderedSmiles();
   // Invalidate pending lookups/draws before they can publish an older input.
   ++renderSequence;
@@ -747,7 +792,9 @@ document.querySelector('#invertChirality').addEventListener('click', async () =>
         throw new Error('無法確認所有 R/S 皆已反轉且 E/Z 保持不變，已停止操作。');
       }
     } finally { original.delete(); mol.delete(); }
-    selectedName = invertedName(selectedName);
+    const reversedName = invertedName(selectedName);
+    selectedName = reversedName && reversedName !== selectedName ? reversedName : '反轉手性結構';
+    historyChoice = null;
     structureInput.value = next;
     if (await render()) toast('已產生對映異構物；R/S 手性中心已反轉，E/Z 保持不變。');
   } catch (error) { setError(error.message); }
@@ -765,6 +812,31 @@ copySmilesButton.addEventListener('click', async () => {
     renderedSmiles.select();
     toast('無法自動複製，已選取 SMILES，請手動複製');
   }
+});
+historyButton.addEventListener('click', () => {
+  if (!historyPanel.hidden) return closeHistory();
+  updateHistoryList();
+  historyPanel.hidden = false;
+  historyButton.setAttribute('aria-expanded', 'true');
+});
+document.querySelector('#closeHistory').addEventListener('click', () => {closeHistory(); historyButton.focus();});
+document.querySelector('#clearHistory').addEventListener('click', () => {historyStore.clear(); updateHistoryList();});
+historyList.addEventListener('click', event => {
+  const button = event.target.closest('[data-history-index]');
+  if (!button) return;
+  const record = historyStore.list()[Number(button.getAttribute('data-history-index'))];
+  if (!record) return;
+  // Only use saved SMILES as input. Never replay the original name via APIs.
+  historyChoice = {id:`history:${record.smiles}`, name:record.name, smiles:record.smiles, history:true,
+    originalInput:record.input, originalSource:record.source};
+  selectedChoice = null;
+  selectedName = record.name;
+  structureInput.value = record.smiles;
+  closeHistory();
+  return render();
+});
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && !historyPanel.hidden) {closeHistory(); historyButton.focus();}
 });
 
 document.querySelector('#copyFormula').addEventListener('click', async () => {

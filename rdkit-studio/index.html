@@ -46,8 +46,14 @@
             <div class="input-line">
               <input id="structureInput" type="text" autocomplete="off" placeholder="乙醇 / CH3CH2OH / CCO">
               <button id="renderButton" class="primary-button" type="button" disabled>繪製</button>
+              <button id="historyButton" class="history-button" type="button" aria-expanded="false" aria-controls="historyPanel">歷史</button>
             </div>
           </div>
+          <section id="historyPanel" class="history-panel" aria-label="成功繪製歷史" hidden>
+            <div class="history-heading"><strong>最近繪製</strong><button id="clearHistory" type="button">清除歷史</button><button id="closeHistory" type="button" aria-label="關閉歷史">×</button></div>
+            <p id="historyStorageStatus" role="status" hidden></p>
+            <div id="historyList"></div>
+          </section>
           <p id="lookupStatus" class="lookup-hint" role="status" data-kind="idle">等待輸入或選擇範例。</p>
           <textarea id="codeInput" hidden aria-hidden="true"></textarea>
           <div class="quick-row">
@@ -209,6 +215,7 @@
   <script src="steroid-numbering.js"></script>
   <script src="renderer.js"></script>
   <script src="name-lookup.js"></script>
+  <script src="history-store.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

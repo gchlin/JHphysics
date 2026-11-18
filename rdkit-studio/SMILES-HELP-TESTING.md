@@ -5,6 +5,7 @@
 ```powershell
 node RDKit/RDKit/tests/smiles-help.test.js
 node RDKit/RDKit/tests/name-lookup.test.js
+node RDKit/RDKit/tests/history-store.test.js
 ```
 
 腳本使用實際 `script.js` 的查表、候選、繪製流程與事件處理器及 `name-lookup.js`，載入現有 RDKit WebAssembly 真正解析 SMILES。名稱服務使用固定回應，不連網；DOM、剪貼簿與畫面量測採簡化替身。因此腳本通過不等於完成實機視覺、無障礙或作業系統剪貼簿驗收。測試不會開啟 Gemini 或傳送問題；實際頁面按繪製查詢未收錄名稱則會向 OPSIN／PubChem 送出文字。
@@ -51,6 +52,13 @@ Gemini 失敗引導依真實服務結果顯示：只有 OPSIN 與 PubChem 都確
 
 ## 必須手動的瀏覽器驗收
 
+歷史自動測試涵蓋成功才寫入、候選未選不寫入、30 筆上限、SMILES 去重最近優先、重建 store 後讀回及持久清除、schema／長度／來源 URL allowlist、儲存禁止／損壞／容量不足降級、歷史點選不查 API、非法保存 SMILES 解析失敗不送 API、安全 DOM 文字、R↔S 後不沿用來源及一般 IUPAC 名稱、Escape 與 aria。localStorage 替身驗證存取契約，尚需下列真實瀏覽器驗收：
+
+- 成功畫兩個分子，打開「歷史」，最近結果在上方；重新整理仍可見。只打開候選不選取時不增加記錄。
+- 點歷史結果，Network 不應新增 OPSIN／PubChem 請求，狀態顯示「歷史」；原名稱保留在記錄中，輸入列使用保存的 SMILES。清除後重新整理仍為空態。
+- DevTools 封鎖 storage，或將 `rdkit-studio-history-v1` 設成壞 JSON，重整並成功繪圖仍可操作；打開歷史應提示僅本頁記憶體。若無法清除磁碟資料，應如實提示從瀏覽器網站資料清除，不宣稱已永久刪除。
+- 歷史面板可用鍵盤開啟、關閉，Escape 關閉並回到歷史按鈕；320／375 px 下列表可捲動、名稱與長 SMILES 不造成橫向裁切。
+
 從儲存庫根目錄執行 `python -m http.server 8000`，開啟 `http://127.0.0.1:8000/rdkit-studio/`。以下未在實機瀏覽器完成，請勿當作已通過：
 
 1. **桌面短視窗**：設為約 1024×600，展開求助、觸發未知名稱 CTA。左欄可捲到底、樣式控制可操作；面板不遮住輸入或複製入口。
@@ -74,3 +82,7 @@ Gemini 失敗引導依真實服務結果顯示：只有 OPSIN 與 PubChem 都確
 本頁可驗證「本機是否收錄」、「SMILES 是否能被 RDKit 解析」與介面狀態；**合法 SMILES 不等於符合輸入名稱**，也不表示已經查證來源。
 
 若日後人工測試 Gemini 回覆，請逐項核對原名稱、來源頁實際結構、分子式、電荷、酸鹽／質子化及 R/S、E/Z。`C2H6O` 不足以指定乙醇；`CO` 同時有分子式及 SMILES 語境；未指定立體化學不應自行補上；混合物先問具體成分。有歧義應先提問／列候選，不應先給唯一最終答案。提示詞能表達這些要求，無法保證 Gemini 遵守；本測試不連外驗證 Gemini 答案。
+
+## Repository 接續紀錄
+
+切換帳號或模型後，先在主儲存庫與 `RDKit/RDKit` 各執行 `git log -5 --oneline`、`git status --short`，再讀取現有差異。兩個目錄是各自的提交紀錄，前端檔需同步；不要用舊對話 context 覆蓋已完成的新檔案。若發現另一帳號仍寫入，先協調再編輯。各階段由負責驗收者 review／commit 後再接續下一階段。
