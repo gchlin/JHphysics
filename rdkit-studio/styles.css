@@ -236,6 +236,10 @@ main { display:block; height:calc(100dvh - 44px); overflow:hidden; padding:8px 0
 .lookup-source summary { cursor:pointer; }
 .lookup-source a { color:var(--teal); }
 .lookup-source p { margin:4px 0; }
+.smiles-row { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:6px; flex:none; min-width:0; margin-top:4px; color:var(--muted); font-size:10px; }
+.smiles-row input { width:100%; min-width:0; padding:4px 5px; border:1px solid var(--line); border-radius:4px; background:#fafbfa; color:var(--ink); font:11px ui-monospace,monospace; }
+.smiles-row button { padding:4px 6px; border:1px solid var(--line); border-radius:4px; background:#fff; color:var(--muted); font-size:10px; cursor:pointer; }
+.smiles-row button:hover { color:var(--ink); background:#f4f5f4; }
 .smiles-help p { margin:6px 0; color:var(--muted); font-size:11px; line-height:1.4; }
 .smiles-help textarea { box-sizing:border-box; width:100%; height:115px; resize:vertical; padding:7px; border:1px solid var(--line); border-radius:5px; color:var(--ink); background:#f8f9f8; font-size:11px; line-height:1.4; }
 .copy-prompt { margin-top:6px; padding:5px 8px; border:1px solid var(--line); border-radius:5px; background:#f4f5f4; color:var(--ink); font-size:11px; cursor:pointer; }

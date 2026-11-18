@@ -38,4 +38,4 @@ SMILES／Gemini 求助的可重跑檢查與手動邊界案例見 [求助測試�
 
 其他未收錄名稱在按「繪製」後，會以保留內部空白及大小寫的文字依序查詢 [OPSIN](https://www.ebi.ac.uk/opsin/) 與 [PubChem PUG REST](https://pubchem.ncbi.nlm.nih.gov/pcfe/docs/markdown/pug-rest.md)。每個服務約 8 秒逾時，不自動重試；修改輸入或再次繪製會取消舊查詢。最多快取 50 個成功查詢於本次頁面記憶體，重新整理即清空；網路錯誤不快取。PubChem 請求至少間隔 250 ms。
 
-所有採用的回傳 SMILES 均先經本機 RDKit 解析。OPSIN 成功可直接繪製，WARNING 須先確認；PubChem 一律先顯示回傳 IUPAC 名、分子式與 CID 候選，即使只有一筆，避免同名查詢誤選酸鹽或質子化型態。最多列 8 筆並提示範圍限制，並非全部異構物。PubChem 使用包含立體與同位素資訊的 `SMILES`，不以不含立體資訊的 `ConnectivitySMILES` 替代。繪圖下方可展開「查詢來源與 SMILES」核對來源；回傳可解析不等於名稱語意已驗證。中文名稱不保證被外部服務收錄，未找到、逾時／網路、限流與格式錯誤會分別提示，可再用 Gemini 求助。
+所有採用的回傳 SMILES 均先經本機 RDKit 解析。OPSIN 成功可直接繪製，WARNING 須先確認；PubChem 一律先顯示回傳 IUPAC 名、分子式與 CID 候選，即使只有一筆，避免同名查詢誤選酸鹽或質子化型態。最多列 8 筆並提示範圍限制，並非全部異構物。PubChem 使用包含立體與同位素資訊的 `SMILES`，不以不含立體資訊的 `ConnectivitySMILES` 替代。成功繪製後，結構下方有可選取與複製的 SMILES 列；R↔S 反轉後會更新為新結構。可另展開「查詢來源」核對來源；回傳可解析不等於名稱語意已驗證。中文名稱不保證被外部服務收錄，未找到、逾時／網路、限流與格式錯誤會分別提示，可再用 Gemini 求助。

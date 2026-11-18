@@ -6,6 +6,14 @@ const unknownNamePromptButton = document.querySelector('#copyUnknownNamePrompt')
 const structureNotice = document.querySelector('#structureNotice');
 const lookupStatus = document.querySelector('#lookupStatus');
 const lookupSource = document.querySelector('#lookupSource');
+const smilesRow = document.querySelector('#smilesRow');
+const renderedSmiles = document.querySelector('#renderedSmiles');
+const copySmilesButton = document.querySelector('#copySmiles');
+function clearRenderedSmiles() {
+  smilesRow.hidden = true;
+  renderedSmiles.value = '';
+  copySmilesButton.disabled = true;
+}
 let lookupController = null;
 let lookupState = {kind:'idle', message:'等待輸入或選擇範例。'};
 function setLookupStatus(kind, message) {
@@ -171,6 +179,7 @@ function setLoading(loading) {
   renderButton.textContent = loading ? '繪製中…' : '繪製';
 }
 function clearPreview(message = '輸入結構或選擇範例後按下編譯。') {
+  clearRenderedSmiles();
   lookupSource.hidden = true;
   document.querySelector('#lookupSourceBody').textContent = '';
   structureNotice.hidden = true;
@@ -360,6 +369,7 @@ async function render() {
   lookupController = new AbortController();
   const controller = lookupController;
   const sequence = ++renderSequence;
+  clearRenderedSmiles();
   let stage = 'input';
   let cachedLookup = false;
   setError('');
@@ -409,6 +419,9 @@ async function render() {
     lastSvg = baseSvg;
     lastFormula = data.formula || data.smiles;
     lastSmiles = structure;
+    renderedSmiles.value = lastSmiles;
+    smilesRow.hidden = false;
+    copySmilesButton.disabled = false;
     lastRenderOptions = data.options;
     previewStage.innerHTML = lastSvg;
     previewStage.classList.toggle('transparent', data.options.transparent_background);
@@ -439,9 +452,7 @@ async function render() {
       link.target = '_blank';
       link.rel = 'noopener noreferrer';
       link.textContent = candidate.source.label;
-      const smiles = document.createElement('p');
-      smiles.textContent = `SMILES：${structure}`;
-      body.append(link, smiles);
+      body.append(link);
       lookupSource.hidden = false;
     }
     return true;
@@ -591,6 +602,7 @@ candidateList.addEventListener('click', event => {
   return render();
 });
 structureInput.addEventListener('input', () => {
+  clearRenderedSmiles();
   // Invalidate pending lookups/draws before they can publish an older input.
   ++renderSequence;
   lookupController?.abort();
@@ -740,6 +752,21 @@ document.querySelector('#invertChirality').addEventListener('click', async () =>
     if (await render()) toast('已產生對映異構物；R/S 手性中心已反轉，E/Z 保持不變。');
   } catch (error) { setError(error.message); }
 });
+copySmilesButton.addEventListener('click', async () => {
+  if (copySmilesButton.disabled || !lastSvg || !renderedSmiles.value) return;
+  const smiles = renderedSmiles.value;
+  const sequence = renderSequence;
+  try {
+    await navigator.clipboard.writeText(smiles);
+    if (sequence === renderSequence) toast('SMILES 已複製');
+  } catch {
+    if (sequence !== renderSequence || renderedSmiles.value !== smiles) return;
+    renderedSmiles.focus();
+    renderedSmiles.select();
+    toast('無法自動複製，已選取 SMILES，請手動複製');
+  }
+});
+
 document.querySelector('#copyFormula').addEventListener('click', async () => {
   if (!lastFormula) return;
   const mathml = formulaMathML(lastFormula);
