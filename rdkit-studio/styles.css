@@ -212,20 +212,30 @@ body.drawer-open { overflow:hidden; }
 .gallery-button { border-color:var(--line); background:#fff; color:var(--ink); padding:5px 8px; font-size:11px; }
 main { display:block; height:calc(100dvh - 44px); overflow:hidden; padding:8px 0; }
 .workspace-grid { display:grid; grid-template-columns:minmax(365px,.79fr) minmax(0,1.21fr); gap:10px; height:100%; align-items:stretch; }
-.editor-column { display:flex; flex-direction:column; gap:8px; min-height:0; }
+.editor-column { display:flex; flex-direction:column; gap:8px; min-height:0; min-width:0; overflow-y:auto; }
+.editor-column > .style-strip { flex-shrink:0; }
 .panel { border-radius:9px; box-shadow:none; }
 .editor-panel,.preview-panel { padding:10px; min-height:0; }
 .editor-panel { flex:none; overflow:visible; }
 .editor-heading,.style-title { display:flex; align-items:center; justify-content:space-between; gap:6px; margin-bottom:6px; }
 .editor-heading strong,.style-title strong,.panel-head strong { font-size:12px; }
 .editor-heading span,.style-title span { color:var(--muted); font-size:10px; }
-.entry-hint { display:inline-flex; align-items:center; gap:4px; white-space:nowrap; }
-.help-icon { width:17px; height:17px; padding:0; border:1px solid var(--line); border-radius:50%; background:#fff; color:var(--ink); font-size:10px; font-weight:700; line-height:15px; text-align:center; cursor:pointer; }
+.editor-heading { flex-wrap:wrap; }
+.entry-hint { display:inline-flex; align-items:center; flex-wrap:wrap; gap:4px; }
+.help-icon { padding:4px 6px; border:1px solid var(--line); border-radius:5px; background:#fff; color:var(--ink); font-size:11px; line-height:1.4; text-align:center; cursor:pointer; }
 .help-icon:hover,.help-icon[aria-expanded="true"] { background:#e0e6e2; }
-.smiles-help { position:absolute; z-index:15; top:34px; right:10px; width:min(360px,calc(100vw - 36px)); padding:10px; border:1px solid var(--line); border-radius:8px; background:#fff; box-shadow:0 8px 24px #17241d20; }
+.smiles-help { box-sizing:border-box; position:relative; z-index:15; width:100%; margin-bottom:8px; padding:10px; border:1px solid var(--line); border-radius:8px; background:#fff; box-shadow:0 8px 24px #17241d20; }
 .smiles-help > div { display:flex; align-items:center; justify-content:space-between; }
 .smiles-help strong { font-size:12px; }
-.smiles-help > div button { border:0; background:transparent; font-size:18px; line-height:1; cursor:pointer; }
+.smiles-help-heading button { border:0; background:transparent; font-size:18px; line-height:1; cursor:pointer; }
+.smiles-help .smiles-help-actions { justify-content:flex-start; gap:8px; flex-wrap:wrap; }
+.smiles-help-actions a { display:inline-block; text-decoration:none; }
+.structure-notice { margin:4px 0; color:var(--muted); font-size:11px; line-height:1.5; }
+.lookup-hint,.lookup-source { margin:5px 0; color:var(--muted); font-size:11px; line-height:1.5; }
+.lookup-source { flex:none; overflow-wrap:anywhere; }
+.lookup-source summary { cursor:pointer; }
+.lookup-source a { color:var(--teal); }
+.lookup-source p { margin:4px 0; }
 .smiles-help p { margin:6px 0; color:var(--muted); font-size:11px; line-height:1.4; }
 .smiles-help textarea { box-sizing:border-box; width:100%; height:115px; resize:vertical; padding:7px; border:1px solid var(--line); border-radius:5px; color:var(--ink); background:#f8f9f8; font-size:11px; line-height:1.4; }
 .copy-prompt { margin-top:6px; padding:5px 8px; border:1px solid var(--line); border-radius:5px; background:#f4f5f4; color:var(--ink); font-size:11px; cursor:pointer; }
@@ -289,7 +299,7 @@ main { display:block; height:calc(100dvh - 44px); overflow:hidden; padding:8px 0
   .app-shell { height:auto; padding:0 8px; }
   main { height:auto; overflow:visible; padding:6px 0 14px; }
   .workspace-grid { height:auto; grid-template-columns:minmax(0,1fr); gap:7px; }
-  .editor-column { gap:7px; }
+  .editor-column { gap:7px; overflow:visible; }
   .preview-panel { height:auto!important; }
   .preview-stage { flex:none; height:min(48dvh,360px); min-height:230px; }
   .gallery-drawer { top:0; width:min(570px,100vw); }

@@ -2,6 +2,11 @@ const codeInput = document.querySelector('#codeInput');
 const structureInput = document.querySelector('#structureInput');
 const previewStage = document.querySelector('#previewStage');
 const errorBox = document.querySelector('#errorBox');
+const unknownNamePromptButton = document.querySelector('#copyUnknownNamePrompt');
+const structureNotice = document.querySelector('#structureNotice');
+const lookupStatus = document.querySelector('#lookupStatus');
+const lookupSource = document.querySelector('#lookupSource');
+let lookupController = null;
 const renderButton = document.querySelector('#renderButton');
 const downloadButton = document.querySelector('#downloadOutput');
 const copyButton = document.querySelector('#copyOutput');
@@ -73,6 +78,14 @@ async function loadCatalog() {
   }
 }
 const catalogReady = loadCatalog();
+const nameResolver = NameLookup.createResolver({fetchImpl: (...args) => fetch(...args), validateSmiles: smiles => {
+  // Resolver runs only after resolveCandidates has awaited rdkitReady.
+  const molecule = lookupRdkit.get_mol(smiles);
+  if (!molecule) return false;
+  try { return molecule.get_num_atoms() > 0; }
+  finally { molecule.delete(); }
+}});
+let lookupRdkit;
 
 function options() {
   const heightCm = Number(document.querySelector('#heightCm').value);
@@ -108,7 +121,10 @@ async function refreshTransform() {
   document.querySelector('#flipVertical').setAttribute('aria-pressed', String(flipY));
   return lastSvg ? render() : false;
 }
-function setError(message = '') { errorBox.textContent = message; }
+function setError(message = '') {
+  errorBox.textContent = message;
+  unknownNamePromptButton.hidden = true;
+}
 function setStatus(online, text) {
   document.querySelector('#statusDot').className = 'status-dot ' + (online ? 'online' : 'offline');
   document.querySelector('#statusText').textContent = text;
@@ -118,6 +134,10 @@ function setLoading(loading) {
   renderButton.textContent = loading ? '繪製中…' : '繪製';
 }
 function clearPreview(message = '輸入結構或選擇範例後按下編譯。') {
+  lookupSource.hidden = true;
+  document.querySelector('#lookupSourceBody').textContent = '';
+  structureNotice.hidden = true;
+  structureNotice.textContent = '';
   lastSvg = '';
   lastFormula = '';
   lastSmiles = '';
@@ -155,7 +175,11 @@ async function checkHealth() {
     setStatus(false, 'RDKit 載入失敗');
   }
 }
-async function resolveCandidates(value) {
+function tryParseSmiles(rdkit, value) {
+  try { return rdkit.get_mol(value); }
+  catch { return null; }
+}
+async function resolveCandidates(value, lookupOptions = {}) {
   await catalogReady;
   const input = String(value || '').trim();
   const key = normalizeQuery(input);
@@ -180,12 +204,12 @@ async function resolveCandidates(value) {
   }
   if (candidates.length && /^[\x00-\x7F]+$/.test(input)) {
     const rdkit = await rdkitReady;
-    const parsed = rdkit.get_mol(input);
+    const parsed = tryParseSmiles(rdkit, input);
     if (parsed) {
       try {
         const parsedSmiles = parsed.get_smiles();
         const same = candidates.some(candidate => {
-          const molecule = rdkit.get_mol(candidate.smiles);
+          const molecule = tryParseSmiles(rdkit, candidate.smiles);
           if (!molecule) return false;
           try { return molecule.get_smiles() === parsedSmiles; }
           finally { molecule.delete(); }
@@ -194,7 +218,22 @@ async function resolveCandidates(value) {
       } finally { parsed.delete(); }
     }
   }
-  return candidates.length ? candidates : [{id:`raw:${input}`, name:'自訂分子', smiles:input}];
+  if (candidates.length) return candidates;
+  const rdkit = await rdkitReady;
+  lookupRdkit = rdkit;
+  if (lookupOptions.signal?.aborted) throw new DOMException('查詢已取消', 'AbortError');
+  const molecule = tryParseSmiles(rdkit, input);
+  if (molecule) {
+    try {
+      if (molecule.get_num_atoms() > 0) return [{id:`raw:${input}`, name:'自訂分子', smiles:input}];
+    } finally { molecule.delete(); }
+  }
+  if (NameLookup.isFormula(input)) {
+    const error = new Error(`「${input}」看起來是未收錄的分子式，可能對應多種結構。請輸入具體化合物名稱或 SMILES，或用下方提示詞先確認目標；不會用分子式推定唯一結構。`);
+    error.needsNameHelp = true;
+    throw error;
+  }
+  return nameResolver.lookup(input, lookupOptions);
 }
 function needsFormulaConfirmation(value) {
   const key = normalizeQuery(value);
@@ -211,12 +250,16 @@ async function showCandidates(candidates, sequence) {
     } catch { return ''; }
   }));
   if (sequence !== renderSequence) return;
-  candidateList.innerHTML = `<strong>${candidates.length > 1 ? '找到多個可能結構，請選擇一個' : '找到一筆已收錄結構，請確認'}</strong>` +
-    '<p>以下列出本機已收錄或可由 SMILES 解析的候選；同分子式可能還有其他異構物。</p>' +
+  const online = candidates.some(candidate => candidate.source);
+  candidateList.innerHTML = `<strong>${candidates.length > 1 ? '找到多個可能結構，請選擇一個' : online ? '找到一筆線上查詢結果，請確認' : '找到一筆已收錄結構，請確認'}</strong>` +
+    (online ? '<p>以下為線上名稱查詢結果，請核對名稱、分子式、電荷與立體化學後選擇；結果不代表全部異構物。</p>' :
+      '<p>以下列出本機已收錄或可由 SMILES 解析的候選；同分子式可能還有其他異構物。</p>') +
     candidates.map((candidate, index) =>
       `<button type="button" class="candidate-card" data-candidate="${index}">` +
       `<span class="candidate-image">${images[index]}</span>` +
-      `<span><b>${escapeHTML(candidate.name)}</b><small>${escapeHTML(candidate.smiles)}</small></span></button>`
+      `<span><b>${escapeHTML(candidate.name)}</b><small>${escapeHTML(candidate.smiles)}</small>` +
+      (candidate.source ? `<small>${escapeHTML(candidate.source.label)}${candidate.formula ? ` · ${escapeHTML(candidate.formula)}` : ''}</small>` : '') +
+      (candidate.warning ? `<small>${escapeHTML(candidate.warning)}</small>` : '') + '</span></button>'
     ).join('');
   candidateList.hidden = false;
   candidateList._candidates = candidates;
@@ -271,14 +314,32 @@ function invertedName(name) {
     .replace(/^([LD])-/, (_, sense) => sense === 'L' ? 'D-' : 'L-');
 }
 async function render() {
+  lookupController?.abort();
+  lookupController = new AbortController();
+  const controller = lookupController;
   const sequence = ++renderSequence;
   setError('');
+  updateSmilesPrompt();
+  structureNotice.hidden = true;
+  structureNotice.textContent = '';
+  lookupSource.hidden = true;
+  candidateList.hidden = true;
+  candidateList.innerHTML = '';
   setLoading(true);
   try {
     if (!structureInput.value.trim()) throw new Error('\u8acb\u5148\u8f38\u5165\u5316\u5b78\u5f0f\u6216\u4fd7\u540d');
-    const candidates = await resolveCandidates(structureInput.value);
+    options(); // Reject invalid drawing settings before sending a name query.
+    const candidates = await resolveCandidates(structureInput.value, {
+      signal: controller.signal,
+      onProgress(message) {
+        if (sequence !== renderSequence) return;
+        lookupStatus.textContent = message;
+        lookupStatus.hidden = false;
+      }
+    });
     if (sequence !== renderSequence) return false;
-    if (candidates.length > 1 || needsFormulaConfirmation(structureInput.value)) {
+    if (candidates.length > 1 || needsFormulaConfirmation(structureInput.value) ||
+        (candidates[0]?.requiresConfirmation && selectedChoice?.compound !== candidates[0])) {
       clearPreview('請從左側候選結構選擇一個。');
       await showCandidates(candidates, sequence);
       return false;
@@ -292,7 +353,9 @@ async function render() {
     try { data = await drawMolecule(structure, options()); }
     catch (error) {
       if (candidate.id.startsWith('raw:') && /SMILES 無法解析/.test(error.message)) {
-        throw new Error(`本機對照表未收錄「${structureInput.value.trim()}」，且無法當作 SMILES 解析；請選擇範例或輸入有效 SMILES。`);
+        const lookupError = new Error(`本機名稱表尚未收錄「${structureInput.value.trim()}」，這段輸入也無法直接作為 SMILES 繪圖。可請 Gemini 協助查詢，再貼回 SMILES。`);
+        lookupError.needsNameHelp = true;
+        throw lookupError;
       }
       throw error;
     }
@@ -320,18 +383,39 @@ async function render() {
     copyButton.disabled = false;
     document.querySelector('#copyFormula').disabled = false;
     document.querySelector('#invertChirality').disabled = !(data.stereo_tags.CIP_atoms?.length && /\[[^\]]*@@?[^\]]*\]/.test(structure));
+    unknownNamePromptButton.hidden = true;
+    structureNotice.textContent = '結構已繪製，請確認是否為你要的化合物。';
+    structureNotice.hidden = false;
+    if (candidate.source) {
+      const body = document.querySelector('#lookupSourceBody');
+      body.textContent = '';
+      const link = document.createElement('a');
+      link.href = candidate.source.url;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.textContent = candidate.source.label;
+      const smiles = document.createElement('p');
+      smiles.textContent = `SMILES：${structure}`;
+      body.append(link, smiles);
+      lookupSource.hidden = false;
+    }
     return true;
   } catch (error) {
-    if (sequence === renderSequence) {
+    if (sequence === renderSequence && error.name !== 'AbortError') {
       clearPreview('請修正輸入後再編譯。');
       setError(error.message);
+      unknownNamePromptButton.hidden = !error.needsNameHelp;
     }
     return false;
   } finally {
-    if (sequence === renderSequence) setLoading(false);
+    if (sequence === renderSequence) {
+      setLoading(false);
+      lookupStatus.hidden = true;
+      lookupStatus.textContent = '';
+    }
   }
 }
-function loadCode(structure, name = '') { selectedChoice = null; selectedName = name; structureInput.value = structure; render(); }
+function loadCode(structure, name = '') { selectedChoice = null; selectedName = name; structureInput.value = structure; return render(); }
 function safeFilename(value, extension) {
   return String(value).replace(/[\\/:*?"<>|]/g, '_').replace(/\s+/g, '') + '.' + extension;
 }
@@ -459,9 +543,20 @@ candidateList.addEventListener('click', event => {
   if (!compound) return;
   selectedChoice = {key:normalizeQuery(structureInput.value), compound};
   selectedName = compound.id.startsWith('smiles:') ? '' : compound.name;
-  render();
+  return render();
 });
 structureInput.addEventListener('input', () => {
+  // Invalidate pending lookups/draws before they can publish an older input.
+  ++renderSequence;
+  lookupController?.abort();
+  lookupStatus.hidden = true;
+  lookupStatus.textContent = '';
+  lookupSource.hidden = true;
+  setLoading(false);
+  setError('');
+  updateSmilesPrompt();
+  structureNotice.hidden = true;
+  structureNotice.textContent = '';
   selectedChoice = null;
   selectedName = '';
   candidateList.hidden = true;
@@ -714,30 +809,52 @@ document.addEventListener('keydown', event => {
 });
 const smilesHelpButton = document.querySelector('#smilesHelpButton');
 const smilesHelpPanel = document.querySelector('#smilesHelpPanel');
+const smilesPromptText = document.querySelector('#smilesPromptText');
+function updateSmilesPrompt() {
+  const query = structureInput.value.trim() || '［請填入要查詢的化合物名稱、分子式、示性式或 SMILES］';
+  smilesPromptText.value = `請協助取得化合物 SMILES，供 RDKit 繪圖。
+使用者輸入：「${query}」
+請先辨認輸入是名稱、分子式、示性式或 SMILES；不要以分子式指定唯一結構，也不要根據用途猜測。
+若位置異構、R/S、E/Z、酸鹽／質子化狀態等歧義會影響目標，請簡短提問並列出候選名稱及差異；先不要替我選擇或給出最終 SMILES。未指定立體化學時不要自行補上；混合物或組成不固定的材料請先詢問具體成分。
+優先使用 PubChem 等可查證資料；能連網時請提供實際來源，不能查證時請明說，不要編造來源或聲稱已驗證。
+確認目標後，請輸出名稱、分子式、立體化學是否指定、來源或未查證說明。最後用獨立 code block 只放一筆 SMILES，不含名稱、引號、變數或 Python 程式，並保留已指定的立體化學。`;
+}
+function openSmilesHelp() {
+  updateSmilesPrompt();
+  smilesHelpPanel.hidden = false;
+  smilesHelpButton.setAttribute('aria-expanded', 'true');
+}
 function closeSmilesHelp() {
   smilesHelpPanel.hidden = true;
   smilesHelpButton.setAttribute('aria-expanded', 'false');
 }
 smilesHelpButton.addEventListener('click', () => {
-  smilesHelpPanel.hidden = !smilesHelpPanel.hidden;
-  smilesHelpButton.setAttribute('aria-expanded', String(!smilesHelpPanel.hidden));
+  if (smilesHelpPanel.hidden) openSmilesHelp();
+  else closeSmilesHelp();
 });
 document.querySelector('#closeSmilesHelp').addEventListener('click', closeSmilesHelp);
-document.querySelector('#copySmilesPrompt').addEventListener('click', async () => {
+async function copySmilesPrompt() {
+  openSmilesHelp();
   try {
-    await navigator.clipboard.writeText(document.querySelector('#smilesPromptText').value);
-    toast('提示詞已複製');
-    closeSmilesHelp();
-  } catch { toast('無法複製，請選取提示詞後手動複製'); }
-});
+    await navigator.clipboard.writeText(smilesPromptText.value);
+    toast('提示詞已複製，請開啟 Gemini 並貼上');
+  } catch {
+    smilesPromptText.focus();
+    smilesPromptText.select();
+    toast('無法複製，已選取提示詞，請手動複製');
+  }
+}
+document.querySelector('#copySmilesPrompt').addEventListener('click', copySmilesPrompt);
+unknownNamePromptButton.addEventListener('click', copySmilesPrompt);
 document.addEventListener('pointerdown', event => {
-  if (!smilesHelpPanel.hidden && !smilesHelpPanel.contains(event.target) && event.target !== smilesHelpButton) closeSmilesHelp();
+  if (!smilesHelpPanel.hidden && !smilesHelpPanel.contains(event.target) && !smilesHelpButton.contains(event.target) && !unknownNamePromptButton.contains(event.target)) closeSmilesHelp();
 });
 document.addEventListener('keydown', event => {
   if (event.key === 'Escape' && !smilesHelpPanel.hidden) closeSmilesHelp();
 });
 
 structureInput.value = '';
+updateSmilesPrompt();
 document.querySelector('#dpiInput').value = '300';
 updateFormatLabels();
 checkHealth();
