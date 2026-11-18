@@ -731,12 +731,20 @@ document.querySelectorAll('[data-stereo]').forEach(button => button.addEventList
   document.querySelectorAll('[data-stereo]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
   scheduleStyleRender();
 }));
+function updateNumberingControls() {
+  const disabled = numberingMode === 'none';
+  document.querySelectorAll('[data-numbering-size]').forEach(button => { button.disabled = disabled; });
+  document.querySelector('#numberingSizeControls').setAttribute('aria-disabled', String(disabled));
+}
+updateNumberingControls();
 document.querySelectorAll('[data-numbering]').forEach(button => button.addEventListener('click', () => {
   numberingMode = button.dataset.numbering;
   document.querySelectorAll('[data-numbering]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+  updateNumberingControls();
   scheduleStyleRender();
 }));
 document.querySelectorAll('[data-numbering-size]').forEach(button => button.addEventListener('click', () => {
+  if (button.disabled || numberingMode === 'none') return;
   numberingSize = button.dataset.numberingSize;
   document.querySelectorAll('[data-numbering-size]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
   scheduleStyleRender();
@@ -857,6 +865,8 @@ document.querySelector('#copyFormula').addEventListener('click', async () => {
 let outputFormat = 'png';
 function updateFormatLabels() {
   const png = outputFormat === 'png';
+  document.querySelector('#dpiButtons').hidden = !png;
+  document.querySelectorAll('[data-dpi]').forEach(button => {button.disabled = !png;});
   copyButton.textContent = '⧉';
   copyButton.title = png ? '複製 PNG（包含文件尺寸）' : '複製 SVG 原始碼';
   copyButton.setAttribute('aria-label', copyButton.title);
@@ -871,6 +881,7 @@ document.querySelectorAll('[data-format]').forEach(button => button.addEventList
   updateFormatLabels();
 }));
 document.querySelectorAll('[data-dpi]').forEach(button => button.addEventListener('click', () => {
+  if (button.disabled || outputFormat !== 'png') return;
   document.querySelector('#dpiInput').value = button.dataset.dpi;
   document.querySelectorAll('[data-dpi]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
 }));

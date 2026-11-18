@@ -6,6 +6,8 @@
 node RDKit/RDKit/tests/smiles-help.test.js
 node RDKit/RDKit/tests/name-lookup.test.js
 node RDKit/RDKit/tests/history-store.test.js
+node RDKit/RDKit/tests/studio-ui.test.js
+node RDKit/RDKit/tests/history-store.test.js
 ```
 
 腳本使用實際 `script.js` 的查表、候選、繪製流程與事件處理器及 `name-lookup.js`，載入現有 RDKit WebAssembly 真正解析 SMILES。名稱服務使用固定回應，不連網；DOM、剪貼簿與畫面量測採簡化替身。因此腳本通過不等於完成實機視覺、無障礙或作業系統剪貼簿驗收。測試不會開啟 Gemini 或傳送問題；實際頁面按繪製查詢未收錄名稱則會向 OPSIN／PubChem 送出文字。
@@ -52,6 +54,12 @@ Gemini 失敗引導依真實服務結果顯示：只有 OPSIN 與 PubChem 都確
 
 ## 必須手動的瀏覽器驗收
 
+`studio-ui.test.js` 檢查 HTML 容器與唯一 ID、畫布變換與底部輸出控制分離，以及實際 JS 的編號／DPI disabled 狀態。它不計算瀏覽器 CSS 幾何或焦點；以下視覺項目仍須人工驗收：
+
+- 「圖像樣式」分成「外觀與線條」、「原子與基團顯示」、「立體化學與編號」，標籤對齊。「自動佈局：最佳化」仍控制 CoordGen；不顯示編號時大小禁用，切回編號可操作。SVG 時 DPI 隱藏禁用，PNG 恢復。
+- 變換工具列位於畫布上緣的獨立區域，保留旋轉、鏡射、重設與 R↔S；窄畫面換行時也不遮分子。分子資訊與 SMILES 緊貼畫布下方，尺寸、背景與匯出在底部。
+- 桌面短窗（1024×600，另試高 480px）可捲動預覽區，分子區至少保留 230px，底部控制不能被裁掉；320／375px 下分段按鈕可換行，尺寸欄與長名稱不造成橫向裁切。這些是設計約束，尚未宣稱已實機驗證。
+
 歷史自動測試涵蓋成功才寫入、候選未選不寫入、30 筆上限、SMILES 去重最近優先、重建 store 後讀回及持久清除、schema／長度／來源 URL allowlist、儲存禁止／損壞／容量不足降級、歷史點選不查 API、非法保存 SMILES 解析失敗不送 API、安全 DOM 文字、R↔S 後不沿用來源及一般 IUPAC 名稱、Escape 與 aria。localStorage 替身驗證存取契約，尚需下列真實瀏覽器驗收：
 
 - 成功畫兩個分子，打開「歷史」，最近結果在上方；重新整理仍可見。只打開候選不選取時不增加記錄。
@@ -71,7 +79,7 @@ Gemini 失敗引導依真實服務結果顯示：只有 OPSIN 與 PubChem 都確
 
 `name-lookup.test.js` 的固定回應測試包含 OPSIN 成功／WARNING／未找到、PubChem fallback／多筆／單筆強制確認／前 8 筆上限、保留原名稱空白及大小寫、成功快取上限、錯誤不快取、429／503、JSON 格式錯誤、非法 SMILES／非法立體語法、缺少 `SMILES` 但只有 `ConnectivitySMILES` 時拒絕使用、逾時與取消。每筆採用的 SMILES 由真實 RDKit 解析。整合腳本另外測試線上來源顯示、重繪命中快取、PubChem 酸鹽回傳名稱不被原輸入冒充、修改輸入取消正在進行的 HTTP。
 
-人工 live smoke（會將下列名稱送至公開服務）：輸入 `2-methylpentan-3-ol` 按繪製，應顯示 OPSIN 查詢狀態，成功後可展開來源及 SMILES。輸入 `Advil` 可測試 OPSIN 未找到後轉 PubChem 並要求確認候選；候選顯示服務回傳 IUPAC 名與分子式，選定後才繪製。品牌查詢結果不能代表商品所有成分；仍須確認具體化合物。另可用 `(S)-ibuprofen` 檢查酸／陰離子差異：不能只看原輸入名稱便認定是酸，應核對回傳名稱、式尾電荷及 SMILES。
+人工 live smoke（會將下列名稱送至公開服務）：輸入 `2-methylpentan-3-ol` 按繪製，應顯示 OPSIN 查詢狀態，成功後可展開來源，並在結構下方查看 SMILES。輸入 `Advil` 可測試 OPSIN 未找到後轉 PubChem 並要求確認候選；候選顯示服務回傳 IUPAC 名與分子式，選定後才繪製。品牌查詢結果不能代表商品所有成分；仍須確認具體化合物。另可用 `(S)-ibuprofen` 檢查酸／陰離子差異：不能只看原輸入名稱便認定是酸，應核對回傳名稱、式尾電荷及 SMILES。
 
 2026-11-18 實際 HTTP 檢查：OPSIN `/ws/2-methylpropane.json` 回 `status:SUCCESS`、`smiles:CC(C)C`，並對 `Origin: http://localhost:8000` 回同值 `Access-Control-Allow-Origin`；PubChem `loratadine/property/SMILES,IUPACName,MolecularFormula/JSON` 回 HTTP 200，實際欄位為 `PropertyTable.Properties[].SMILES`，CORS 為 `*`。因此不需新增代理服務。另參照 [PubChem 官方欄位規格](https://pubchem.ncbi.nlm.nih.gov/pcfe/docs/markdown/pug-rest.md)，`SMILES` 含立體與同位素資訊，`ConnectivitySMILES` 不含；不可互換。這些是 HTTP／標頭檢查，尚非真實瀏覽器端到端驗證，服務可用性及收錄內容可能改變。
 

@@ -1,12 +1,12 @@
 # RDKit SVG Studio（GitHub Pages 版本）
 
-此目錄是主網站首頁連結的靜態部署副本。`index.html`、`styles.css`、`script.js`、`name-lookup.js`、`renderer.js`、`compound-aliases.json` 與範例圖檔來自 `../RDKit/RDKit/`；RDKit.js 2025.3.3-1.0.0 的 JavaScript、WebAssembly 和授權文件存放於 `vendor/`。樣式控制區的「結構美化」預設開啟，使用 CoordGen 產生 2D 座標；關閉後使用 RDKit 原生排版。
+此目錄是主網站首頁連結的靜態部署副本。`index.html`、`styles.css`、`script.js`、`name-lookup.js`、`renderer.js`、`compound-aliases.json` 與範例圖檔來自 `../RDKit/RDKit/`；RDKit.js 2025.3.3-1.0.0 的 JavaScript、WebAssembly 和授權文件存放於 `vendor/`。樣式控制區的「自動佈局：最佳化」預設開啟，使用 CoordGen 產生 2D 座標；關閉後使用 RDKit 原生排版。
 
 頁面提供旋轉、化學組態保真的鏡射、立體標註、SVG 與 300/600 DPI PNG。立體鍵可選楔形鍵、楔形鍵加文字、文字，或不顯示楔形鍵與文字的一般線條。鏡射前後會核對 RDKit 的 R/S 和 E/Z 標記。ACS 預設僅作樣式參考；芳香環圓圈和 PDF/EPS 尚未實作。形式電荷始終顯示。
 
 編號可選 RDKit 原子索引或膽固醇型固醇的類固醇 C 編號。後者比對碳骨架後標示 C1–C27，支鏈延長時可標至 C29；無法可靠辨認時會顯示錯誤。範例庫有膽固醇、β-穀固醇及麥角固醇。兩種編號都可選文字大小：預設「小」比 RDKit 原生索引字大，「中」與元素符號一樣大，「大」為元素符號的 1.25 倍。編號規則與範例來源見原始專案 `../RDKit/RDKit/README.md`。
 
-輸出區預設固定畫布高度（2、5、10 cm 或自訂），也可改用固定鍵長比例。SVG 以 cm 寫入實際尺寸，PNG 依寬高輸出像素並標記 300/600 DPI。透明背景位於輸出區，預覽會顯示格紋。實作方法與跨程式貼上的限制見 [尺寸控制筆記](SIZING-NOTES.md)。
+圖像樣式分成外觀與線條、原子與基團顯示、立體化學與編號三組；「自動佈局：最佳化」控制 CoordGen，不顯示編號時大小選項禁用。畫布上緣的獨立「變換」工具列與分子區分開，分子資訊和 SMILES 位於畫布下方。底部輸出區提供固定畫布高度（2、5、10 cm 或自訂）、固定鍵長比例、背景、格式與匯出。SVG 以 cm 寫入實際尺寸且隱藏 DPI，PNG 依寬高輸出像素並標記 300/600 DPI。透明背景時預覽顯示格紋。實作方法與跨程式貼上的限制見 [尺寸控制筆記](SIZING-NOTES.md)。
 
 從儲存庫根目錄執行 `python -m http.server 8000`，開啟 `http://127.0.0.1:8000/rdkit-studio/` 即可在本機使用。發布 GitHub Pages 時，此目錄須與首頁一同提交。
 

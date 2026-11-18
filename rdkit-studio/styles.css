@@ -179,6 +179,7 @@ main { display:block; }
   .transform-toolbar .chirality-action { margin-left:0; }
   .meta-row { justify-content:flex-start; }
 }
+
 [hidden] { display:none!important; }
 .output-settings .size-choices { display:inline-flex; align-items:center; gap:4px; }
 .output-settings .size-choices label { padding:0; gap:3px; font-size:10px; }
@@ -329,4 +330,44 @@ main { display:block; height:calc(100dvh - 44px); overflow:hidden; padding:8px 0
   .transform-toolbar button { padding:4px; }
   .transform-toolbar .chirality-action { margin-left:auto; }
   .meta-row { justify-content:flex-start; }
+}
+
+/* Studio layout: scoped rules override the earlier prototype size constraints. */
+.studio-style .studio-style-section { min-width:0; padding:7px 0; border-top:1px solid #edf0ee; }
+.studio-style .studio-style-section:first-child { padding-top:0; border-top:0; }
+.studio-style h3 { margin:0 0 6px; color:var(--muted); font-size:10px; font-weight:500; letter-spacing:.04em; }
+.studio-style .studio-style-section > .style-group { display:grid; grid-template-columns:68px minmax(0,1fr); align-items:center; gap:8px; width:100%; min-height:32px; padding:3px 0; }
+.studio-style .style-group > strong { color:var(--muted); font-size:11px; font-weight:500; }
+.studio-style .segmented { justify-self:start; flex-wrap:wrap; max-width:100%; }
+.studio-style .segmented button { white-space:normal; }
+.studio-style [aria-disabled="true"] { opacity:.45; }
+.studio-style button:disabled { cursor:default; }
+.studio-preview.preview-panel { overflow-y:auto; overflow-x:hidden; }
+.studio-preview .panel-head { margin-bottom:6px; }
+.studio-preview .studio-canvas { display:grid; grid-template-rows:auto minmax(230px,1fr); flex:1 0 310px; min-height:310px; min-width:0; border:1px solid var(--line); border-radius:8px; background:#fafbfa; }
+.studio-preview .studio-transform { position:relative; z-index:1; justify-self:center; align-self:start; display:flex; flex-wrap:wrap; justify-content:center; gap:4px; max-width:calc(100% - 12px); margin:6px; padding:5px 7px; border:1px solid var(--line); border-radius:7px; background:#fff; box-shadow:0 2px 7px #17241d12; }
+.studio-preview .studio-transform .chirality-action { margin-left:0; }
+.studio-preview .studio-transform i { display:none; }
+.studio-preview .studio-canvas > .preview-stage { width:100%; height:100%; min-height:230px; max-height:none; margin:0; border:0; border-radius:0 0 8px 8px; overflow:hidden; }
+.studio-preview .preview-stage svg { width:100%; height:100%; max-width:100%; max-height:100%; object-fit:contain; }
+.studio-preview .studio-molecule-info { flex:none; min-width:0; padding:0 2px 7px; }
+.studio-preview .meta-row { flex-wrap:wrap; justify-content:flex-start; margin-top:4px; padding-top:2px; }
+.studio-preview .meta-identity { flex-wrap:wrap; max-width:100%; }
+.studio-preview .meta-identity strong { white-space:normal; overflow-wrap:anywhere; }
+.studio-preview .studio-output { display:grid; flex:none; gap:6px; margin:0; padding:8px 0 0; border-top:1px solid var(--line); font:inherit; }
+.studio-output .output-settings { display:grid; grid-template-columns:68px minmax(0,1fr); align-items:center; gap:6px 8px; margin:0; padding:0; border:0; background:transparent; }
+.studio-output .output-settings > .style-group { display:contents; }
+.studio-output .style-group > strong { font-size:11px; font-weight:500; }
+.studio-output .output-settings > .size-choices,.studio-output .output-settings > .size-hint { grid-column:2; }
+.studio-output .size-choices { flex-wrap:wrap; justify-content:flex-start; min-width:0; }
+.studio-output .segmented { flex-wrap:wrap; justify-self:start; max-width:100%; }
+.studio-output .output-actions { flex-wrap:wrap; justify-content:flex-end; gap:6px; }
+@media (max-width:900px) {
+  .studio-preview .studio-canvas { flex:none; min-height:310px; height:auto; grid-template-rows:auto minmax(230px,min(44dvh,360px)); }
+}
+@media (max-width:560px) {
+  .studio-style .studio-style-section > .style-group,.studio-output .output-settings { grid-template-columns:60px minmax(0,1fr); gap:6px; }
+  .studio-preview .studio-transform { gap:4px; padding:5px; }
+  .studio-preview .studio-transform button { padding:5px; }
+  .studio-output .output-actions { justify-content:flex-start; }
 }
