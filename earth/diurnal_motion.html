@@ -1,0 +1,1521 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>天球週日運動 — 3D 互動教學動畫（分段追隨與空間投影升級版）</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    * { box-sizing: border-box; user-select: none; }
+    body, html {
+      margin: 0; padding: 0; width: 100%; height: 100%;
+      overflow: hidden;
+      background-color: #050810;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans TC", sans-serif;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      cursor: grab;
+    }
+    canvas:active { cursor: grabbing; }
+    .glass-panel {
+      background: rgba(10, 15, 28, 0.82);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+    }
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      height: 4px;
+      background: rgba(148, 163, 184, 0.25);
+      border-radius: 999px;
+      outline: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #f8fafc;
+      cursor: pointer;
+      box-shadow: 0 0 8px rgba(248, 250, 252, 0.7);
+    }
+    .toggle-chip {
+      transition: all 0.18s ease;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 全螢幕主畫布（單擊空白處可隱藏/顯示控制列） -->
+  <canvas id="scene"></canvas>
+
+  <!-- 左上角極簡狀態提示 -->
+  <div id="topHint" class="fixed top-4 left-4 z-10 pointer-events-none transition-opacity duration-300 max-w-xl">
+    <div class="glass-panel px-4 py-2.5 rounded-xl flex items-center gap-3 text-xs text-slate-200 shadow-lg">
+      <span id="stageBadge" class="px-2.5 py-0.5 rounded-md bg-sky-500/20 border border-sky-400/40 text-sky-200 font-semibold shrink-0">階段 1 / 5</span>
+      <span id="stageDesc" class="text-slate-200 leading-relaxed">宇宙視角：恆星位於天球上，地球自轉、天球靜止</span>
+    </div>
+  </div>
+
+  <!-- 右上角重播、暫停與設定齒輪工具 -->
+  <div id="topRightTools" class="fixed top-4 right-4 z-10 flex items-center gap-2 transition-opacity duration-300">
+    <button id="replayBtn" onclick="replayCurrentAction()"
+            class="glass-panel hover:bg-slate-800/90 text-slate-200 text-xs px-3.5 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-lg">
+      <span id="replayBtnText">↻ 重播本階段</span>
+    </button>
+    <button id="pauseBtn" onclick="togglePause()"
+            class="glass-panel hover:bg-slate-800/90 text-slate-200 text-xs px-3.5 py-2 rounded-xl transition cursor-pointer shadow-lg">
+      暫停
+    </button>
+    <button id="gearBtn" onclick="toggleSettingsDrawer()" title="參數與輔助線設定"
+            class="glass-panel hover:bg-slate-800/90 text-slate-200 text-sm px-3 py-1.5 rounded-xl transition cursor-pointer shadow-lg flex items-center gap-1">
+      <span>⚙️</span>
+    </button>
+  </div>
+
+  <!-- 可收合參數與輔助線設定面板（預設收進右上角齒輪） -->
+  <div id="settingsDrawer" class="hidden fixed top-16 right-4 z-20 w-[92%] max-w-md transition-all duration-200">
+    <div class="glass-panel rounded-2xl p-4 shadow-2xl flex flex-col gap-3.5 text-xs text-slate-300 border border-slate-700/80">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+        <span class="font-semibold text-slate-100">⚙️ 參數微調與空間輔助線</span>
+        <button onclick="toggleSettingsDrawer()" class="text-slate-400 hover:text-white px-1.5 py-0.5 rounded cursor-pointer">✕</button>
+      </div>
+
+      <!-- 觀察位置（緯度）控制 -->
+      <div class="flex flex-col gap-1.5">
+        <div class="flex items-center justify-between">
+          <span class="text-slate-400">觀察緯度</span>
+          <span id="latLabel" class="font-mono text-slate-100 font-semibold">35° N</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="setLatitude(35)" class="px-2 py-1 rounded bg-slate-800/90 hover:bg-slate-700 text-slate-200 transition cursor-pointer">北半球</button>
+          <button onclick="setLatitude(0)" class="px-2 py-1 rounded bg-slate-800/90 hover:bg-slate-700 text-slate-200 transition cursor-pointer">赤道</button>
+          <button onclick="setLatitude(-35)" class="px-2 py-1 rounded bg-slate-800/90 hover:bg-slate-700 text-slate-200 transition cursor-pointer">南半球</button>
+          <input id="latSlider" type="range" min="-60" max="60" value="35" step="1" class="flex-1" />
+        </div>
+      </div>
+
+      <!-- 彗星掃尾長度測試滑桿 -->
+      <div class="flex flex-col gap-1.5">
+        <div class="flex items-center justify-between">
+          <span class="text-slate-400">掃尾長度</span>
+          <span id="tailLabel" class="font-mono text-slate-100 font-semibold">5/6 圈</span>
+        </div>
+        <input id="tailSlider" type="range" min="0" max="1" value="0.8333" step="0.0166" class="w-full" />
+      </div>
+
+      <!-- 空間輔助線手動開關 -->
+      <div class="flex flex-col gap-2 pt-2 border-t border-slate-800/80">
+        <span class="text-slate-400">空間輔助線開關：</span>
+        <div class="flex flex-wrap items-center gap-1.5 text-[11px]">
+          <button onclick="toggleAssist('polarAxis')" id="tog-polarAxis" class="toggle-chip px-2 py-1 rounded-md border cursor-pointer">✓ 貫穿天軸 (N/S)</button>
+          <button onclick="toggleAssist('celestialGrid')" id="tog-celestialGrid" class="toggle-chip px-2 py-1 rounded-md border cursor-pointer">✓ 天球經緯網格</button>
+          <button onclick="toggleAssist('earthAxes')" id="tog-earthAxes" class="toggle-chip px-2 py-1 rounded-md border cursor-pointer">✓ 地球經緯與十字軸</button>
+          <button onclick="toggleAssist('cometTrails')" id="tog-cometTrails" class="toggle-chip px-2 py-1 rounded-md border cursor-pointer">✓ 彗星掃尾軌跡</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 底部極簡控制台（最左側保留北半球/赤道/南半球快速切換，右側為五階段步驟） -->
+  <div id="controlBar" class="fixed bottom-4 left-1/2 -translate-x-1/2 z-10 w-[96%] max-w-4xl transition-all duration-300">
+    <div class="glass-panel rounded-2xl p-2.5 sm:px-4 sm:py-3 shadow-2xl flex flex-col gap-2">
+      
+      <!-- 第一排：最左側觀察點快捷鈕 + 右側五階段步驟切換 -->
+      <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+        <!-- 最左方：北半球 / 赤道 / 南半球 快速切換 -->
+        <div class="flex items-center justify-center gap-1 bg-slate-950/75 p-1 rounded-xl border border-slate-800/80 shrink-0">
+          <button onclick="setLatitude(35)" id="quick-lat-35" class="quick-lat-btn py-1.5 px-2.5 rounded-lg text-xs font-medium transition cursor-pointer">
+            北半球
+          </button>
+          <button onclick="setLatitude(0)" id="quick-lat-0" class="quick-lat-btn py-1.5 px-2.5 rounded-lg text-xs font-medium transition cursor-pointer">
+            赤道
+          </button>
+          <button onclick="setLatitude(-35)" id="quick-lat--35" class="quick-lat-btn py-1.5 px-2.5 rounded-lg text-xs font-medium transition cursor-pointer">
+            南半球
+          </button>
+        </div>
+
+        <!-- 五階段步驟切換 -->
+        <div class="grid grid-cols-5 gap-1 bg-slate-950/70 p-1 rounded-xl border border-slate-800/80 flex-1">
+          <button onclick="setStage(1)" id="btn-stage-1" class="stage-btn py-1.5 px-1.5 rounded-lg text-[11px] sm:text-xs font-medium transition cursor-pointer">
+            1. 宇宙天球視角
+          </button>
+          <button onclick="setStage(2)" id="btn-stage-2" class="stage-btn py-1.5 px-1.5 rounded-lg text-[11px] sm:text-xs font-medium transition cursor-pointer">
+            2. 攝影機追隨
+          </button>
+          <button onclick="setStage(3)" id="btn-stage-3" class="stage-btn py-1.5 px-1.5 rounded-lg text-[11px] sm:text-xs font-medium transition cursor-pointer">
+            3. 切平面與描邊
+          </button>
+          <button onclick="setStage(4)" id="btn-stage-4" class="stage-btn py-1.5 px-1.5 rounded-lg text-[11px] sm:text-xs font-medium transition cursor-pointer">
+            4. 扶正地平
+          </button>
+          <button onclick="setStage(5)" id="btn-stage-5" class="stage-btn py-1.5 px-1.5 rounded-lg text-[11px] sm:text-xs font-medium transition cursor-pointer">
+            5. 左南右北側視
+          </button>
+        </div>
+      </div>
+
+      <!-- 階段 2 專屬：三段式手動增速追趕控制列（從 0% 未加速開始） -->
+      <div id="chaseSubBar" class="hidden bg-slate-900/85 border border-amber-500/30 rounded-xl px-3.5 py-2 flex flex-wrap items-center justify-between gap-2 text-xs">
+        <div class="flex items-center gap-2 text-amber-300 font-medium">
+          <span>🎥 攝影機噴射追趕速度（分段加速）：</span>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <button onclick="setChaseStep(0)" id="chase-step-0" class="chase-btn px-2.5 py-1 rounded-lg border transition cursor-pointer">0% 未加速</button>
+          <button onclick="setChaseStep(1)" id="chase-step-1" class="chase-btn px-2.5 py-1 rounded-lg border transition cursor-pointer">一段加速 (33%)</button>
+          <button onclick="setChaseStep(2)" id="chase-step-2" class="chase-btn px-2.5 py-1 rounded-lg border transition cursor-pointer">二段加速 (66%)</button>
+          <button onclick="setChaseStep(3)" id="chase-step-3" class="chase-btn px-2.5 py-1 rounded-lg border transition cursor-pointer">三段同步 (100%)</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("scene");
+    const ctx = canvas.getContext("2d");
+
+    // =========================================================================
+    // 物理與教學動畫狀態變數
+    // =========================================================================
+    const DEG = Math.PI / 180;
+    const TWO_PI = Math.PI * 2;
+
+    let stage = 1;                // 1: 宇宙視角, 2: 攝影機追隨, 3: 切平面與描邊, 4: 扶正地平, 5: 左南右北側視
+    let targetLat = 35;           // 目標緯度 (-60 ~ +60)
+    let currentLat = 35;          // 平滑插值緯度
+    let maxTailFraction = 5 / 6;  // 預設掃尾長度 5/6 圈
+    let isPaused = false;
+    let uiHidden = false;
+    let settingsOpen = false;
+
+    // 階段 2：分段追趕速度控制 (0: 0% 未加速, 1: 33%, 2: 66%, 3: 100%)
+    let chaseStep = 0;            // 預設從 0% 未加速開始
+    let targetChaseRatio = 0.0;
+    let currentChaseRatio = 0.0;
+
+    // 階段 2 貼近觀察者的 Zoom In 進度 (0 -> 1)
+    let zoomInProgress = 0;
+
+    // 階段 3：先長出觀察者切平面 (planeGrowProgress: 0 -> 1)，再 Zoom Out 看與天球相切並描邊強調 (zoomOutCutProgress: 0 -> 1)
+    let planeGrowProgress = 0;
+    let zoomOutCutProgress = 0;
+
+    // 階段 4：扶正地平面為水平 (levelProgress: 0 -> 1)
+    let levelProgress = 0;
+
+    // 階段 5：將已扶正的半球轉向「向右北方、向左南方」的正側視剖面 (sideProfileProgress: 0 -> 1)
+    let sideProfileProgress = 0;
+
+    // 旋轉累積角（地球自轉 & 天球反轉）
+    let earthAngle = 0;
+    let skyAngle = 0;
+
+    // 噴射火焰粒子系統
+    const flameParticles = [];
+
+    // 空間輔助線開關狀態（預設收進齒輪）
+    const assists = {
+      polarAxis: true,      // 貫穿畫面邊界的南北極天軸 (含 N/S 標示)
+      celestialGrid: true,  // 天球經緯網格（增強球體立體感）
+      earthAxes: true,      // 地球經緯線與 ±X / ±Z 十字座標軸
+      cometTrails: true     // 彗星漸暗掃尾軌跡
+    };
+
+    // 使用者滑鼠拖曳微調視角
+    let userYaw = 0;
+    let userPitch = 0;
+    let isDragging = false;
+    let lastMouse = { x: 0, y: 0 };
+    let dragDist = 0;
+
+    // 深空背景微星
+    const bgStars = Array.from({ length: 120 }, (_, i) => ({
+      x: Math.abs((Math.sin(i * 12.9898) * 43758.5453) % 1),
+      y: Math.abs((Math.sin(i * 78.233) * 23421.631) % 1),
+      r: (i % 4 === 0) ? 1.3 : 0.75,
+      a: 0.14 + (i % 5) * 0.05
+    }));
+
+    // 地球大陸簡化輪廓多邊形（經緯度座標，增加地球自轉時的強烈視覺參照）
+    const continents = [
+      [[10, 35], [40, 42], [85, 55], [125, 45], [135, 22], [105, 12], [78, 8], [50, 12], [35, -25], [18, -33], [12, 5], [-12, 15], [-5, 34]],
+      [[-125, 52], [-75, 48], [-82, 25], [-98, 18], [-78, 8], [-52, -5], [-42, -22], [-68, -50], [-75, -18], [-105, 24], [-122, 38]],
+      [[115, -20], [148, -18], [150, -36], [118, -34]]
+    ];
+
+    // 3 顆代表性指標星（藍 / 金 / 紅，一開始即直接位於天球上）
+    const indicatorStars = [
+      { lat: 62,  color: "#38BDF8", rgb: "56, 189, 248",  initLon: 28 },  // 北天中緯度（冰藍）
+      { lat: 0,   color: "#FACC15", rgb: "250, 204, 21",  initLon: 112 }, // 天赤道（亮金）
+      { lat: -32, color: "#FB7185", rgb: "251, 113, 133", initLon: 205 }  // 南天中緯度（珊瑚紅）
+    ];
+
+    // =========================================================================
+    // 3D 向量與旋轉數學核心（徹底修正扶正矩陣，確保地平面嚴格水平）
+    // =========================================================================
+    function rotX(p, rad) {
+      const c = Math.cos(rad), s = Math.sin(rad);
+      return { x: p.x, y: p.y * c - p.z * s, z: p.y * s + p.z * c };
+    }
+    function rotY(p, rad) {
+      const c = Math.cos(rad), s = Math.sin(rad);
+      return { x: p.x * c + p.z * s, y: p.y, z: -p.x * s + p.z * c };
+    }
+    function rotZ(p, rad) {
+      const c = Math.cos(rad), s = Math.sin(rad);
+      return { x: p.x * c - p.y * s, y: p.x * s + p.y * c, z: p.z };
+    }
+    function sphToCart(r, latDeg, lonRad) {
+      const lat = latDeg * DEG;
+      return {
+        x: r * Math.cos(lat) * Math.sin(lonRad),
+        y: r * Math.sin(lat),
+        z: r * Math.cos(lat) * Math.cos(lonRad)
+      };
+    }
+    function easeInOutCubic(t) {
+      return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    }
+    function easeOutBack(t) {
+      const c1 = 1.70158;
+      const c3 = c1 + 1;
+      return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+    }
+    function lerp(a, b, t) {
+      return a + (b - a) * t;
+    }
+
+    // 觀察者天頂單位向量（在世界座標中，觀察者固定站在子午線 lon = 0、緯度 = currentLat）
+    // 世界座標定義：+Y 為地球北極方向，+Z 為經度 0 子午線赤道方向，+X 為東方
+    function getZenithVec(latDeg) {
+      const lat = latDeg * DEG;
+      return { x: 0, y: Math.sin(lat), z: Math.cos(lat) };
+    }
+
+    // 計算某點在觀察者地平面上的高度（> 0 表示在地平線以上，< 0 表示在地平線以下）
+    function horizonDot(p, latDeg) {
+      const zVec = getZenithVec(latDeg);
+      return p.x * zVec.x + p.y * zVec.y + p.z * zVec.z;
+    }
+
+    // =========================================================================
+    // 互動控制與狀態切換邏輯
+    // =========================================================================
+    const stageMeta = {
+      1: {
+        badge: "階段 1 / 5",
+        desc: "宇宙視角：三顆指標星位於天球上，地球自轉、天球完全靜止"
+      },
+      2: {
+        badge: "階段 2 / 5",
+        desc: "攝影機噴射追隨：攝影機向西邊（後方）噴火加速追趕地球自轉，直到與地表同步"
+      },
+      3: {
+        badge: "階段 3 / 5",
+        desc: "切平面與描邊：展開觀察者切平面並拉遠，亮白描邊強調被切出的半球，暗化非觀察半球"
+      },
+      4: {
+        badge: "階段 4 / 5",
+        desc: "扶正地平：鏡頭旋轉將傾斜的切平面與觀測半球扶正為水平地面"
+      },
+      5: {
+        badge: "階段 5 / 5",
+        desc: "左南右北側視：旋轉水平視角，成為「右方為北 (N)、左方為南 (S)」的標準剖面切平面"
+      }
+    };
+
+    function setStage(newStage) {
+      stage = newStage;
+      if (stage === 1) {
+        setChaseStep(0);
+        currentChaseRatio = 0;
+        zoomInProgress = 0;
+        planeGrowProgress = 0;
+        zoomOutCutProgress = 0;
+        levelProgress = 0;
+        sideProfileProgress = 0;
+      } else if (stage === 2) {
+        planeGrowProgress = 0;
+        zoomOutCutProgress = 0;
+        levelProgress = 0;
+        sideProfileProgress = 0;
+        // 進入階段 2 時從 0% 未加速開始，讓老師手動按一段、二段、三段加速
+        setChaseStep(0);
+        currentChaseRatio = 0;
+      } else if (stage === 3) {
+        setChaseStep(3);
+        currentChaseRatio = 1.0;
+        zoomInProgress = 1.0;
+        planeGrowProgress = 0;
+        zoomOutCutProgress = 0;
+        levelProgress = 0;
+        sideProfileProgress = 0;
+      } else if (stage === 4) {
+        setChaseStep(3);
+        currentChaseRatio = 1.0;
+        zoomInProgress = 1.0;
+        planeGrowProgress = 1.0;
+        zoomOutCutProgress = 1.0;
+        levelProgress = 0;
+        sideProfileProgress = 0;
+      } else if (stage === 5) {
+        setChaseStep(3);
+        currentChaseRatio = 1.0;
+        zoomInProgress = 1.0;
+        planeGrowProgress = 1.0;
+        zoomOutCutProgress = 1.0;
+        levelProgress = 1.0;
+        sideProfileProgress = 0;
+      }
+      updateUI();
+    }
+
+    function setChaseStep(stepIdx) {
+      chaseStep = stepIdx;
+      const ratios = [0.0, 0.33, 0.66, 1.0];
+      targetChaseRatio = ratios[stepIdx];
+      updateChaseButtons();
+    }
+
+    function updateChaseButtons() {
+      for (let i = 0; i <= 3; i++) {
+        const btn = document.getElementById(`chase-step-${i}`);
+        if (!btn) continue;
+        if (i === chaseStep) {
+          btn.className = "chase-btn px-2.5 py-1 rounded-lg border border-amber-400 bg-amber-500/25 text-amber-200 font-semibold transition cursor-pointer shadow";
+        } else {
+          btn.className = "chase-btn px-2.5 py-1 rounded-lg border border-slate-700 bg-slate-800/70 text-slate-300 hover:bg-slate-700 transition cursor-pointer";
+        }
+      }
+    }
+
+    function replayCurrentAction() {
+      if (stage === 1) {
+        earthAngle = 0;
+      } else if (stage === 2) {
+        currentChaseRatio = 0;
+        zoomInProgress = 0;
+        setChaseStep(0);
+      } else if (stage === 3) {
+        planeGrowProgress = 0;
+        zoomOutCutProgress = 0;
+      } else if (stage === 4) {
+        levelProgress = 0;
+      } else if (stage === 5) {
+        sideProfileProgress = 0;
+      }
+    }
+
+    function toggleSettingsDrawer() {
+      settingsOpen = !settingsOpen;
+      const drawer = document.getElementById("settingsDrawer");
+      if (settingsOpen) {
+        drawer.classList.remove("hidden");
+      } else {
+        drawer.classList.add("hidden");
+      }
+    }
+
+    function setLatitude(lat) {
+      targetLat = lat;
+      document.getElementById("latSlider").value = lat;
+      updateLatText(lat);
+      updateQuickLatButtons();
+    }
+
+    function updateQuickLatButtons() {
+      [35, 0, -35].forEach(val => {
+        const btn = document.getElementById(`quick-lat-${val}`);
+        if (!btn) return;
+        if (Math.abs(targetLat - val) < 1) {
+          btn.className = "quick-lat-btn py-1.5 px-2.5 rounded-lg text-xs font-semibold bg-sky-500/25 border border-sky-400/50 text-sky-200 transition cursor-pointer";
+        } else {
+          btn.className = "quick-lat-btn py-1.5 px-2.5 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 border border-transparent transition cursor-pointer";
+        }
+      });
+    }
+
+    function updateLatText(lat) {
+      const el = document.getElementById("latLabel");
+      if (lat === 0) el.textContent = "0° 赤道";
+      else if (lat > 0) el.textContent = `${lat}° N`;
+      else el.textContent = `${Math.abs(lat)}° S`;
+    }
+
+    function updateTailText(val) {
+      const el = document.getElementById("tailLabel");
+      const twelfths = Math.round(val * 12);
+      if (twelfths === 0) el.textContent = "無尾巴";
+      else if (twelfths === 12) el.textContent = "1 整圈";
+      else if (twelfths === 10) el.textContent = "5/6 圈";
+      else if (twelfths === 9) el.textContent = "3/4 圈";
+      else if (twelfths === 8) el.textContent = "2/3 圈";
+      else if (twelfths === 6) el.textContent = "1/2 圈";
+      else if (twelfths === 4) el.textContent = "1/3 圈";
+      else if (twelfths === 3) el.textContent = "1/4 圈";
+      else el.textContent = `${Math.round(val * 360)}°`;
+    }
+
+    function togglePause() {
+      isPaused = !isPaused;
+      document.getElementById("pauseBtn").textContent = isPaused ? "繼續播放" : "暫停";
+    }
+
+    function toggleAssist(key) {
+      assists[key] = !assists[key];
+      updateAssistButtons();
+    }
+
+    function updateAssistButtons() {
+      const labels = {
+        polarAxis: "貫穿天軸 (N/S)",
+        celestialGrid: "天球經緯網格",
+        earthAxes: "地球經緯與十字軸",
+        cometTrails: "彗星掃尾軌跡"
+      };
+      for (const [key, label] of Object.entries(labels)) {
+        const btn = document.getElementById(`tog-${key}`);
+        if (!btn) continue;
+        if (assists[key]) {
+          btn.className = "toggle-chip px-2 py-1 rounded-md border border-sky-400/50 bg-sky-500/20 text-sky-200 cursor-pointer";
+          btn.textContent = `✓ ${label}`;
+        } else {
+          btn.className = "toggle-chip px-2 py-1 rounded-md border border-slate-700 bg-slate-900/60 text-slate-500 hover:text-slate-300 cursor-pointer";
+          btn.textContent = `○ ${label}`;
+        }
+      }
+    }
+
+    function updateUI() {
+      for (let i = 1; i <= 5; i++) {
+        const btn = document.getElementById(`btn-stage-${i}`);
+        if (!btn) continue;
+        if (i === stage) {
+          btn.className = "stage-btn py-1.5 px-1.5 rounded-lg text-[11px] sm:text-xs font-semibold bg-slate-100 text-slate-950 shadow transition cursor-pointer";
+        } else {
+          btn.className = "stage-btn py-1.5 px-1.5 rounded-lg text-[11px] sm:text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 transition cursor-pointer";
+        }
+      }
+      document.getElementById("stageBadge").textContent = stageMeta[stage].badge;
+      document.getElementById("stageDesc").textContent = stageMeta[stage].desc;
+
+      const chaseSubBar = document.getElementById("chaseSubBar");
+      if (stage === 2) {
+        chaseSubBar.classList.remove("hidden");
+      } else {
+        chaseSubBar.classList.add("hidden");
+      }
+
+      const replayLabels = {
+        1: "↻ 重置宇宙視角",
+        2: "↻ 重播貼近追隨",
+        3: "↻ 重播切面與描邊",
+        4: "↻ 重播扶正地平",
+        5: "↻ 重播轉向側視"
+      };
+      document.getElementById("replayBtnText").textContent = replayLabels[stage];
+    }
+
+    document.getElementById("latSlider").addEventListener("input", (e) => {
+      targetLat = parseInt(e.target.value, 10);
+      updateLatText(targetLat);
+      updateQuickLatButtons();
+    });
+
+    document.getElementById("tailSlider").addEventListener("input", (e) => {
+      maxTailFraction = parseFloat(e.target.value);
+      updateTailText(maxTailFraction);
+    });
+
+    // 畫布拖曳與點擊隱藏 UI
+    canvas.addEventListener("pointerdown", (e) => {
+      isDragging = true;
+      dragDist = 0;
+      lastMouse = { x: e.clientX, y: e.clientY };
+    });
+    window.addEventListener("pointermove", (e) => {
+      if (!isDragging) return;
+      const dx = e.clientX - lastMouse.x;
+      const dy = e.clientY - lastMouse.y;
+      dragDist += Math.hypot(dx, dy);
+      userYaw += dx * 0.005;
+      userPitch = Math.max(-0.45, Math.min(0.45, userPitch + dy * 0.005));
+      lastMouse = { x: e.clientX, y: e.clientY };
+    });
+    window.addEventListener("pointerup", () => {
+      if (isDragging && dragDist < 5) {
+        uiHidden = !uiHidden;
+        const op = uiHidden ? "0" : "1";
+        const pe = uiHidden ? "none" : "auto";
+        document.getElementById("controlBar").style.opacity = op;
+        document.getElementById("controlBar").style.pointerEvents = pe;
+        document.getElementById("topHint").style.opacity = op;
+        document.getElementById("topRightTools").style.opacity = op;
+      }
+      isDragging = false;
+    });
+
+    function resize() {
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = window.innerWidth * dpr;
+      canvas.height = window.innerHeight * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    window.addEventListener("resize", resize);
+    resize();
+
+    // =========================================================================
+    // 繪製攝影機觀察者與動態噴射火焰（嚴格沿地球切線：鏡頭朝東 +X，火焰嚴格向西 -X 噴射）
+    // =========================================================================
+    function drawCameraObserver(x, y, eastAngleRad, upSign, scale, thrustRatio, dt) {
+      ctx.save();
+      ctx.translate(x, y);
+      // 先旋轉使局部 +X 嚴格對齊螢幕上的「東方切線方向」
+      ctx.rotate(eastAngleRad);
+      // 若「天頂 (上方)」在局部座標中朝向 +Y（而非 Canvas 預設的 -Y），則垂直翻轉使攝影機永遠直立於地表上方
+      ctx.scale(scale, scale * upSign);
+
+      // 局部座標說明：
+      // 0, 0 為腳架底座接觸地球/地平面的位置
+      // 局部 +X = 嚴格東方（地球自轉前進方向），局部 -X = 嚴格西方（噴火推進方向）
+      // 局部 -Y = 天頂上方
+
+      // 1. 噴射火焰粒子生成與更新（thrustRatio > 0.05 時嚴格向 -X 西方噴發）
+      if (!isPaused && thrustRatio > 0.05) {
+        const spawnCount = Math.ceil(thrustRatio * 5);
+        for (let i = 0; i < spawnCount; i++) {
+          flameParticles.push({
+            lx: -9 + (Math.random() - 0.5) * 2.0,
+            ly: -12 + (Math.random() - 0.5) * 2.8,
+            vx: -(50 + thrustRatio * 120 + Math.random() * 40),
+            vy: (Math.random() - 0.5) * 10,
+            life: 1.0,
+            maxLife: 0.24 + thrustRatio * 0.26,
+            size: 2.2 + thrustRatio * 3.8
+          });
+        }
+      }
+
+      for (let i = flameParticles.length - 1; i >= 0; i--) {
+        const fp = flameParticles[i];
+        if (!isPaused) {
+          fp.lx += fp.vx * dt;
+          fp.ly += fp.vy * dt;
+          fp.life -= dt / fp.maxLife;
+        }
+        if (fp.life <= 0) {
+          flameParticles.splice(i, 1);
+          continue;
+        }
+        const alpha = Math.max(0, fp.life);
+        const r = fp.size * (0.4 + fp.life * 0.8);
+        const grad = ctx.createRadialGradient(fp.lx, fp.ly, 0, fp.lx, fp.ly, r * 1.8);
+        grad.addColorStop(0, `rgba(255, 255, 255, ${alpha})`);
+        grad.addColorStop(0.35, `rgba(251, 191, 36, ${alpha * 0.92})`);
+        grad.addColorStop(0.75, `rgba(249, 115, 22, ${alpha * 0.65})`);
+        grad.addColorStop(1, "rgba(239, 68, 68, 0)");
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(fp.lx, fp.ly, r * 1.8, 0, TWO_PI);
+        ctx.fill();
+      }
+
+      // 2. 噴射核心尾焰光錐（嚴格向西方 -X 噴射）
+      if (thrustRatio > 0.05) {
+        const coneLen = 18 + thrustRatio * 52 + Math.sin(performance.now() * 0.045) * 3;
+        const coneGrad = ctx.createLinearGradient(-8, -12, -8 - coneLen, -12);
+        coneGrad.addColorStop(0, "rgba(255, 255, 255, 0.96)");
+        coneGrad.addColorStop(0.3, "rgba(250, 204, 21, 0.88)");
+        coneGrad.addColorStop(0.7, "rgba(249, 115, 22, 0.48)");
+        coneGrad.addColorStop(1, "rgba(239, 68, 68, 0)");
+        ctx.fillStyle = coneGrad;
+        ctx.beginPath();
+        ctx.moveTo(-8, -15.5);
+        ctx.lineTo(-8 - coneLen, -12);
+        ctx.lineTo(-8, -8.5);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      // 3. 攝影機支撐腳架（連接至地球表面 / 地平面中心）
+      ctx.strokeStyle = "#94a3b8";
+      ctx.lineWidth = 1.8;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(-4, 0);
+      ctx.lineTo(0, -8);
+      ctx.lineTo(4, 0);
+      ctx.stroke();
+
+      // 4. 後方推進噴嘴
+      ctx.fillStyle = "#475569";
+      ctx.beginPath();
+      ctx.moveTo(-6, -14.5);
+      ctx.lineTo(-9, -15.8);
+      ctx.lineTo(-9, -8.2);
+      ctx.lineTo(-6, -9.5);
+      ctx.closePath();
+      ctx.fill();
+
+      // 5. 攝影機機身主體（銀白科技機殼）
+      ctx.fillStyle = "#f1f5f9";
+      ctx.strokeStyle = "#334155";
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.roundRect(-6.5, -16.5, 13, 9, 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // 機頂雙膠卷盤 / 感測器圓輪
+      ctx.fillStyle = "#cbd5e1";
+      ctx.beginPath();
+      ctx.arc(-3, -18.5, 2.7, 0, TWO_PI);
+      ctx.arc(2.5, -18.5, 2.7, 0, TWO_PI);
+      ctx.fill();
+      ctx.stroke();
+
+      // 6. 前方廣角鏡頭遮光罩（朝向 +X 前進觀察方向）
+      ctx.fillStyle = "#38bdf8";
+      ctx.beginPath();
+      ctx.moveTo(6.5, -14.5);
+      ctx.lineTo(11, -16.2);
+      ctx.lineTo(11, -7.8);
+      ctx.lineTo(6.5, -9.5);
+      ctx.closePath();
+      ctx.fill();
+
+      // 鏡頭前緣高光鏡片
+      ctx.strokeStyle = "#e0f2fe";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(11, -15.6);
+      ctx.lineTo(11, -8.4);
+      ctx.stroke();
+
+      // 錄影指示紅燈（加速時閃爍）
+      const recGlow = thrustRatio > 0.05 ? (0.6 + 0.4 * Math.sin(performance.now() * 0.015)) : 0.85;
+      ctx.fillStyle = `rgba(239, 68, 68, ${recGlow})`;
+      ctx.beginPath();
+      ctx.arc(3.5, -14.2, 1.4, 0, TWO_PI);
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    // =========================================================================
+    // 主渲染迴圈
+    // =========================================================================
+    let lastTime = performance.now();
+
+    function render(now) {
+      const dt = Math.min(0.05, (now - lastTime) / 1000);
+      lastTime = now;
+
+      // 1. 狀態平滑過渡計算
+      currentLat = lerp(currentLat, targetLat, 1 - Math.exp(-6 * dt));
+      currentChaseRatio = lerp(currentChaseRatio, targetChaseRatio, 1 - Math.exp(-4.5 * dt));
+
+      if (!isPaused) {
+        // 階段 2：貼近攝影機觀察者 Zoom In (0 -> 1 約 1.6 秒)
+        if (stage >= 2 && zoomInProgress < 1) {
+          zoomInProgress = Math.min(1, zoomInProgress + dt / 1.6);
+        } else if (stage === 1 && zoomInProgress > 0) {
+          zoomInProgress = Math.max(0, zoomInProgress - dt * 1.6);
+        }
+
+        // 階段 3：先畫觀察者切平面 (0 -> 1 約 1.1 秒)，再 Zoom Out 看與天球相切並描邊強調上半球 (0 -> 1 約 1.5 秒)
+        if (stage >= 3) {
+          if (planeGrowProgress < 1) {
+            planeGrowProgress = Math.min(1, planeGrowProgress + dt / 1.1);
+          } else if (zoomOutCutProgress < 1) {
+            zoomOutCutProgress = Math.min(1, zoomOutCutProgress + dt / 1.5);
+          }
+        } else {
+          planeGrowProgress = Math.max(0, planeGrowProgress - dt * 2.0);
+          zoomOutCutProgress = Math.max(0, zoomOutCutProgress - dt * 2.0);
+        }
+
+        // 階段 4：扶正地平面為水平 (levelProgress: 0 -> 1 約 1.6 秒)
+        if (stage >= 4) {
+          if (levelProgress < 1) {
+            levelProgress = Math.min(1, levelProgress + dt / 1.6);
+          }
+        } else {
+          levelProgress = Math.max(0, levelProgress - dt * 2.0);
+        }
+
+        // 階段 5：轉向「向右北方、向左南方」的標準側視切平面 (sideProfileProgress: 0 -> 1 約 1.5 秒)
+        if (stage >= 5) {
+          if (sideProfileProgress < 1) {
+            sideProfileProgress = Math.min(1, sideProfileProgress + dt / 1.5);
+          }
+        } else {
+          sideProfileProgress = Math.max(0, sideProfileProgress - dt * 2.0);
+        }
+
+        const baseOmega = 0.68;
+        const earthSpeed = (1 - currentChaseRatio) * baseOmega;
+        const skySpeed = currentChaseRatio * baseOmega;
+
+        earthAngle = (earthAngle + earthSpeed * dt) % TWO_PI;
+        skyAngle = (skyAngle + skySpeed * dt) % TWO_PI;
+      }
+
+      const easeZoomIn = easeInOutCubic(zoomInProgress);
+      const easePlaneGrow = easeInOutCubic(planeGrowProgress);
+      const easeZoomOutCut = easeInOutCubic(zoomOutCutProgress);
+      const easeLevel = easeInOutCubic(levelProgress);
+      const easeSideProfile = easeInOutCubic(sideProfileProgress);
+
+      // 非觀察的「背面半球」可見度係數：
+      // 階段 3 切出半球時，背面非觀察半球大幅黯淡 (0.08)，扶正後進一步淡出 (0.015)，讓被切出來的觀察半球極度鮮明
+      const backHemiAlpha = lerp(0.08, 0.015, easeLevel);
+
+      // 2. 清空畫布與深空背景
+      const W = window.innerWidth;
+      const H = window.innerHeight;
+      ctx.fillStyle = "#050810";
+      ctx.fillRect(0, 0, W, H);
+
+      const bgGrad = ctx.createRadialGradient(W * 0.5, H * 0.48, 30, W * 0.5, H * 0.48, Math.max(W, H) * 0.75);
+      bgGrad.addColorStop(0, "#0e1629");
+      bgGrad.addColorStop(1, "#04060b");
+      ctx.fillStyle = bgGrad;
+      ctx.fillRect(0, 0, W, H);
+
+      bgStars.forEach(s => {
+        ctx.fillStyle = `rgba(148, 163, 184, ${s.a})`;
+        ctx.beginPath();
+        ctx.arc(s.x * W, s.y * H, s.r, 0, TWO_PI);
+        ctx.fill();
+      });
+
+      // 3. 鏡頭縮放與中心定位計算
+      // - 階段 1：baseCelR = minDim * 0.41
+      // - 階段 2：Zoom In 貼近攝影機觀察者 (2.15x)
+      // - 階段 3：Zoom Out 看切平面切開天球並描邊強調觀察半球 (0.94x)
+      // - 階段 4：扶正地平面為水平 (1.08x)
+      // - 階段 5：轉向「右北左南」標準側視切平面 (1.12x)
+      const minDim = Math.min(W, H);
+      const baseCelR = minDim * 0.41;
+
+      let camScale = 1.0;
+      camScale = lerp(camScale, 2.15, easeZoomIn);
+      camScale = lerp(camScale, 0.94, easeZoomOutCut);
+      camScale = lerp(camScale, 1.08, easeLevel);
+      camScale = lerp(camScale, 1.12, easeSideProfile);
+
+      const R_cel = baseCelR * camScale;
+      const R_earth = R_cel * 0.27;
+
+      const obsDir3D = getZenithVec(currentLat);
+      let cx = W * 0.5;
+      let cy = H * 0.48;
+
+      function projectRaw(p, levelT, sideT) {
+        let qTilted = rotY(p, -48 * DEG + userYaw);
+        qTilted = rotX(qTilted, 16 * DEG + userPitch);
+        qTilted = rotZ(qTilted, -15 * DEG);
+
+        if (levelT <= 0.001) {
+          return qTilted;
+        }
+
+        // 扶正矩陣：
+        // 1. rotX(-(90 - currentLat) * DEG) 將天頂轉向 +Y，此時地方「北方」指向 -Z，「南方」指向 +Z，「東方」指向 +X
+        // 2. 當 rotY(-90 * DEG) 時：北方 (-Z) 轉向 +X（畫面正右方），南方 (+Z) 轉向 -X（畫面正左方），東方 (+X) 轉向 +Z（朝向觀眾）！
+        // 3. 階段 4 先轉至 -64° 保留立體圓盤透視感，階段 5 平滑轉至 -90°（右北左南）並將俯仰角歸零（或保留極微俯仰）形成標準切平面剖面！
+        const angleToUp = -(90 - currentLat) * DEG;
+        let qLeveled = rotX(p, angleToUp);
+        const yawAngle = lerp(-64 * DEG, -90 * DEG, sideT) + userYaw;
+        const pitchAngle = lerp(16 * DEG, 4 * DEG, sideT) + userPitch;
+        qLeveled = rotY(qLeveled, yawAngle);
+        qLeveled = rotX(qLeveled, pitchAngle);
+
+        return {
+          x: lerp(qTilted.x, qLeveled.x, levelT),
+          y: lerp(qTilted.y, qLeveled.y, levelT),
+          z: lerp(qTilted.z, qLeveled.z, levelT)
+        };
+      }
+
+      const focusWeight = easeZoomIn * (1 - easeZoomOutCut);
+      if (focusWeight > 0.001) {
+        const obsWorld = {
+          x: obsDir3D.x * R_earth * 0.85,
+          y: obsDir3D.y * R_earth * 0.85,
+          z: obsDir3D.z * R_earth * 0.85
+        };
+        const obsCam = projectRaw(obsWorld, 0, 0);
+        cx -= obsCam.x * focusWeight * 0.72;
+        cy += obsCam.y * focusWeight * 0.72;
+      }
+
+      cy += easeLevel * (minDim * 0.14);
+
+      function project(p) {
+        const q = projectRaw(p, easeLevel, easeSideProfile);
+        return { sx: cx + q.x, sy: cy - q.y, z: q.z };
+      }
+
+      // =========================================================================
+      // 4. 繪製立體半透明天球外殼（階段 3 強調被切出的觀察半球，非觀察半球極度黯淡）
+      // =========================================================================
+      const celSphereAlpha = 1 - easeLevel * 0.92;
+      if (celSphereAlpha > 0.02) {
+        // 非觀察的「背面整球」背景底層（階段 3 切開後大幅黯淡至 0.10）
+        const backShellMult = easeZoomOutCut > 0 ? lerp(1.0, 0.10, easeZoomOutCut) : 1.0;
+        const celGrad = ctx.createRadialGradient(
+          cx - R_cel * 0.22, cy - R_cel * 0.22, R_cel * 0.1,
+          cx, cy, R_cel
+        );
+        celGrad.addColorStop(0, "rgba(148, 163, 184, 0.01)");
+        celGrad.addColorStop(0.68, `rgba(148, 163, 184, ${(0.03 * celSphereAlpha * backShellMult).toFixed(3)})`);
+        celGrad.addColorStop(0.91, `rgba(186, 230, 253, ${(0.11 * celSphereAlpha * backShellMult).toFixed(3)})`);
+        celGrad.addColorStop(1, `rgba(224, 242, 254, ${(0.32 * celSphereAlpha * backShellMult).toFixed(3)})`);
+
+        ctx.fillStyle = celGrad;
+        ctx.beginPath();
+        ctx.arc(cx, cy, R_cel, 0, TWO_PI);
+        ctx.fill();
+
+        // 整球外輪廓（非觀察半球為極淡暗虛線）
+        ctx.strokeStyle = `rgba(148, 163, 184, ${(0.30 * celSphereAlpha * backShellMult).toFixed(3)})`;
+        ctx.lineWidth = 1.1;
+        ctx.setLineDash(easeZoomOutCut > 0.2 ? [4, 5] : []);
+        ctx.beginPath();
+        ctx.arc(cx, cy, R_cel, 0, TWO_PI);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      // 天球經緯網格（被切出來的上半球明亮清晰，非觀察半球隨 backHemiAlpha 漸暗）
+      if (assists.celestialGrid) {
+        const eqSteps = 96;
+        for (let i = 0; i < eqSteps; i++) {
+          const a0 = (i / eqSteps) * TWO_PI;
+          const a1 = ((i + 1) / eqSteps) * TWO_PI;
+          const p0 = sphToCart(R_cel, 0, a0);
+          const p1 = sphToCart(R_cel, 0, a1);
+          const pm = sphToCart(R_cel, 0, (a0 + a1) * 0.5);
+
+          const hDot = horizonDot(pm, currentLat);
+          let vis = 1.0;
+          if (easeZoomOutCut > 0 && hDot < 0) {
+            vis = lerp(1.0, backHemiAlpha, easeZoomOutCut);
+          }
+          if (vis <= 0.015) continue;
+
+          const pr0 = project(p0), pr1 = project(p1), prm = project(pm);
+          const depth = prm.z >= 0 ? 1.0 : 0.28;
+          ctx.strokeStyle = `rgba(250, 204, 21, ${(0.30 * depth * vis).toFixed(3)})`;
+          ctx.lineWidth = 1.35;
+          ctx.beginPath();
+          ctx.moveTo(pr0.sx, pr0.sy);
+          ctx.lineTo(pr1.sx, pr1.sy);
+          ctx.stroke();
+        }
+
+        for (let m = 0; m < 12; m++) {
+          const lon = -skyAngle + (m * Math.PI) / 6;
+          const latSteps = 36;
+          for (let j = 0; j < latSteps; j++) {
+            const la0 = -90 + (j / latSteps) * 180;
+            const la1 = -90 + ((j + 1) / latSteps) * 180;
+            const p0 = sphToCart(R_cel, la0, lon);
+            const p1 = sphToCart(R_cel, la1, lon);
+            const pm = sphToCart(R_cel, (la0 + la1) * 0.5, lon);
+
+            const hDot = horizonDot(pm, currentLat);
+            let vis = 1.0;
+            if (easeZoomOutCut > 0 && hDot < 0) {
+              vis = lerp(1.0, backHemiAlpha, easeZoomOutCut);
+            }
+            if (vis <= 0.015) continue;
+
+            const pr0 = project(p0), pr1 = project(p1), prm = project(pm);
+            const depth = prm.z >= 0 ? 1.0 : 0.24;
+            ctx.strokeStyle = `rgba(148, 163, 184, ${(0.18 * depth * vis).toFixed(3)})`;
+            ctx.lineWidth = 0.95;
+            ctx.beginPath();
+            ctx.moveTo(pr0.sx, pr0.sy);
+            ctx.lineTo(pr1.sx, pr1.sy);
+            ctx.stroke();
+          }
+        }
+      }
+
+      // =========================================================================
+      // 5. 彗星掃尾漸暗星軌繪製（區分背景層 z < 0 與前景層 z >= 0，非觀察半球大幅黯淡）
+      // =========================================================================
+      const activeTailFraction = (stage === 1 ? 0 : currentChaseRatio) * maxTailFraction;
+
+      function drawCometTrails(isFrontLayer) {
+        if (!assists.cometTrails || activeTailFraction <= 0.005) return;
+
+        const tailAngleSpan = activeTailFraction * TWO_PI;
+        const segments = Math.max(28, Math.round(activeTailFraction * 120));
+
+        indicatorStars.forEach(star => {
+          const headLon = star.initLon * DEG - skyAngle;
+
+          for (let i = 0; i < segments; i++) {
+            const t0 = i / segments;
+            const t1 = (i + 1) / segments;
+            const lon0 = headLon + (1 - t0) * tailAngleSpan;
+            const lon1 = headLon + (1 - t1) * tailAngleSpan;
+
+            const p0 = sphToCart(R_cel, star.lat, lon0);
+            const p1 = sphToCart(R_cel, star.lat, lon1);
+            const pm = sphToCart(R_cel, star.lat, (lon0 + lon1) * 0.5);
+
+            const proj0 = project(p0);
+            const proj1 = project(p1);
+            const projm = project(pm);
+
+            if (isFrontLayer ? (projm.z < 0) : (projm.z >= 0)) continue;
+
+            const hDot = horizonDot(pm, currentLat);
+            let horizonFactor = 1.0;
+            if (easeZoomOutCut > 0 && hDot < 0) {
+              horizonFactor = lerp(1.0, backHemiAlpha, easeZoomOutCut);
+            }
+            if (horizonFactor <= 0.01) continue;
+
+            const fade = Math.pow(t1, 1.65);
+            const depthDim = isFrontLayer ? 1.0 : 0.35;
+            const alpha = fade * 0.95 * depthDim * horizonFactor;
+            if (alpha <= 0.01) continue;
+
+            ctx.strokeStyle = `rgba(${star.rgb}, ${alpha.toFixed(3)})`;
+            ctx.lineWidth = (1.1 + fade * 2.5) * (isFrontLayer ? 1.0 : 0.85);
+            ctx.lineCap = "round";
+            ctx.beginPath();
+            ctx.moveTo(proj0.sx, proj0.sy);
+            ctx.lineTo(proj1.sx, proj1.sy);
+            ctx.stroke();
+          }
+        });
+      }
+
+      drawCometTrails(false);
+
+      // =========================================================================
+      // 6. 貫穿延伸至畫面邊界的南北極天軸 + N / S 標示 + 軸心白星
+      // =========================================================================
+      const ncpSurf = project({ x: 0, y: R_cel, z: 0 });
+      const scpSurf = project({ x: 0, y: -R_cel, z: 0 });
+      const originProj = project({ x: 0, y: 0, z: 0 });
+
+      if (assists.polarAxis) {
+        const dx = ncpSurf.sx - originProj.sx;
+        const dy = ncpSurf.sy - originProj.sy;
+        const len = Math.hypot(dx, dy) || 1;
+        const ux = dx / len;
+        const uy = dy / len;
+        const infDist = Math.max(W, H) * 2.2;
+
+        ctx.save();
+        ctx.strokeStyle = "rgba(56, 189, 248, 0.58)";
+        ctx.lineWidth = 1.4;
+        ctx.setLineDash([6, 5]);
+        ctx.beginPath();
+        if (easeLevel > 0.65) {
+          const dirSign = currentLat >= 0 ? 1 : -1;
+          ctx.moveTo(originProj.sx, originProj.sy);
+          ctx.lineTo(originProj.sx + ux * dirSign * infDist, originProj.sy + uy * dirSign * infDist);
+        } else {
+          ctx.moveTo(originProj.sx - ux * infDist, originProj.sy - uy * infDist);
+          ctx.lineTo(originProj.sx + ux * infDist, originProj.sy + uy * infDist);
+        }
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // 在地軸兩端清楚標示 N（北極）與 S（南極）
+        ctx.font = "bold 13px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+
+        // N 標示（位於天北極外側）
+        const nLabelX = ncpSurf.sx + ux * 18;
+        const nLabelY = ncpSurf.sy + uy * 18;
+        if (easeLevel <= 0.65 || currentLat >= 0) {
+          ctx.fillStyle = "rgba(15, 23, 42, 0.78)";
+          ctx.beginPath();
+          ctx.arc(nLabelX, nLabelY, 11, 0, TWO_PI);
+          ctx.fill();
+          ctx.fillStyle = "#38bdf8";
+          ctx.fillText("N", nLabelX, nLabelY + 0.5);
+        }
+
+        // S 標示（位於天南極外側；未扶正或南半球扶正時顯示）
+        const sLabelX = scpSurf.sx - ux * 18;
+        const sLabelY = scpSurf.sy - uy * 18;
+        const sAlpha = easeLevel <= 0.65 ? (easeZoomOutCut > 0 ? lerp(1.0, Math.max(0.22, backHemiAlpha * 2.5), easeZoomOutCut) : 1.0) : (currentLat < 0 ? 1.0 : 0);
+        if (sAlpha > 0.05) {
+          ctx.globalAlpha = sAlpha;
+          ctx.fillStyle = "rgba(15, 23, 42, 0.78)";
+          ctx.beginPath();
+          ctx.arc(sLabelX, sLabelY, 11, 0, TWO_PI);
+          ctx.fill();
+          ctx.fillStyle = "#94a3b8";
+          ctx.fillText("S", sLabelX, sLabelY + 0.5);
+          ctx.globalAlpha = 1.0;
+        }
+        ctx.restore();
+      }
+
+      // 軸心白星（天北極星 / 天南極星）
+      const showNorthPole = (easeLevel < 0.5) || (currentLat >= 0);
+      const polePt = showNorthPole ? ncpSurf : scpSurf;
+      const pole3D = { x: 0, y: showNorthPole ? R_cel : -R_cel, z: 0 };
+      if (easeLevel < 0.5 || horizonDot(pole3D, currentLat) >= -0.05) {
+        const glow = ctx.createRadialGradient(polePt.sx, polePt.sy, 0, polePt.sx, polePt.sy, 12);
+        glow.addColorStop(0, "rgba(255, 255, 255, 0.98)");
+        glow.addColorStop(0.4, "rgba(224, 242, 254, 0.5)");
+        glow.addColorStop(1, "rgba(224, 242, 254, 0)");
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(polePt.sx, polePt.sy, 12, 0, TWO_PI);
+        ctx.fill();
+
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.arc(polePt.sx, polePt.sy, 4.0, 0, TWO_PI);
+        ctx.fill();
+      }
+
+      // =========================================================================
+      // 7. 觀察者切平面與「被切出來的觀察半球亮白描邊強調」（階段 3, 4, 5）
+      // =========================================================================
+      if (easePlaneGrow > 0.01) {
+        const lat = currentLat * DEG;
+        const planeCenterR = lerp(R_earth, 0, easeLevel);
+        const planeCenter3D = {
+          x: obsDir3D.x * planeCenterR,
+          y: obsDir3D.y * planeCenterR,
+          z: obsDir3D.z * planeCenterR
+        };
+
+        const maxHorizonR = Math.sqrt(Math.max(0, R_cel * R_cel - planeCenterR * planeCenterR));
+        const currentDiskR = lerp(R_earth * 1.65, maxHorizonR, easeZoomOutCut) * easePlaneGrow;
+
+        // 外延方形幾何切平面（階段 3 傾斜時輔助說明幾何切面，扶正後淡出）
+        const quadAlpha = easeZoomOutCut * (1 - easeLevel);
+        if (quadAlpha > 0.02) {
+          const half = R_cel * 1.18;
+          const corners = [
+            { e: -half, n: -half },
+            { e:  half, n: -half },
+            { e:  half, n:  half },
+            { e: -half, n:  half }
+          ].map(c => project({
+            x: planeCenter3D.x + c.e,
+            y: planeCenter3D.y + c.n * Math.cos(lat),
+            z: planeCenter3D.z - c.n * Math.sin(lat)
+          }));
+
+          ctx.fillStyle = `rgba(148, 163, 184, ${0.05 * quadAlpha})`;
+          ctx.strokeStyle = `rgba(226, 232, 240, ${0.28 * quadAlpha})`;
+          ctx.lineWidth = 1.05;
+          ctx.setLineDash([4, 3]);
+          ctx.beginPath();
+          corners.forEach((pt, idx) => idx === 0 ? ctx.moveTo(pt.sx, pt.sy) : ctx.lineTo(pt.sx, pt.sy));
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+
+        // 圓形地平盤（中性灰白，階段 3 切開時亮白描邊強調）
+        const steps = 100;
+        ctx.beginPath();
+        for (let i = 0; i <= steps; i++) {
+          const az = (i / steps) * TWO_PI;
+          const north = Math.cos(az), east = Math.sin(az);
+          const pt3D = {
+            x: planeCenter3D.x + currentDiskR * east,
+            y: planeCenter3D.y + currentDiskR * north * Math.cos(lat),
+            z: planeCenter3D.z - currentDiskR * north * Math.sin(lat)
+          };
+          const p2D = project(pt3D);
+          if (i === 0) ctx.moveTo(p2D.sx, p2D.sy);
+          else ctx.lineTo(p2D.sx, p2D.sy);
+        }
+        ctx.closePath();
+        ctx.fillStyle = `rgba(148, 163, 184, ${lerp(0.16, 0.24, easeZoomOutCut) * easePlaneGrow})`;
+        ctx.fill();
+
+        // 地平圈亮白描邊（階段 3 強調切面邊界）
+        ctx.save();
+        if (easeZoomOutCut > 0.1) {
+          ctx.shadowColor = "rgba(224, 242, 254, 0.65)";
+          ctx.shadowBlur = 10 * easeZoomOutCut;
+        }
+        ctx.strokeStyle = `rgba(248, 250, 252, ${lerp(0.75, 0.96, easeZoomOutCut) * easePlaneGrow})`;
+        ctx.lineWidth = lerp(1.6, 2.5, easeZoomOutCut);
+        ctx.stroke();
+        ctx.restore();
+
+        // 階段 5（左南右北側視切平面）清楚標示地面方位「S (南) 在左、N (北) 在右」
+        if (easeSideProfile > 0.25) {
+          const sPt = project({
+            x: planeCenter3D.x,
+            y: planeCenter3D.y - currentDiskR * Math.cos(lat),
+            z: planeCenter3D.z + currentDiskR * Math.sin(lat)
+          });
+          const nPt = project({
+            x: planeCenter3D.x,
+            y: planeCenter3D.y + currentDiskR * Math.cos(lat),
+            z: planeCenter3D.z - currentDiskR * Math.sin(lat)
+          });
+
+          ctx.save();
+          ctx.globalAlpha = Math.min(1, (easeSideProfile - 0.25) / 0.6);
+          ctx.font = "bold 13px -apple-system, BlinkMacSystemFont, 'Noto Sans TC', sans-serif";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+
+          // 左方：南 (S)
+          ctx.fillStyle = "#fb7185";
+          ctx.fillText("南 (S)", sPt.sx - 24, sPt.sy);
+
+          // 右方：北 (N)
+          ctx.fillStyle = "#38bdf8";
+          ctx.fillText("北 (N)", nPt.sx + 24, nPt.sy);
+          ctx.restore();
+        }
+      }
+
+      // =========================================================================
+      // 8. 繪製不透明高細節地球本體與地球 ±X / ±Y 十字座標軸
+      // =========================================================================
+      const earthAlpha = 1 - easeLevel;
+      if (earthAlpha > 0.02) {
+        ctx.save();
+        ctx.globalAlpha = earthAlpha;
+
+        // 大氣層微光暈
+        const atmoGrad = ctx.createRadialGradient(
+          originProj.sx, originProj.sy, R_earth * 0.92,
+          originProj.sx, originProj.sy, R_earth * 1.15
+        );
+        atmoGrad.addColorStop(0, "rgba(56, 189, 248, 0.28)");
+        atmoGrad.addColorStop(1, "rgba(56, 189, 248, 0)");
+        ctx.fillStyle = atmoGrad;
+        ctx.beginPath();
+        ctx.arc(originProj.sx, originProj.sy, R_earth * 1.15, 0, TWO_PI);
+        ctx.fill();
+
+        // 地球不透明海洋球體漸層（完全遮擋後方背景線條）
+        const eGrad = ctx.createRadialGradient(
+          originProj.sx - R_earth * 0.32, originProj.sy - R_earth * 0.32, R_earth * 0.08,
+          originProj.sx, originProj.sy, R_earth
+        );
+        eGrad.addColorStop(0, "#2563eb");
+        eGrad.addColorStop(0.55, "#1d4ed8");
+        eGrad.addColorStop(0.88, "#172554");
+        eGrad.addColorStop(1, "#090e1a");
+
+        ctx.fillStyle = eGrad;
+        ctx.beginPath();
+        ctx.arc(originProj.sx, originProj.sy, R_earth, 0, TWO_PI);
+        ctx.fill();
+
+        // 裁切至地球球體內部繪製不透明大陸色塊與經緯網格
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(originProj.sx, originProj.sy, R_earth, 0, TWO_PI);
+        ctx.clip();
+
+        // 不透明質感大陸板塊（隨 earthAngle 旋轉）
+        ctx.fillStyle = "#10b981";
+        ctx.strokeStyle = "#6ee7b7";
+        ctx.lineWidth = 0.9;
+        continents.forEach(poly => {
+          ctx.beginPath();
+          let anyFront = false;
+          poly.forEach(([lonDeg, latDeg], idx) => {
+            const p3 = sphToCart(R_earth, latDeg, lonDeg * DEG + earthAngle);
+            const p2 = project(p3);
+            if (p2.z >= -R_earth * 0.1) anyFront = true;
+            if (idx === 0) ctx.moveTo(p2.sx, p2.sy);
+            else ctx.lineTo(p2.sx, p2.sy);
+          });
+          if (anyFront) {
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+          }
+        });
+
+        // 地球球體陰影遮罩（保留立體球面明暗，同時維持完全不透明）
+        const shadeGrad = ctx.createRadialGradient(
+          originProj.sx - R_earth * 0.35, originProj.sy - R_earth * 0.35, R_earth * 0.15,
+          originProj.sx, originProj.sy, R_earth
+        );
+        shadeGrad.addColorStop(0, "rgba(255, 255, 255, 0.12)");
+        shadeGrad.addColorStop(0.6, "rgba(15, 23, 42, 0.15)");
+        shadeGrad.addColorStop(1, "rgba(2, 6, 23, 0.72)");
+        ctx.fillStyle = shadeGrad;
+        ctx.beginPath();
+        ctx.arc(originProj.sx, originProj.sy, R_earth, 0, TWO_PI);
+        ctx.fill();
+
+        // 地球經緯線網格
+        if (assists.earthAxes) {
+          for (let m = 0; m < 12; m++) {
+            const lon = earthAngle + (m * Math.PI) / 6;
+            ctx.strokeStyle = "rgba(226, 232, 240, 0.32)";
+            ctx.lineWidth = 0.9;
+            ctx.beginPath();
+            let started = false;
+            for (let la = -85; la <= 85; la += 10) {
+              const p3 = sphToCart(R_earth, la, lon);
+              const p2 = project(p3);
+              if (p2.z >= 0) {
+                if (!started) { ctx.moveTo(p2.sx, p2.sy); started = true; }
+                else ctx.lineTo(p2.sx, p2.sy);
+              } else {
+                started = false;
+              }
+            }
+            ctx.stroke();
+          }
+          [-60, -30, 30, 60].forEach(latLine => {
+            ctx.strokeStyle = "rgba(226, 232, 240, 0.28)";
+            ctx.lineWidth = 0.85;
+            ctx.beginPath();
+            let started = false;
+            for (let i = 0; i <= 72; i++) {
+              const p3 = sphToCart(R_earth, latLine, (i / 72) * TWO_PI);
+              const p2 = project(p3);
+              if (p2.z >= 0) {
+                if (!started) { ctx.moveTo(p2.sx, p2.sy); started = true; }
+                else ctx.lineTo(p2.sx, p2.sy);
+              } else {
+                started = false;
+              }
+            }
+            ctx.stroke();
+          });
+        }
+
+        // 地球赤道亮線
+        ctx.strokeStyle = "rgba(250, 204, 21, 0.82)";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        let eqStarted = false;
+        for (let i = 0; i <= 72; i++) {
+          const p3 = sphToCart(R_earth, 0, (i / 72) * TWO_PI);
+          const p2 = project(p3);
+          if (p2.z >= 0) {
+            if (!eqStarted) { ctx.moveTo(p2.sx, p2.sy); eqStarted = true; }
+            else ctx.lineTo(p2.sx, p2.sy);
+          } else {
+            eqStarted = false;
+          }
+        }
+        ctx.stroke();
+        ctx.restore(); // 結束地球球體裁切
+
+        // 地球外輪廓高光
+        ctx.strokeStyle = "rgba(96, 165, 250, 0.68)";
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.arc(originProj.sx, originProj.sy, R_earth, 0, TWO_PI);
+        ctx.stroke();
+
+        // 地球赤道面完整十字座標軸 (+X, -X, +Y, -Y，隨地球自轉，遇到地球遮擋時自然被不透明地球擋住)
+        if (assists.earthAxes) {
+          const axisLen = R_earth * 1.48;
+          const crossAxes = [
+            { pos: sphToCart(axisLen, 0, earthAngle),                   col: "rgba(248, 113, 113, 0.85)", label: "+X" },
+            { pos: sphToCart(axisLen, 0, earthAngle + Math.PI),         col: "rgba(248, 113, 113, 0.55)", label: "-X" },
+            { pos: sphToCart(axisLen, 0, earthAngle + Math.PI * 0.5),   col: "rgba(74, 222, 128, 0.85)",  label: "+Y" },
+            { pos: sphToCart(axisLen, 0, earthAngle + Math.PI * 1.5),   col: "rgba(74, 222, 128, 0.55)",  label: "-Y" }
+          ];
+
+          ctx.font = "bold 10px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+
+          crossAxes.forEach(ax => {
+            const pEnd = project(ax.pos);
+            // 計算從地心到端點在螢幕上的方向，只畫出球體外部的軸段（因為地球是不透明的）
+            const dx = pEnd.sx - originProj.sx;
+            const dy = pEnd.sy - originProj.sy;
+            const dist2D = Math.hypot(dx, dy);
+
+            // 若端點在球體後方且投影距離小於地球半徑，則完全被不透明地球遮擋
+            if (pEnd.z < 0 && dist2D <= R_earth) return;
+
+            const startRatio = dist2D > R_earth ? (R_earth / dist2D) : 0;
+            const sxStart = originProj.sx + dx * startRatio;
+            const syStart = originProj.sy + dy * startRatio;
+
+            ctx.strokeStyle = ax.col;
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(sxStart, syStart);
+            ctx.lineTo(pEnd.sx, pEnd.sy);
+            ctx.stroke();
+
+            ctx.fillStyle = ax.col;
+            ctx.beginPath();
+            ctx.arc(pEnd.sx, pEnd.sy, 2.3, 0, TWO_PI);
+            ctx.fill();
+
+            // 端點標示 (+X / -X / +Y / -Y)
+            const ux = dx / (dist2D || 1);
+            const uy = dy / (dist2D || 1);
+            ctx.fillText(ax.label, pEnd.sx + ux * 11, pEnd.sy + uy * 11);
+          });
+        }
+
+        ctx.restore();
+      }
+
+      // =========================================================================
+      // 9. 繪製攝影機觀察者（階段 2 起登場，鏡頭朝東 +X，火焰嚴格向西 -X 噴射）
+      // =========================================================================
+      const personAlpha = stage === 1 ? 0 : Math.min(1, zoomInProgress * 2.5);
+      if (personAlpha > 0.02) {
+        const hoverOffset = (1 - easePlaneGrow) * (R_earth * 0.14);
+        const surfR = lerp(R_earth + hoverOffset, 0, easeLevel);
+        const obsBase3D = sphToCart(surfR, currentLat, 0);
+        const obsTop3D = sphToCart(surfR + 20, currentLat, 0);
+        // 嚴格計算當地「東方切線」(+X 世界向量) 在螢幕上的投影方向，確保噴火永遠嚴格指向西方 (-X)
+        const obsEast3D = { x: obsBase3D.x + 20, y: obsBase3D.y, z: obsBase3D.z };
+
+        const pBase = project(obsBase3D);
+        const pTop = project(obsTop3D);
+        const pEast = project(obsEast3D);
+
+        const eastVecX = pEast.sx - pBase.sx;
+        const eastVecY = pEast.sy - pBase.sy;
+        const eastAngleRad = Math.atan2(eastVecY, eastVecX);
+
+        // 計算天頂向量 (pTop - pBase) 與螢幕東方切線向量的外積符號，確保攝影機直立於地表上方而非倒立
+        const upVecX = pTop.sx - pBase.sx;
+        const upVecY = pTop.sy - pBase.sy;
+        const crossZ = eastVecX * upVecY - eastVecY * upVecX;
+        const upSign = crossZ < 0 ? 1 : -1;
+
+        const personScale = lerp(1.18, 1.0, easeZoomOutCut);
+
+        ctx.save();
+        ctx.globalAlpha = personAlpha;
+        const activeThrust = (stage === 2) ? currentChaseRatio : 0;
+        drawCameraObserver(pBase.sx, pBase.sy, eastAngleRad, upSign, personScale, activeThrust, dt);
+        ctx.restore();
+      }
+
+      // =========================================================================
+      // 10. 被切出來的觀察半球「亮白描邊強調」（階段 3 強調切出半球，階段 4/5 維持清晰穹頂輪廓）
+      // =========================================================================
+      if (easeZoomOutCut > 0.01) {
+        const latRad = currentLat * DEG;
+        const planeCenterR = lerp(R_earth, 0, easeLevel);
+        const planeCenter3D = {
+          x: obsDir3D.x * planeCenterR,
+          y: obsDir3D.y * planeCenterR,
+          z: obsDir3D.z * planeCenterR
+        };
+        const domeR = Math.sqrt(Math.max(0, R_cel * R_cel - planeCenterR * planeCenterR));
+
+        // 繪製被切出來的上半球天穹拱線（子午線與東西卯酉圈雙拱線，階段 3 加上亮白發光描邊）
+        const domeProfiles = [
+          // 1. 東西向拱線（卯酉圈上半弧）
+          (rad) => ({
+            x: planeCenter3D.x + domeR * Math.sin(rad),
+            y: planeCenter3D.y + domeR * Math.cos(rad) * Math.sin(latRad),
+            z: planeCenter3D.z + domeR * Math.cos(rad) * Math.cos(latRad)
+          }),
+          // 2. 南北向拱線（子午圈上半弧，階段 5 側視時成為最外圈完整半圓輪廓！）
+          (rad) => ({
+            x: planeCenter3D.x,
+            y: planeCenter3D.y + domeR * (Math.cos(rad) * Math.sin(latRad) + Math.sin(rad) * Math.cos(latRad)),
+            z: planeCenter3D.z + domeR * (Math.cos(rad) * Math.cos(latRad) - Math.sin(rad) * Math.sin(latRad))
+          })
+        ];
+
+        ctx.save();
+        // 階段 3 特別強化被切出半球的發光描邊，突顯「這半顆球才是我們要觀察的天球」
+        const highlightBoost = easeZoomOutCut * (1 - easeLevel * 0.45);
+        ctx.shadowColor = "rgba(186, 230, 253, 0.85)";
+        ctx.shadowBlur = 12 * highlightBoost;
+        ctx.strokeStyle = `rgba(248, 250, 252, ${lerp(0.35, 0.88, highlightBoost)})`;
+        ctx.lineWidth = lerp(1.4, 2.4, highlightBoost);
+
+        domeProfiles.forEach((profileFn, idx) => {
+          // 階段 5 正側視時主要突出南北向子午半圓輪廓
+          if (idx === 0 && easeSideProfile > 0.85) return;
+          ctx.beginPath();
+          for (let a = -90; a <= 90; a += 3) {
+            const p2 = project(profileFn(a * DEG));
+            if (a === -90) ctx.moveTo(p2.sx, p2.sy);
+            else ctx.lineTo(p2.sx, p2.sy);
+          }
+          ctx.stroke();
+        });
+        ctx.restore();
+      }
+
+      // =========================================================================
+      // 11. 繪製前景層掃尾 (z >= 0) + 3 顆指標星本體（一開始即直接位於天球上）
+      // =========================================================================
+      drawCometTrails(true);
+
+      indicatorStars.forEach(star => {
+        const headLon = star.initLon * DEG - skyAngle;
+        const pSurf3D = sphToCart(R_cel, star.lat, headLon);
+        const pSurf2D = project(pSurf3D);
+
+        // 判斷是否在地平面以下（背面半球隨 backHemiAlpha 漸暗）
+        let starAlpha = 1.0;
+        if (easeZoomOutCut > 0) {
+          const hDot = horizonDot(pSurf3D, currentLat);
+          if (hDot < 0) {
+            starAlpha = lerp(1.0, backHemiAlpha, easeZoomOutCut);
+          }
+        }
+        if (starAlpha <= 0.015) return;
+
+        const depthAlpha = (pSurf2D.z >= 0 ? 1.0 : 0.45) * starAlpha;
+        const glowR = pSurf2D.z >= 0 ? 15 : 10;
+        const grad = ctx.createRadialGradient(pSurf2D.sx, pSurf2D.sy, 0, pSurf2D.sx, pSurf2D.sy, glowR);
+        grad.addColorStop(0, `rgba(255, 255, 255, ${0.98 * depthAlpha})`);
+        grad.addColorStop(0.35, `rgba(${star.rgb}, ${0.72 * depthAlpha})`);
+        grad.addColorStop(1, `rgba(${star.rgb}, 0)`);
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(pSurf2D.sx, pSurf2D.sy, glowR, 0, TWO_PI);
+        ctx.fill();
+
+        ctx.fillStyle = `rgba(255, 255, 255, ${depthAlpha})`;
+        ctx.beginPath();
+        ctx.arc(pSurf2D.sx, pSurf2D.sy, pSurf2D.z >= 0 ? 4.0 : 2.8, 0, TWO_PI);
+        ctx.fill();
+      });
+
+      requestAnimationFrame(render);
+    }
+
+    // 初始化所有 UI 狀態與開關
+    updateUI();
+    updateQuickLatButtons();
+    updateAssistButtons();
+    updateLatText(targetLat);
+    updateTailText(maxTailFraction);
+    requestAnimationFrame(render);
+  </script>
+</body>
+</html>
