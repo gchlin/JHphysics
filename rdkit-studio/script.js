@@ -8,6 +8,7 @@ const lookupStatus = document.querySelector('#lookupStatus');
 const lookupSource = document.querySelector('#lookupSource');
 const smilesRow = document.querySelector('#smilesRow');
 const renderedSmiles = document.querySelector('#renderedSmiles');
+const smilesPreview = document.querySelector('#smilesPreview');
 const copySmilesButton = document.querySelector('#copySmiles');
 const historyButton = document.querySelector('#historyButton');
 const historyPanel = document.querySelector('#historyPanel');
@@ -49,6 +50,7 @@ function closeHistory() {
 function clearRenderedSmiles() {
   smilesRow.hidden = true;
   renderedSmiles.value = '';
+  smilesPreview.textContent = '';
   copySmilesButton.disabled = true;
 }
 let lookupController = null;
@@ -219,7 +221,8 @@ function setLoading(loading) {
 function clearPreview(message = '輸入結構或選擇範例後按下編譯。') {
   clearRenderedSmiles();
   lookupSource.hidden = true;
-  document.querySelector('#lookupSourceBody').textContent = '';
+  lookupSource.removeAttribute('href');
+  lookupSource.textContent = '來源';
   structureNotice.hidden = true;
   structureNotice.textContent = '';
   lastSvg = '';
@@ -232,7 +235,6 @@ function clearPreview(message = '輸入結構或選擇範例後按下編譯。')
   document.querySelector('#metaFormula').textContent = '—';
   document.querySelector('#metaWeight').textContent = 'MW: —';
   document.querySelector('#metaSize').textContent = '—';
-  document.querySelector('#autoSizeHint').textContent = sizeMode === 'height' ? '自動寬度：—' : '畫布：—';
   downloadButton.disabled = true;
   copyButton.disabled = true;
   document.querySelector('#copyFormula').disabled = true;
@@ -459,6 +461,7 @@ async function render() {
     lastFormula = data.formula || data.smiles;
     lastSmiles = structure;
     renderedSmiles.value = lastSmiles;
+    smilesPreview.textContent = lastSmiles.length > 25 ? `${lastSmiles.slice(0, 24)}…` : lastSmiles;
     smilesRow.hidden = false;
     copySmilesButton.disabled = false;
     lastRenderOptions = data.options;
@@ -473,25 +476,16 @@ async function render() {
     document.querySelector('#metaWeight').textContent = Number.isFinite(data.molecular_weight)
       ? `MW: ${data.molecular_weight.toFixed(2)} g/mol` : 'MW: —';
     document.querySelector('#metaSize').textContent = `${data.options.width_cm.toFixed(2)} × ${data.options.height_cm.toFixed(2)} cm`;
-    document.querySelector('#autoSizeHint').textContent = sizeMode === 'height'
-      ? `自動寬度：約 ${data.options.width_cm.toFixed(2)} cm`
-      : `畫布：約 ${data.options.width_cm.toFixed(2)} × ${data.options.height_cm.toFixed(2)} cm`;
     downloadButton.disabled = false;
     copyButton.disabled = false;
     document.querySelector('#copyFormula').disabled = false;
     document.querySelector('#invertChirality').disabled = !(data.stereo_tags.CIP_atoms?.length && /\[[^\]]*@@?[^\]]*\]/.test(structure));
     unknownNamePromptButton.hidden = true;
-    structureNotice.textContent = '結構已繪製，請確認是否為你要的化合物。';
-    structureNotice.hidden = false;
+    structureNotice.textContent = '';
+    structureNotice.hidden = true;
     if (candidate.source) {
-      const body = document.querySelector('#lookupSourceBody');
-      body.textContent = '';
-      const link = document.createElement('a');
-      link.href = candidate.source.url;
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
-      link.textContent = candidate.source.label;
-      body.append(link);
+      lookupSource.href = candidate.source.url;
+      lookupSource.textContent = candidate.source.label;
       lookupSource.hidden = false;
     }
     const historySource = candidate.history ? candidate.originalSource : candidate.source;
@@ -681,6 +675,12 @@ document.querySelectorAll('[data-bond]').forEach(button => button.addEventListen
   scheduleStyleRender();
 }));
 document.querySelectorAll('.style-strip input:not([type=hidden])').forEach(control => control.addEventListener('input', scheduleStyleRender));
+document.querySelectorAll('[data-layout]').forEach(button => button.addEventListener('click', () => {
+  const useCoordGen = button.dataset.layout === 'coordgen';
+  document.querySelector('#coordGenInput').checked = useCoordGen;
+  document.querySelectorAll('[data-layout]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+  scheduleStyleRender();
+}));
 document.querySelector('#transparentInput').addEventListener('input', scheduleStyleRender);
 document.querySelectorAll('[data-background]').forEach(button => button.addEventListener('click', () => {
   document.querySelector('#transparentInput').checked = button.dataset.background === 'transparent';
@@ -692,7 +692,6 @@ document.querySelectorAll('[data-size-mode]').forEach(button => button.addEventL
   document.querySelectorAll('[data-size-mode]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
   document.querySelector('#heightControls').hidden = sizeMode !== 'height';
   document.querySelector('#bondControls').hidden = sizeMode !== 'bond';
-  document.querySelector('#autoSizeHint').textContent = sizeMode === 'height' ? '自動寬度：—' : '畫布：—';
   if (lastSmiles) scheduleStyleRender();
 }));
 for (const [attribute, inputId] of [['height', 'heightCm'], ['scale', 'scalePercent']]) {
@@ -876,6 +875,7 @@ let outputFormat = 'png';
 function updateFormatLabels() {
   const png = outputFormat === 'png';
   document.querySelector('#dpiButtons').hidden = !png;
+  document.querySelector('#dpiDivider').hidden = !png;
   document.querySelectorAll('[data-dpi]').forEach(button => {button.disabled = !png;});
   copyButton.textContent = '⧉';
   copyButton.title = png ? '複製 PNG（包含文件尺寸）' : '複製 SVG 原始碼';
