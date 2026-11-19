@@ -949,7 +949,68 @@ document.querySelectorAll('[data-name-example]').forEach(button => button.addEve
 // Only the initial state follows the viewport. Resizing must not discard the
 // user's choice to open a panel or their place in its controls.
 if (typeof window !== 'undefined' && window.matchMedia?.('(max-width: 900px)').matches) {
-  document.querySelectorAll('#styleOptions, .studio-style-section, #exportOptions').forEach(panel => { panel.open = false; });
+  document.querySelectorAll('#styleOptions, #exportOptions').forEach(panel => { panel.open = false; });
+  document.querySelectorAll('.studio-style-section').forEach((panel, index) => { panel.open = index === 0; });
+}
+// Phone layout: 樣式 / 尺寸與格式 / 標色 options are bottom sheets above the
+// action bar, so the canvas stays on screen and the page itself never scrolls.
+// body[data-sheet] names the open sheet; --sheet-h tells the CSS how much
+// canvas to give up while one is open.
+if (typeof window !== 'undefined' && window.matchMedia) {
+  const phone = window.matchMedia('(max-width: 900px)');
+  const styleTab = document.querySelector('#styleTab');
+  const styleOptions = document.querySelector('#styleOptions');
+  const exportOptions = document.querySelector('#exportOptions');
+  const highlightTools = document.querySelector('#highlightTools');
+  const actionBar = document.querySelector('.studio-output');
+  const sheetEls = () => [
+    document.querySelector('#styleOptions'),
+    document.querySelector('#exportOptions > .output-control-row'),
+    document.querySelector('#highlightTools')
+  ].filter(Boolean);
+  const measureSheet = () => {
+    const root = document.documentElement;
+    if (!phone.matches) { root.style.removeProperty('--sheet-h'); root.style.removeProperty('--bar-h'); return; }
+    // Distance from the action bar's top edge to the screen bottom, so sheets
+    // sit exactly on the bar whatever spacing sits below it.
+    const barTop = actionBar ? actionBar.getBoundingClientRect().top : 0;
+    root.style.setProperty('--bar-h', `${barTop > 0 ? Math.round(window.innerHeight - barTop) : 57}px`);
+    const open = sheetEls().find(el => el.getClientRects().length > 0 && getComputedStyle(el).position === 'fixed');
+    root.style.setProperty('--sheet-h', open ? `${open.offsetHeight}px` : '0px');
+  };
+  const currentSheet = () => document.body.dataset.sheet || '';
+  const applySheet = name => {
+    if (name) document.body.dataset.sheet = name; else delete document.body.dataset.sheet;
+    styleTab?.setAttribute('aria-expanded', String(name === 'style'));
+    if (phone.matches) {
+      if (styleOptions) styleOptions.open = name === 'style';
+      if (exportOptions) exportOptions.open = name === 'export';
+    }
+    measureSheet();
+    requestAnimationFrame(measureSheet);
+  };
+  styleTab?.addEventListener('click', () => applySheet(currentSheet() === 'style' ? '' : 'style'));
+  exportOptions?.addEventListener('toggle', () => {
+    if (!phone.matches) return;
+    const next = exportOptions.open ? 'export' : (currentSheet() === 'export' ? '' : currentSheet());
+    if (next !== currentSheet()) applySheet(next);
+  });
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && phone.matches && currentSheet()) { event.stopImmediatePropagation(); applySheet(''); }
+  }, true);
+  phone.addEventListener?.('change', () => {
+    if (phone.matches) { applySheet(''); }
+    else { delete document.body.dataset.sheet; if (styleOptions) styleOptions.open = true; if (exportOptions) exportOptions.open = true; measureSheet(); }
+  });
+  if (typeof ResizeObserver !== 'undefined') {
+    const observer = new ResizeObserver(measureSheet);
+    sheetEls().forEach(el => observer.observe(el));
+    if (actionBar) observer.observe(actionBar);
+  }
+  if (highlightTools && typeof MutationObserver !== 'undefined') {
+    new MutationObserver(() => { measureSheet(); requestAnimationFrame(measureSheet); }).observe(highlightTools, {attributes: true, attributeFilter: ['hidden']});
+  }
+  measureSheet();
 }
 document.querySelectorAll('[data-color]').forEach(button => button.addEventListener('click', () => {
   const color = button.dataset.color === 'color';
