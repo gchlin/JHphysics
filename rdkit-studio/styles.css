@@ -371,3 +371,71 @@ main { display:block; height:calc(100dvh - 44px); overflow:hidden; padding:8px 0
   .studio-preview .studio-transform button { padding:5px; }
   .studio-output .output-actions { justify-content:flex-start; }
 }
+
+/* Compact controls with native, keyboard-accessible disclosure panels. */
+.studio-style summary,.export-options > summary { cursor:pointer; color:var(--ink); font-size:14px; padding:7px 0; }
+.studio-style > .style-title { display:list-item; margin:0; font-weight:600; }
+.studio-style .studio-style-section > summary { color:var(--muted); font-weight:500; }
+.studio-style .studio-style-section > .style-group { grid-template-columns:58px minmax(0,1fr); }
+.studio-style .compact-controls { display:flex; align-items:center; flex-wrap:wrap; gap:5px 14px; padding:3px 0; }
+.compact-controls .style-group { display:flex; flex-direction:row; align-items:center; gap:7px; }
+.studio-style .style-group > strong,.studio-output .style-group > strong { font-size:14px; white-space:nowrap; }
+.studio-style .segmented button,.studio-output .segmented button { font-size:14px; padding:6px 7px; }
+.studio-style .mini-switch { font-size:14px!important; }
+.studio-style .control-help { margin-top:4px; }
+.studio-style .control-help summary { font-size:13px; color:var(--muted); }
+.control-help p { margin:3px 0 5px; font-size:14px; line-height:1.6; color:var(--muted); }
+.studio-style:not([open]) > :not(summary),.export-options:not([open]) > :not(summary) { display:none!important; }
+.studio-preview .studio-output { display:flex; align-items:flex-end; flex-wrap:wrap; gap:8px; }
+.export-options { flex:1 1 100%; min-width:0; }
+.export-options > summary { font-weight:500; }
+.studio-output .output-settings { display:flex; flex-wrap:wrap; align-items:center; gap:7px 12px; }
+.studio-output .output-settings > .style-group { display:flex; }
+.studio-output .output-settings > .size-choices,.studio-output .output-settings > .size-hint { grid-column:auto; }
+.studio-output .output-settings input[type=number] { width:54px; font-size:14px; padding:6px; }
+.studio-output .size-choices label,.studio-output .size-hint { font-size:13px; }
+.studio-output .output-actions { justify-content:flex-start; margin-top:8px; }
+.export-buttons { display:flex; align-items:center; gap:6px; margin-left:auto; }
+.export-buttons button { padding:8px 12px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--ink); font-size:14px; }
+.export-buttons button:disabled { opacity:.45; cursor:not-allowed; }
+.structure-entry input { font-size:14px; font-family:inherit; max-width:none; }
+.primary-button,.history-button,.gallery-button,.help-icon,.quick-row button { font-size:14px; }
+.quick-row { flex-wrap:wrap; gap:5px; }
+.quick-row > span { font-size:13px; }
+.editor-heading strong,.panel-head strong { font-size:14px; }
+summary:focus-visible,button:focus-visible { outline:2px solid var(--teal); outline-offset:3px; }
+@media (min-width:901px) {
+  .export-options { flex:1 1 calc(100% - 115px); }
+  .export-options[open] > summary { display:none; }
+  .studio-output .output-settings .size-choices > .segmented { display:none; }
+  .studio-output .output-settings .style-group > strong { display:none; }
+}
+@media (max-width:900px) {
+  .editor-column { display:contents; }
+  .editor-panel { grid-row:1; }
+  .editor-column > .style-strip { grid-row:2; padding:2px 12px; }
+  .studio-preview { grid-row:3; }
+  .studio-style .studio-style-section { padding:4px 0; }
+  .studio-style .studio-style-section > .style-group { min-height:44px; }
+  .studio-style > .style-title { padding:11px 0; }
+  .structure-entry input { font-size:16px; }
+  .input-line button,.quick-row button,.gallery-button,.help-icon { min-height:40px; }
+  .quick-row { margin-top:4px; }
+  .quick-row > span { display:none; }
+  .lookup-hint[data-kind="idle"] { display:none; }
+  .studio-preview .panel-head { display:none; }
+  .studio-preview .studio-canvas { min-height:230px; grid-template-rows:auto minmax(180px, min(38dvh,340px)); }
+  .studio-preview .studio-canvas > .preview-stage { min-height:180px; }
+  .studio-preview .studio-transform { gap:4px; padding:3px; margin:4px; }
+  .studio-preview .studio-transform > span { display:none; }
+  .studio-preview .studio-transform button { min-width:40px; min-height:40px; padding:5px; font-size:14px; }
+  .studio-style .segmented button,.studio-output .segmented button { min-height:40px; }
+  .studio-preview .studio-output { align-items:center; }
+  .export-options { flex:1 1 140px; }
+  .export-options > summary { min-height:40px; padding:10px 0; }
+  .export-options[open] { flex-basis:100%; }
+  .export-buttons button { min-height:40px; }
+  .studio-output .output-settings .size-choices > .segmented { display:none; }
+  .studio-output .output-settings .style-group { flex-basis:auto; }
+  .studio-molecule-info .meta-row { font-size:12px; }
+}

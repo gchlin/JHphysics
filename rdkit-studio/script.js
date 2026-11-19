@@ -710,6 +710,12 @@ for (const [attribute, inputId] of [['height', 'heightCm'], ['scale', 'scalePerc
 }
 document.querySelectorAll('.quick-row button[data-code]').forEach(button => button.addEventListener('click', () => loadCode(snippets[button.dataset.code])));
 document.querySelectorAll('button[data-smiles]').forEach(button => button.addEventListener('click', () => loadCode(button.dataset.smiles, button.dataset.label)));
+document.querySelectorAll('[data-name-example]').forEach(button => button.addEventListener('click', () => loadCode(button.dataset.nameExample)));
+// Only the initial state follows the viewport. Resizing must not discard the
+// user's choice to open a panel or their place in its controls.
+if (typeof window !== 'undefined' && window.matchMedia?.('(max-width: 900px)').matches) {
+  document.querySelectorAll('#styleOptions, .studio-style-section, #exportOptions').forEach(panel => { panel.open = false; });
+}
 document.querySelectorAll('[data-color]').forEach(button => button.addEventListener('click', () => {
   const color = button.dataset.color === 'color';
   document.querySelector('#colorInput').checked = color;
@@ -761,6 +767,10 @@ document.querySelectorAll('[data-preset]').forEach(button => button.addEventList
   document.querySelectorAll('[data-bond]').forEach(item => item.setAttribute('aria-pressed', String(item.dataset.bond === document.querySelector('#bondInput').value)));
   document.querySelector('#colorInput').checked = preset === 'standard';
   document.querySelector('#carbonInput').checked = preset === 'teaching';
+  hydrogenMode = 'hetero';
+  explicitMethyl = preset === 'teaching';
+  document.querySelectorAll('[data-hydrogens]').forEach(item => item.setAttribute('aria-pressed', String(item.dataset.hydrogens === hydrogenMode)));
+  document.querySelectorAll('[data-methyl]').forEach(item => item.setAttribute('aria-pressed', String((item.dataset.methyl === 'explicit') === explicitMethyl)));
   document.querySelectorAll('[data-carbons]').forEach(item => item.setAttribute('aria-pressed', String((item.dataset.carbons === 'show') === document.querySelector('#carbonInput').checked)));
   document.querySelectorAll('[data-color]').forEach(item => item.setAttribute('aria-pressed', String((item.dataset.color === 'color') === document.querySelector('#colorInput').checked)));
   document.querySelectorAll('[data-preset]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
