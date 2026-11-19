@@ -952,6 +952,108 @@ if (typeof window !== 'undefined' && window.matchMedia?.('(max-width: 900px)').m
   document.querySelectorAll('#styleOptions, #exportOptions').forEach(panel => { panel.open = false; });
   document.querySelectorAll('.studio-style-section').forEach((panel, index) => { panel.open = index === 0; });
 }
+// Phone hints: title attributes are invisible on touch screens, so each group
+// with an explanation gets a "？" button. Tapping it opens ONE shared popover
+// built from the same title attributes at tap time, so the titles stay the only
+// copy of the text. The buttons are hidden on mouse desktops by CSS. This block
+// must stay above the "Phone layout" block: its Escape listener has to run first.
+(() => {
+  if (typeof window === 'undefined' || !document.body) return;
+  const popover = document.createElement('div');
+  popover.id = 'hintPopover';
+  popover.className = 'hint-popover';
+  popover.setAttribute('role', 'dialog');
+  popover.hidden = true;
+  document.body.append(popover);
+  let owner = null;
+  const close = () => {
+    if (!owner) return;
+    owner.setAttribute('aria-expanded', 'false');
+    owner = null;
+    popover.hidden = true;
+  };
+  const place = button => {
+    const gap = 8, edge = 8;
+    const anchor = button.getBoundingClientRect();
+    const width = popover.offsetWidth, height = popover.offsetHeight;
+    let top = anchor.top - gap - height;
+    if (top < edge) top = anchor.bottom + gap; // no room above: flip below
+    top = Math.max(edge, Math.min(top, window.innerHeight - height - edge));
+    const center = anchor.left + anchor.width / 2 - width / 2;
+    const left = Math.max(edge, Math.min(center, window.innerWidth - width - edge));
+    popover.style.top = `${Math.round(top)}px`;
+    popover.style.left = `${Math.round(left)}px`;
+  };
+  const open = (button, lines) => {
+    close();
+    popover.replaceChildren(...lines.map(text => {
+      const p = document.createElement('p');
+      p.textContent = text;
+      return p;
+    }));
+    popover.setAttribute('aria-label', button.getAttribute('aria-label'));
+    popover.hidden = false;
+    owner = button;
+    button.setAttribute('aria-expanded', 'true');
+    place(button);
+  };
+  // Lines: the root's own title (groups only), then "按鈕文字：說明" for each titled button.
+  const linesOf = root => () => {
+    const lines = root.getAttribute('title') ? [root.getAttribute('title')] : [];
+    root.querySelectorAll('button[title]').forEach(button => {
+      lines.push(`${button.textContent.trim()}：${button.getAttribute('title')}`);
+    });
+    return lines;
+  };
+  const addHint = (label, linesFor, insert) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'hint-button';
+    button.textContent = '？';
+    button.setAttribute('aria-label', `說明：${label}`);
+    button.setAttribute('aria-expanded', 'false');
+    button.setAttribute('aria-controls', 'hintPopover');
+    insert(button);
+    button.addEventListener('click', () => {
+      if (owner === button) return close();
+      const lines = linesFor();
+      if (lines.length) open(button, lines);
+    });
+  };
+  // Groups: "？" right after the group label. Stand-alone segmented controls: just before them.
+  document.querySelectorAll('#styleOptions .style-group, #exportOptions .style-group').forEach(group => {
+    const linesFor = linesOf(group);
+    if (!linesFor().length) return;
+    const label = group.querySelector(':scope > strong');
+    addHint(label ? label.textContent : '選項', linesFor, button => (label ? label.after(button) : group.prepend(button)));
+  });
+  document.querySelectorAll('#styleOptions .segmented, #exportOptions .segmented').forEach(segmented => {
+    if (segmented.closest('.style-group')) return; // the group above carries its own "？"
+    const linesFor = linesOf(segmented);
+    if (!linesFor().length) return;
+    addHint(segmented.getAttribute('aria-label') || '選項', linesFor, button => segmented.before(button));
+  });
+  const mode = document.querySelector('#highlightMode');
+  if (mode) addHint('標色', () => ['標色會一併輸出到 PNG／SVG。點選原子或鍵標色，再點一次取消。'], button => mode.after(button));
+  // Tapping elsewhere, scrolling, opening or closing a sheet or the gallery, or resizing dismisses it.
+  document.addEventListener('pointerdown', event => {
+    if (owner && !popover.contains(event.target) && !event.target.closest?.('.hint-button')) close();
+  }, true);
+  document.addEventListener('scroll', event => {
+    if (owner && !popover.contains(event.target)) close();
+  }, true);
+  window.addEventListener('resize', () => (owner && owner.getClientRects().length ? place(owner) : close()));
+  if (typeof MutationObserver !== 'undefined') {
+    new MutationObserver(() => close()).observe(document.body, {attributes: true, attributeFilter: ['data-sheet', 'class']});
+  }
+  // Escape closes only the popover; stopImmediatePropagation keeps the sheet and 標色 handlers from running.
+  document.addEventListener('keydown', event => {
+    if (event.key !== 'Escape' || !owner) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    close();
+  }, true);
+})();
 // Phone layout: 樣式 / 尺寸與格式 / 標色 options are bottom sheets above the
 // action bar, so the canvas stays on screen and the page itself never scrolls.
 // body[data-sheet] names the open sheet; --sheet-h tells the CSS how much
@@ -1180,7 +1282,7 @@ function updateFormatLabels() {
   document.querySelector('#dpiButtons').hidden = !png;
   document.querySelector('#dpiDivider').hidden = !png;
   document.querySelectorAll('[data-dpi]').forEach(button => {button.disabled = !png;});
-  copyButton.textContent = '⧉ 複製圖片';
+  copyButton.textContent = '複製圖片';
   copyButton.title = png ? '複製 PNG（包含文件尺寸）' : '複製 SVG 原始碼';
   copyButton.setAttribute('aria-label', copyButton.title);
   downloadButton.textContent = '↓ 下載';

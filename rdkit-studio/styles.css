@@ -350,7 +350,7 @@ main { display:block; height:calc(100dvh - 44px); overflow:hidden; padding:8px 0
 .studio-preview .smiles-row label { flex:none; font-size:9px; }
 .studio-preview .smiles-preview { display:inline-block; flex:0 1 25ch; max-width:25ch; overflow:hidden; color:var(--ink); font:10px 'DM Mono',monospace; text-overflow:ellipsis; white-space:nowrap; }
 .studio-preview .smiles-row input { flex:0 1 25ch; width:25ch; max-width:25ch; min-width:0; padding:0; border:0; border-radius:0; background:transparent; color:var(--ink); font:10px 'DM Mono',monospace; }
-.studio-preview .smiles-row button { flex:none; padding:1px 3px; border:0; background:transparent; color:var(--teal); font-size:13px; }
+.studio-preview .smiles-row button { flex:none; padding:1px 5px; border:1px solid var(--line); border-radius:4px; background:transparent; color:var(--teal); font-size:10px; white-space:nowrap; }
 .studio-preview .meta-identity { flex-wrap:wrap; max-width:100%; }
 .studio-preview .meta-identity strong { white-space:normal; overflow-wrap:anywhere; }
 .studio-preview .studio-output { display:grid; flex:none; gap:6px; margin:0; padding:8px 0 0; border-top:1px solid var(--line); font:inherit; }
@@ -584,4 +584,22 @@ summary:focus-visible,button:focus-visible { outline:2px solid var(--teal); outl
   .gallery-drawer .category-filter {flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-right: -12px; padding-right: 12px;}
   .gallery-drawer .category-filter > * {flex: none;}
   .drawer-head .icon-button {min-width: 44px; min-height: 44px;}
+}
+
+/* Phone hints: a "？" opens the title text of its group (touch has no hover).
+   The 44px hit area comes from ::before, so the row layout barely changes. */
+button.hint-button {display: none; position: relative; flex: none; box-sizing: border-box; width: 22px; height: 22px; min-width: 22px; min-height: 22px; margin: 0 6px; padding: 0; align-items: center; justify-content: center; border: 1px solid var(--teal); border-radius: 50%; background: #fff; color: var(--teal); font: 700 12px/1 'DM Sans', 'Noto Sans TC', sans-serif;}
+button.hint-button::before {content: ''; position: absolute; top: -12px; right: -12px; bottom: -12px; left: -12px;}
+button.hint-button[aria-expanded="true"] {background: var(--teal); color: #fff;}
+@media (max-width: 900px), (hover: none) {
+  button.hint-button {display: inline-flex;}
+}
+.hint-popover {position: fixed; z-index: 40; top: 0; left: 0; box-sizing: border-box; width: max-content; max-width: min(320px, 90vw); padding: 9px 11px; border: 1px solid var(--line); border-radius: 9px; background: #fff; color: var(--ink); box-shadow: 0 8px 22px #17241d33; font-size: 13px; line-height: 1.5; overflow-wrap: anywhere;}
+.hint-popover p {margin: 0;}
+.hint-popover p + p {margin-top: 6px;}
+/* Copy buttons: text labels instead of one shared icon (rule 5.7). */
+.formula-copy-label {margin-left: 6px; color: var(--muted); font: 10px 'DM Sans', 'Noto Sans TC', sans-serif;}
+@media (max-width: 900px) {
+  /* Phone: the 標色 mode control shares its line with the ？ instead of taking a full row. */
+  .highlight-tools .highlight-mode {width: auto; flex: 1 1 auto; min-width: 0;}
 }
