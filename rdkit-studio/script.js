@@ -996,8 +996,14 @@ if (typeof window !== 'undefined' && window.matchMedia) {
     if (next !== currentSheet()) applySheet(next);
   });
   document.addEventListener('keydown', event => {
+    // The gallery drawer sits above every sheet: let it handle Esc first.
+    if (document.body.classList.contains('drawer-open')) return;
     if (event.key === 'Escape' && phone.matches && currentSheet()) { event.stopImmediatePropagation(); applySheet(''); }
   }, true);
+  // Opening the gallery covers the screen, so close any bottom sheet with it.
+  new MutationObserver(() => {
+    if (document.body.classList.contains('drawer-open') && currentSheet()) applySheet('');
+  }).observe(document.body, {attributes: true, attributeFilter: ['class']});
   phone.addEventListener?.('change', () => {
     if (phone.matches) { applySheet(''); }
     else { delete document.body.dataset.sheet; if (styleOptions) styleOptions.open = true; if (exportOptions) exportOptions.open = true; measureSheet(); }

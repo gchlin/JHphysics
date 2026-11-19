@@ -2,6 +2,11 @@
 const WASM_SIZE_BYTES = 6913251;
 const PIXELS_PER_CM = 300 / 2.54;
 const STANDARD_BOND_CM = 0.508;
+// In fixed-height mode the artwork is never allowed to be shorter than this many
+// bond lengths. A benzene ring is already ~2 bonds tall, so ordinary molecules are
+// untouched; flat ones (C=O, CO2, HCl) keep a sane bond length and sit centred
+// in the fixed-height canvas instead of being blown up to fill it.
+const MIN_ART_HEIGHT_IN_BONDS = 2;
 const loadingScreen = document.querySelector('#loadingScreen');
 const loadingPhase = document.querySelector('#loadingPhase');
 const loadingAmount = document.querySelector('#loadingAmount');
@@ -195,6 +200,16 @@ function moleculeBounds(molblock) {
   return {width:Math.max(...xs) - Math.min(...xs), height:Math.max(...ys) - Math.min(...ys)};
 }
 
+// Longest plain two-point bond path in the drawing, in SVG units (0 if none).
+function longestBondLength(root) {
+  let longest = 0;
+  root.querySelectorAll('path[class*="bond-"]').forEach(path => {
+    const n = (path.getAttribute('d') || '').match(/-?\d+(?:\.\d+)?/g);
+    if (n && n.length === 4) longest = Math.max(longest, Math.hypot(n[2] - n[0], n[3] - n[1]));
+  });
+  return longest;
+}
+
 function fitSvgToArtwork(svg, sizing) {
   const root = new DOMParser().parseFromString(svg, 'image/svg+xml').documentElement;
   const originalStyle = root.getAttribute('style');
@@ -214,9 +229,15 @@ function fitSvgToArtwork(svg, sizing) {
       : Math.max(18, Math.min(right - left, bottom - top) * 0.06);
     const artWidth = right - left + padding * 2;
     const artHeight = bottom - top + padding * 2;
+    let viewTop = top - padding;
+    let viewHeight = artHeight;
+    if (sizing.mode === 'height') {
+      const minHeight = longestBondLength(root) * MIN_ART_HEIGHT_IN_BONDS;
+      if (artHeight < minHeight) { viewTop -= (minHeight - artHeight) / 2; viewHeight = minHeight; }
+    }
     const heightPx = sizing.mode === 'height' ? Math.round(sizing.heightCm * PIXELS_PER_CM) : Math.round(artHeight);
-    const widthPx = sizing.mode === 'height' ? Math.round(heightPx * artWidth / artHeight) : Math.round(artWidth);
-    root.setAttribute('viewBox', `${left - padding} ${top - padding} ${artWidth} ${artHeight}`);
+    const widthPx = sizing.mode === 'height' ? Math.round(heightPx * artWidth / viewHeight) : Math.round(artWidth);
+    root.setAttribute('viewBox', `${left - padding} ${viewTop} ${artWidth} ${viewHeight}`);
     root.setAttribute('width', `${widthPx}px`);
     root.setAttribute('height', `${heightPx}px`);
     if (originalStyle === null) root.removeAttribute('style');

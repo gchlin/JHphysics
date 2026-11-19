@@ -559,7 +559,7 @@ summary:focus-visible,button:focus-visible { outline:2px solid var(--teal); outl
   /* Shared sheet chrome */
   .editor-column > .style-strip.studio-style,
   .export-options[open] > .output-control-row,
-  .highlight-tools:not([hidden]) {position: fixed; left: 0; right: 0; bottom: var(--bar-h, 57px); z-index: 30; max-height: var(--sheet-max); overflow-y: auto; margin: 0; max-width: none; border: 1px solid var(--line); border-width: 1px 0 0; border-radius: 14px 14px 0 0; background: #fff; box-shadow: 0 -8px 22px #17241d24;}
+  .highlight-tools:not([hidden]) {position: fixed; left: 0; right: 0; bottom: var(--bar-h, 57px); z-index: 25; max-height: var(--sheet-max); overflow-y: auto; margin: 0; max-width: none; border: 1px solid var(--line); border-width: 1px 0 0; border-radius: 14px 14px 0 0; background: #fff; box-shadow: 0 -8px 22px #17241d24;}
   /* 樣式 sheet */
   .editor-column > .style-strip.studio-style {display: none; padding: 6px 14px 12px;}
   body[data-sheet="style"] .editor-column > .style-strip.studio-style {display: block;}
@@ -580,4 +580,8 @@ summary:focus-visible,button:focus-visible { outline:2px solid var(--teal); outl
   .highlight-tools .highlight-finish {margin-left: auto;}
   body[data-sheet] .highlight-tools {display: none;}
   .highlight-hint {bottom: 8px;}
+  /* Gallery drawer (phone): one-row category chips, 44px close target. */
+  .gallery-drawer .category-filter {flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-right: -12px; padding-right: 12px;}
+  .gallery-drawer .category-filter > * {flex: none;}
+  .drawer-head .icon-button {min-width: 44px; min-height: 44px;}
 }
