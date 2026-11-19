@@ -237,10 +237,17 @@ async function drawMolecule(smiles, options = {}) {
     const formula = moleculeFormula(atoms);
     const descriptors = JSON.parse(mol.get_descriptors());
     const stereoTags = JSON.parse(mol.get_stereo_tags());
+    const highlightCandidates = options.interactive_highlights ? {
+      elements: HighlightSelection.getElementMatches(mol),
+      groups: HighlightSelection.getFunctionalGroupMatches(rdkit, mol)
+    } : null;
     const sterolLabels = options.steroid_numbering ? sterolAtomLabels(rdkit, mol) : null;
     if (options.steroid_numbering && !sterolLabels)
       throw new Error('無法可靠辨認此分子的類固醇編號；請改用 RDKit 索引或關閉編號。');
-    if (options.show_hydrogens) mol.add_hs_in_place();
+    if (options.show_hydrogens) {
+      mol.add_hs_in_place();
+      if (highlightCandidates) highlightCandidates.elements = HighlightSelection.getElementMatches(mol);
+    }
     mol.set_new_coords(!!options.use_coordgen);
     const molblock = transformedMolblock(mol.get_molblock(), options);
     const outputOptions = {...options};
@@ -260,6 +267,13 @@ async function drawMolecule(smiles, options = {}) {
       throw new Error('旋轉或翻轉後立體組態無法驗證，已停止輸出。');
     }
     const drawOptions = drawingOptions(moleculeAtoms(transformed), outputOptions);
+    // Transparent RDKit atom ellipses supply exact hit geometry, including skeletal
+    // carbon atoms. They share the final drawing coordinates and survive fitting.
+    if (options.interactive_highlights) {
+      drawOptions.atoms = Array.from({length: transformed.get_num_atoms()}, (_, index) => index);
+      drawOptions.bonds = [];
+      drawOptions.highlightAtomColors = Object.fromEntries(drawOptions.atoms.map(index => [index, [0, 0, 0, 0]]));
+    }
     const rawSvg = sterolLabels ? svgWithSterolNumbers(transformed, sterolLabels, drawOptions, options.numbering_size)
       : options.add_atom_indices ? svgWithNumberLabels(transformed, null, drawOptions, options.numbering_size)
       : transformed.get_svg_with_highlights(JSON.stringify(drawOptions));
@@ -274,7 +288,7 @@ async function drawMolecule(smiles, options = {}) {
       outputOptions.height_cm = options.size_mode === 'height' ? options.height_cm
         : Math.round(fitted.heightPx / PIXELS_PER_CM * 100) / 100;
     }
-    return {svg: fitted.svg, formula, molecular_weight: descriptors.amw, stereo_tags: stereoTags, smiles, atom_count: mol.get_num_atoms(), options: outputOptions};
+    return {svg: fitted.svg, formula, molecular_weight: descriptors.amw, stereo_tags: stereoTags, smiles, atom_count: mol.get_num_atoms(), highlightCandidates, options: outputOptions};
   } finally {
     if (transformed) transformed.delete();
     mol.delete();

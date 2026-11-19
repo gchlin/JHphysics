@@ -41,3 +41,27 @@ SMILES／Gemini 求助的可重跑檢查與手動邊界案例見 [求助測試�
 其他未收錄名稱在按「繪製」後，會以保留內部空白及大小寫的文字依序查詢 [OPSIN](https://www.ebi.ac.uk/opsin/) 與 [PubChem PUG REST](https://pubchem.ncbi.nlm.nih.gov/pcfe/docs/markdown/pug-rest.md)。每個服務約 8 秒逾時，不自動重試；修改輸入或再次繪製會取消舊查詢。最多快取 50 個成功查詢於本次頁面記憶體，重新整理即清空；網路錯誤不快取。PubChem 請求至少間隔 250 ms。
 
 所有採用的回傳 SMILES 均先經本機 RDKit 解析。OPSIN 成功可直接繪製，WARNING 須先確認；PubChem 一律先顯示回傳 IUPAC 名、分子式與 CID 候選，即使只有一筆，避免同名查詢誤選酸鹽或質子化型態。最多列 8 筆並提示範圍限制，並非全部異構物。PubChem 使用包含立體與同位素資訊的 `SMILES`，不以不含立體資訊的 `ConnectivitySMILES` 替代。成功繪製後，資訊列右側顯示最多 25 字元的 SMILES 預覽，旁有複製按鈕；R↔S 反轉後會更新為新結構。查詢來源以單一連結核對；回傳可解析不等於名稱語意已驗證。中文名稱不保證被外部服務收錄，未找到、逾時／網路、限流與格式錯誤會分別提示，可再用 Gemini 求助。
+
+## 教學標色（第一階段）
+
+預覽上方只有一個「標示」入口。展開後可直接點選原子或鍵，也可用元素或官能基預選，再選固定顏色並按「套用」。官能基可選全部或第幾個；藍色虛線／半透明預覽只表示目前選取，套用後才寫入匯出圖。可用「清除此選取」移除局部標色，或「全部清除」重設；「結束」收起工具列，保留已套用的顏色。元素與官能基以隨附 RDKit 的完整分子索引辨識，不需輸入 SMARTS。
+
+目前支援醇羥基、酚羥基、羧基、酯基、醛基、酮羰基、醯胺與一般胺；未找到所選基團時會提示。此階段不包含環辨識、基團縮寫與反應式。點選範圍包含骨架碳，且比細鍵寬；可用 Tab 與 Enter／空白鍵操作。
+
+旋轉、鏡射、尺寸、排版與編號調整保留標色與選取。同一個繪圖分子同時核對 RDKit canonical isomeric SMILES 與原始 SMILES；換分子、原子排列不同的等價 SMILES 或反轉立體組態會清除並提示。變更氫顯示模式時會清除並提示，避免展開／收合後索引錯置。標示僅保存在目前頁面，不寫入歷史紀錄或 localStorage。
+
+SVG、PNG 與複製共用含套用標色的 SVG；互動命中範圍、鍵盤焦點與候選預覽不進入匯出。透明 RDKit 原子幾何用於建立精確點選範圍，匯出中保留不可見的原子幾何，不含事件或操作 overlay。
+
+於儲存庫根目錄可執行：
+
+```powershell
+node RDKit/RDKit/tests/highlight-selection.test.js
+node RDKit/RDKit/tests/highlight-integration.test.js
+node RDKit/RDKit/tests/studio-ui.test.js
+node RDKit/RDKit/tests/steroid-numbering.test.js
+node RDKit/RDKit/tests/name-lookup.test.js
+node RDKit/RDKit/tests/history-store.test.js
+node RDKit/RDKit/tests/smiles-help.test.js
+```
+
+標色整合測試使用實際隨附 WASM，涵蓋幾何、立體／旋轉／鏡射／編號相容性、重複官能基、套用清除、索引生命週期與匯出隔離；UI DOM double 不代替瀏覽器排版、實際剪貼簿與觸控裝置驗證。

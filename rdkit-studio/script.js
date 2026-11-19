@@ -86,6 +86,223 @@ const downloadButton = document.querySelector('#downloadOutput');
 const copyButton = document.querySelector('#copyOutput');
 let lastSvg = '';
 let baseSvg = '';
+const highlightToggle = document.querySelector('#highlightToggle');
+const highlightTools = document.querySelector('#highlightTools');
+const highlightHint = document.querySelector('#highlightHint');
+const highlightStatus = document.querySelector('#highlightStatus');
+const highlightTarget = document.querySelector('#highlightTarget');
+const highlightOccurrence = document.querySelector('#highlightOccurrence');
+const highlightTargetLabel = document.querySelector('#highlightTargetLabel');
+const highlightTargetKind = document.querySelector('#highlightTargetKind');
+const highlightOccurrenceLabel = document.querySelector('#highlightOccurrenceLabel');
+const eraseHighlightButton = document.querySelector('#eraseHighlight');
+const clearHighlightsButton = document.querySelector('#clearHighlights');
+const highlightModeButtons = document.querySelectorAll('[data-highlight-mode]');
+let highlightActive = false;
+let highlightModeValue = 'direct';
+let highlightCandidates = {elements:[], groups:[]};
+let highlightIdentity = '';
+let highlightHydrogens = '';
+let highlightColor = '#f5b942';
+// Committed marks are what the export uses. The selection is the set of marks
+// produced by the current element/group target; it is replaced when the target changes.
+let highlightedAtoms = new Map();
+let highlightedBonds = new Map();
+let selectedAtoms = new Set();
+let selectedBonds = new Set();
+function resetHighlights() {
+  highlightedAtoms.clear(); highlightedBonds.clear(); selectedAtoms.clear(); selectedBonds.clear();
+}
+function reconcileHighlights(identity, hydrogens) {
+  const changedHydrogens = highlightIdentity === identity && highlightHydrogens !== hydrogens;
+  if (highlightIdentity !== identity || changedHydrogens) {
+    resetHighlights(); highlightModeValue = 'direct';
+  }
+  highlightIdentity = identity; highlightHydrogens = hydrogens;
+  return changedHydrogens;
+}
+function highlightTargetItems() {
+  const list = highlightModeValue === 'element' ? highlightCandidates.elements
+    : highlightModeValue === 'group' ? highlightCandidates.groups : [];
+  return list.filter(item => (item.matches || item.atoms).length);
+}
+function highlightItemLabel(item) {
+  if (highlightModeValue === 'element') {
+    const name = HighlightSelection.elementName(item.id);
+    return `${name ? `${name} ` : ''}${item.id} ×${item.atoms.length}`;
+  }
+  return `${item.zh ? `${item.zh}　` : ''}${item.label} ×${item.matches.length}`;
+}
+function syncHighlightModeUI() {
+  highlightModeButtons.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.highlightMode === highlightModeValue)));
+  highlightTargetKind.textContent = highlightModeValue === 'element' ? '元素' : '官能基';
+  highlightTargetLabel.hidden = highlightModeValue === 'direct';
+}
+function updateHighlightOccurrences() {
+  const previous = highlightOccurrence.value;
+  const item = highlightTargetItems().find(entry => entry.id === highlightTarget.value);
+  const multiple = highlightModeValue === 'group' && (item?.matches.length || 0) > 1;
+  const options = multiple
+    ? [new Option(`全部 ×${item.matches.length}`, 'all'), ...item.matches.map((_, index) => new Option(`第 ${index + 1} 個`, String(index)))]
+    : [new Option('全部', 'all')];
+  highlightOccurrence.replaceChildren(...options);
+  highlightOccurrence.value = options.some(option => option.value === previous) ? previous : 'all';
+  highlightOccurrenceLabel.hidden = !multiple;
+}
+function updateHighlightTargets() {
+  const groupButton = document.querySelector('[data-highlight-mode="group"]');
+  const hasGroups = highlightCandidates.groups.some(group => group.matches.length);
+  groupButton.disabled = !hasGroups;
+  groupButton.title = hasGroups ? '依官能基標色' : '此分子沒有可辨識的官能基';
+  if (!hasGroups && highlightModeValue === 'group') {
+    forgetSelection(); highlightModeValue = 'direct';
+  }
+  const previous = highlightTarget.value;
+  const items = highlightTargetItems();
+  const placeholder = highlightModeValue === 'element' ? '選擇元素…' : '選擇官能基…';
+  highlightTarget.replaceChildren(new Option(placeholder, ''), ...items.map(item => new Option(highlightItemLabel(item), item.id)));
+  highlightTarget.value = items.some(item => item.id === previous) ? previous : '';
+  syncHighlightModeUI();
+  updateHighlightOccurrences();
+}
+function forgetSelection() {
+  selectedAtoms.clear(); selectedBonds.clear();
+}
+function removeSelection() {
+  selectedAtoms.forEach(index => highlightedAtoms.delete(index));
+  selectedBonds.forEach(index => highlightedBonds.delete(index));
+  forgetSelection();
+}
+function recolorSelection() {
+  selectedAtoms.forEach(index => highlightedAtoms.set(index, highlightColor));
+  selectedBonds.forEach(index => highlightedBonds.set(index, highlightColor));
+}
+function applyTargetSelection() {
+  removeSelection();
+  const item = highlightTargetItems().find(entry => entry.id === highlightTarget.value);
+  if (item) {
+    const matches = highlightModeValue === 'element' ? [item]
+      : highlightOccurrence.value === 'all' ? item.matches
+      : [item.matches[Number(highlightOccurrence.value)]].filter(Boolean);
+    matches.forEach(match => {
+      match.atoms.forEach(index => selectedAtoms.add(index));
+      match.bonds.forEach(index => selectedBonds.add(index));
+    });
+    recolorSelection();
+  }
+  paintHighlights();
+}
+function setHighlightMode(mode) {
+  forgetSelection();
+  highlightModeValue = mode;
+  highlightTarget.value = '';
+  updateHighlightTargets();
+  paintHighlights();
+}
+function setHighlightActive(active) {
+  highlightActive = active && !!baseSvg;
+  if (highlightActive) paintHighlights();
+  else setHighlightMode('direct');
+}
+function paintHighlights() {
+  if (!baseSvg) highlightActive = false;
+  const selectedCount = selectedAtoms.size + selectedBonds.size;
+  const markCount = highlightedAtoms.size + highlightedBonds.size;
+  highlightToggle.disabled = !baseSvg;
+  highlightToggle.setAttribute('aria-pressed', String(highlightActive));
+  highlightTools.hidden = !highlightActive;
+  highlightHint.hidden = !highlightActive;
+  previewStage.classList.toggle('highlight-active', highlightActive);
+  eraseHighlightButton.disabled = !highlightActive || highlightModeValue === 'direct' || !selectedCount;
+  clearHighlightsButton.disabled = !markCount;
+  highlightStatus.textContent = !baseSvg ? '請先繪製分子。'
+    : markCount ? `已標色 ${highlightedAtoms.size} 原子、${highlightedBonds.size} 鍵`
+    : highlightModeValue === 'direct' ? '點選原子或鍵開始標色'
+    : !highlightTarget.value ? '請選擇目標'
+    : '此目標沒有可標色的項目';
+  if (!baseSvg) return;
+  const root = new DOMParser().parseFromString(baseSvg, 'image/svg+xml').documentElement;
+  const atomShapes = [...root.querySelectorAll('ellipse')].filter(node => /\batom-\d+\b/.test(node.getAttribute('class') || ''));
+  const bondShapes = [...root.querySelectorAll('path')].filter(node => /\bbond-\d+\b/.test(node.getAttribute('class') || ''));
+  const indexOf = (node, kind) => Number(node.getAttribute('class').match(new RegExp(`\\b${kind}-(\\d+)\\b`))[1]);
+  atomShapes.forEach(node => {
+    const color = highlightedAtoms.get(indexOf(node, 'atom'));
+    if (color) node.setAttribute('style', `fill:${color};fill-opacity:0.48;stroke:none`);
+  });
+  const ns = 'http://www.w3.org/2000/svg';
+  const colors = document.createElementNS(ns, 'g');
+  colors.setAttribute('data-applied-highlights', 'bonds');
+  bondShapes.forEach(node => {
+    const color = highlightedBonds.get(indexOf(node, 'bond'));
+    if (!color) return;
+    const clone = node.cloneNode(true);
+    clone.setAttribute('style', `fill:none;stroke:${color};stroke-opacity:0.55;stroke-width:12;stroke-linecap:round;stroke-linejoin:round`);
+    colors.append(clone);
+  });
+  if (bondShapes[0]) root.insertBefore(colors, bondShapes[0]);
+  // Freeze the export before adding selection previews and input targets.
+  lastSvg = new XMLSerializer().serializeToString(root);
+  if (highlightActive) {
+    const overlay = document.createElementNS(ns, 'g');
+    overlay.setAttribute('data-highlight-overlay', 'true');
+    const addTarget = (node, kind, index) => {
+      const marked = (kind === 'atom' ? highlightedAtoms : highlightedBonds).has(index);
+      const clone = node.cloneNode(true);
+      clone.setAttribute('class', 'highlight-hit');
+      clone.setAttribute('style', kind === 'atom'
+        ? `fill:${marked ? '#5168b333' : 'transparent'};stroke:${marked ? '#3658a4' : 'transparent'};stroke-width:2;stroke-dasharray:4 3;pointer-events:all`
+        : `fill:none;stroke:${marked ? '#3658a4' : 'transparent'};stroke-width:16;stroke-opacity:${marked ? '0.35' : '1'};pointer-events:stroke`);
+      clone.setAttribute('data-highlight-kind', kind); clone.setAttribute('data-highlight-index', String(index));
+      clone.setAttribute('tabindex', '0'); clone.setAttribute('role', 'button');
+      clone.setAttribute('aria-label', `${kind === 'atom' ? '原子' : '鍵'} ${index}`);
+      clone.setAttribute('aria-pressed', String(marked));
+      overlay.append(clone);
+    };
+    bondShapes.forEach(node => addTarget(node, 'bond', indexOf(node, 'bond')));
+    atomShapes.forEach(node => addTarget(node, 'atom', indexOf(node, 'atom')));
+    root.append(overlay);
+  }
+  previewStage.replaceChildren(root);
+}
+highlightModeButtons.forEach(button => button.addEventListener('click', () => {
+  if (button.dataset.highlightMode !== highlightModeValue) setHighlightMode(button.dataset.highlightMode);
+}));
+highlightTarget.addEventListener('change', () => {
+  highlightOccurrence.value = 'all';
+  updateHighlightOccurrences();
+  applyTargetSelection();
+});
+highlightOccurrence.addEventListener('change', applyTargetSelection);
+document.querySelectorAll('[data-highlight-color]').forEach(button => button.addEventListener('click', () => {
+  highlightColor = button.dataset.highlightColor;
+  document.querySelectorAll('[data-highlight-color]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+  recolorSelection();
+  paintHighlights();
+}));
+eraseHighlightButton.addEventListener('click', () => {removeSelection(); setHighlightMode('direct');});
+clearHighlightsButton.addEventListener('click', () => {resetHighlights(); setHighlightMode('direct');});
+highlightToggle.addEventListener('click', () => setHighlightActive(!highlightActive));
+document.querySelector('#finishHighlight').addEventListener('click', () => setHighlightActive(false));
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && highlightActive && !drawer.classList.contains('open')) setHighlightActive(false);
+});
+function toggleHighlightTarget(event) {
+  const target = event.target.closest('[data-highlight-kind]');
+  if (!target || !highlightActive) return;
+  if (event.type === 'keydown' && ![' ', 'Enter'].includes(event.key)) return;
+  event.preventDefault();
+  const kind = target.dataset.highlightKind;
+  const index = Number(target.dataset.highlightIndex);
+  if (highlightModeValue !== 'direct') setHighlightMode('direct');
+  const marks = kind === 'atom' ? highlightedAtoms : highlightedBonds;
+  const selection = kind === 'atom' ? selectedAtoms : selectedBonds;
+  if (marks.has(index)) marks.delete(index); else marks.set(index, highlightColor);
+  selection.delete(index);
+  paintHighlights();
+  if (event.type === 'keydown') previewStage.querySelector(`[data-highlight-kind="${kind}"][data-highlight-index="${index}"]`)?.focus();
+}
+previewStage.addEventListener('click', toggleHighlightTarget);
+previewStage.addEventListener('keydown', toggleHighlightTarget);
 let lastFormula = '';
 let lastSmiles = '';
 let lastRenderOptions = null;
@@ -169,6 +386,7 @@ function options() {
   if (sizeMode === 'bond' && (!Number.isFinite(scalePercent) || scalePercent < 20 || scalePercent > 300))
     throw new Error('鍵長比例請設定為 20% 至 300%。');
   return {
+    interactive_highlights: true,
     size_mode: sizeMode,
     height_cm: heightCm,
     scale_percent: scalePercent,
@@ -226,12 +444,13 @@ function clearPreview(message = '輸入結構或選擇範例後按下編譯。')
   structureNotice.hidden = true;
   structureNotice.textContent = '';
   lastSvg = '';
+  baseSvg = ''; highlightIdentity = ''; resetHighlights(); paintHighlights();
   lastFormula = '';
   lastSmiles = '';
   lastRenderOptions = null;
   previewStage.innerHTML = `<div class="empty-state"><strong>等待選擇結構</strong><p>${escapeHTML(message)}</p></div>`;
   document.querySelector('#metaName').textContent = '—';
-  document.querySelector('#metaStereo').textContent = '—';
+  setStereoBadge('');
   document.querySelector('#metaFormula').textContent = '—';
   document.querySelector('#metaWeight').textContent = 'MW: —';
   document.querySelector('#metaSize').textContent = '—';
@@ -356,11 +575,17 @@ async function showCandidates(candidates, sequence) {
   candidateList.hidden = false;
   candidateList._candidates = candidates;
 }
+// Stereo badge stays hidden when the structure has no assigned stereo information.
+function setStereoBadge(label) {
+  const badge = document.querySelector('#metaStereo');
+  badge.textContent = label;
+  badge.hidden = !label;
+}
 function stereoLabel(tags) {
   const values = [...(tags.CIP_atoms || []), ...(tags.CIP_bonds || [])]
     .map(item => item.at(-1)).filter(value => typeof value === 'string')
     .map(value => value.replace(/^\((.*)\)$/, '$1'));
-  return values.length ? [...new Set(values)].join(' · ') : '無指定';
+  return values.length ? [...new Set(values)].join(' · ') : '';
 }
 function formulaMarkup(formula) {
   return escapeHTML(formula).replace(/(\d+)/g, '<sub>$1</sub>');
@@ -457,7 +682,18 @@ async function render() {
     const data = await drawMolecule(structure, options());
     if (sequence !== renderSequence) return false;
     baseSvg = data.svg;
-    lastSvg = baseSvg;
+    const identityMol = (await rdkitReady).get_mol(structure);
+    let identity;
+    // Canonical SMILES alone is insufficient: equivalent input SMILES can have
+    // different atom ordering. Keep the source too unless an explicit mapping exists.
+    try { identity = `${identityMol.get_smiles()}\n${structure}`; } finally { identityMol.delete(); }
+    const changedStructure = highlightIdentity && highlightIdentity !== identity &&
+      (highlightedAtoms.size || highlightedBonds.size || selectedAtoms.size || selectedBonds.size);
+    const changedHydrogens = reconcileHighlights(identity, hydrogenMode);
+    highlightCandidates = data.highlightCandidates;
+    updateHighlightTargets();
+    if (changedHydrogens) toast('氫顯示方式已變更，為避免索引錯置，已清除標色。');
+    else if (changedStructure) toast('結構或原子排列已變更，已清除標色。');
     lastFormula = data.formula || data.smiles;
     lastSmiles = structure;
     renderedSmiles.value = lastSmiles;
@@ -465,17 +701,17 @@ async function render() {
     smilesRow.hidden = false;
     copySmilesButton.disabled = false;
     lastRenderOptions = data.options;
-    previewStage.innerHTML = lastSvg;
+    paintHighlights();
     previewStage.classList.toggle('transparent', data.options.transparent_background);
     document.querySelector('#flipHorizontal').setAttribute('aria-pressed', String(flipX));
     document.querySelector('#flipVertical').setAttribute('aria-pressed', String(flipY));
     const galleryName = gallery.find(entry => entry.smiles === structure)?.name;
     document.querySelector('#metaName').textContent = selectedName || (candidate.id.startsWith('raw:') ? '' : candidate.name) || galleryName || '自訂分子';
-    document.querySelector('#metaStereo').textContent = stereoLabel(data.stereo_tags);
+    setStereoBadge(stereoLabel(data.stereo_tags));
     document.querySelector('#metaFormula').innerHTML = formulaMarkup(data.formula);
     document.querySelector('#metaWeight').textContent = Number.isFinite(data.molecular_weight)
       ? `MW: ${data.molecular_weight.toFixed(2)} g/mol` : 'MW: —';
-    document.querySelector('#metaSize').textContent = `${data.options.width_cm.toFixed(2)} × ${data.options.height_cm.toFixed(2)} cm`;
+    document.querySelector('#metaSize').textContent = `輸出 ${data.options.width_cm.toFixed(2)} × ${data.options.height_cm.toFixed(2)} cm`;
     downloadButton.disabled = false;
     copyButton.disabled = false;
     document.querySelector('#copyFormula').disabled = false;
@@ -877,7 +1113,7 @@ function updateFormatLabels() {
   document.querySelector('#dpiButtons').hidden = !png;
   document.querySelector('#dpiDivider').hidden = !png;
   document.querySelectorAll('[data-dpi]').forEach(button => {button.disabled = !png;});
-  copyButton.textContent = '⧉';
+  copyButton.textContent = '⧉ 複製圖片';
   copyButton.title = png ? '複製 PNG（包含文件尺寸）' : '複製 SVG 原始碼';
   copyButton.setAttribute('aria-label', copyButton.title);
   downloadButton.textContent = '↓ 下載';
