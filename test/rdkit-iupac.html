@@ -19,7 +19,7 @@
 </section>
 <section class="card">
   <h2>測試案例</h2>
-  <p class="note small">原需求中 <code>CC(C)CC(=O)O</code> 標成 4-methylpentanoic acid，但實際結構是 <strong>3-methylbutanoic acid（3-甲基丁酸）</strong>。表格保留原始輸入並另列正確的 4-methylpentanoic acid SMILES 作對照。</p>
+  <p class="note small">原需求中 <code>CC(C)CC(=O)O</code> 標成 4-methylpentanoic acid，但實際結構是 <strong>3-methylbutanoic acid（3-甲基丁酸）</strong>。表格保留原始輸入並另列經 API 確認的 4-methylpentanoic acid SMILES <code>CC(C)CCC(=O)O</code>。</p>
   <div class="actions"><button id="runAll" type="button" disabled>依序測試全部案例</button></div>
   <div id="overall" class="status">等待 RDKit.js 載入。</div>
   <div class="table-wrap"><table><thead><tr><th>輸入 SMILES</th><th>API 名稱／預期名稱</th><th>API 處理後 SMILES</th><th>API 主體定位號 → Atom ID</th><th>原始輸入索引相容性</th><th>圖形預覽</th><th>操作</th></tr></thead><tbody id="cases"></tbody></table></div>
@@ -47,7 +47,7 @@
     {smiles:'CC(O)CC', expected:'butan-2-ol'},
     {smiles:'CC=CCC', expected:'pent-2-ene'},
     {smiles:'CC(C)CC(=O)O', expected:'3-methylbutanoic acid（原需求的預期名稱有誤）'},
-    {smiles:'CCC(C)CC(=O)O', expected:'4-methylpentanoic acid'},
+    {smiles:'CC(C)CCC(=O)O', expected:'4-methylpentanoic acid'},
     {smiles:'C1CCCCC1', expected:'cyclohexane'}
   ];
   const tbody = document.querySelector('#cases');
