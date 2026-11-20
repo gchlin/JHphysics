@@ -85,7 +85,9 @@ function svgWithNumberLabels(mol, labels, options, size = 'small', keepPrefix = 
   const elementFont = Math.max(0,...[...base.matchAll(/<text\b[^>]*class='atom-\d+'[^>]*font-size:([\d.]+)px/g)].map(m=>Number(m[1]))) || noteFont * scale * 2;
   if (!Number.isFinite(noteFont) || !Number.isFinite(elementFont))
     throw new Error('Cannot determine RDKit annotation font size.');
-  const fontSize = Math.round(elementFont * ({small:0.72, medium:1, large:1.25}[size] || 0.72) * 10) / 10;
+  // Teaching presets from the reference artwork: handout half-size, slides
+  // full-size. These are visual proportions, not a nomenclature standard.
+  const fontSize = Math.round(elementFont * ({small:0.5, medium:1, large:1.25}[size] || 0.5) * 10) / 10;
   const widthOf = (text,font) => [...text].reduce((sum,ch)=>sum+(/[il1.,'()]/.test(ch)?0.36:/[^\x00-\x7f]/.test(ch)?1:0.67)*font,0);
   const box = (x,y,width,font,pad=0) => ({left:x-pad,right:x+width+pad,top:y-font-pad,bottom:y+font*0.22+pad});
   const obstacles = [...base.matchAll(/<text\b[^>]*>[\s\S]*?<\/text>/g)].flatMap(([tag])=>{
@@ -135,12 +137,13 @@ function svgWithNumberLabels(mol, labels, options, size = 'small', keepPrefix = 
     const nativeY = center.y+(oldY-noteFont*0.35-reference.y)*scale;
     const nativeAngle = Math.atan2(nativeY-center.y,nativeX-center.x);
     const nativeRadius = Math.hypot(nativeX-center.x,nativeY-center.y);
+    const preferredRadius = Math.max(fontSize*0.7,Math.min(nativeRadius,finalBond*(size==='small'?0.24:0.36)));
     const gap = Math.max(fontSize*0.2,finalBond*0.035);
     let best;
     // Search nearby sectors first, with a radius tied to the text and bond size.
     // Penalize collisions before distance; no global displacement of the drawing.
     const offsets = [0,1,-1,2,-2,3,-3,4,-4,5,-5,6,-6,7,-7,8];
-    const radii = [Math.max(nativeRadius,fontSize*0.8),Math.max(nativeRadius,fontSize*1.25),Math.max(nativeRadius,fontSize*1.7),Math.max(nativeRadius,fontSize*2.2,finalBond*0.65)];
+    const radii = [preferredRadius,Math.max(preferredRadius,fontSize*1.25),Math.max(preferredRadius,fontSize*1.7),Math.max(preferredRadius,fontSize*2.2,finalBond*0.65)];
     for (const radius of radii) for (const offset of offsets) {
       const angle=nativeAngle+offset*Math.PI/8;
       const x=center.x+Math.cos(angle)*radius-width/2, y=center.y+Math.sin(angle)*radius+fontSize*0.39;

@@ -112,16 +112,29 @@
             <div class="style-group"><strong>編號</strong><div class="segmented" role="group" aria-label="原子編號方式">
             <button type="button" data-numbering="none" aria-pressed="true">不顯示</button>
             <button type="button" data-numbering="iupac" aria-pressed="false" title="選用時將目前 SMILES 傳送至 OpenClatura，取得母體主鏈／主環碳定位號；成功結果於本頁暫存">IUPAC 碳編號</button>
+            <button type="button" data-numbering="steroid" aria-pressed="false" title="辨認支援的膽固醇型骨架時自動選取；依固定骨架標出 C1–C27，支鏈可標到 C29">固醇 C 編號</button>
           </div><span id="advancedNumberingStatus" class="advanced-numbering-status" role="status" hidden></span></div>
             <details class="numbering-more"><summary>更多</summary><div class="segmented" role="group" aria-label="其他原子編號方式">
             <button type="button" data-numbering="index" aria-pressed="false" title="從 0 開始，供辨識原子，非命名編號">原子序號</button>
-            <button type="button" data-numbering="steroid" aria-pressed="false" title="依類固醇骨架標出 C1–C27；支鏈可標到 C29">類固醇 C 編號</button>
-          </div></details>
-            <div id="iupacStyleControls" class="style-group" hidden><strong>母體碳樣式</strong><div class="segmented" role="group" aria-label="IUPAC 碳編號樣式"><button type="button" data-iupac-style="combined" aria-pressed="true">C1、C2</button><button type="button" data-iupac-style="element" aria-pressed="false">C ＋ 數字旁註</button></div></div>
-            <div id="numberingSizeControls" class="style-group"><strong>編號大小</strong><div class="segmented" role="group" aria-label="編號文字大小">
-            <button type="button" data-numbering-size="small" aria-pressed="true">小</button>
-            <button type="button" data-numbering-size="medium" aria-pressed="false" title="與元素符號相同大小">中</button>
-            <button type="button" data-numbering-size="large" aria-pressed="false">大</button>
+          </div><div id="iupacExtraStyleControls" class="segmented" role="group" aria-label="其他 IUPAC 標號形式" hidden><button type="button" data-iupac-style="combined" aria-pressed="false">C1、C2</button>
+          </div><details class="sterol-help"><summary>固醇編號怎麼標？</summary>
+            <p>先辨認相連的四個環：A、B、C 是六元環，D 是五元環。下圖以膽固醇為例；含 OH 的六元環是 A，另一端的五元環是 D。先對照環的接點，再沿邊編號，別從任意端點重新數起。</p>
+            <figure><img src="sterol-numbering-guide.svg" alt="膽固醇固定碳定位號 1 至 27；可對照下列四環路徑與側鏈" loading="lazy"><figcaption>膽固醇編號示意；旋轉圖或改變 SMILES 順序，定位號不變。</figcaption></figure>
+            <ol>
+              <li>A 環：1 → 2 → 3 → 4 → 5 → 10 → 回到 1。</li>
+              <li>B 環：5 → 6 → 7 → 8 → 9 → 10 → 回到 5。</li>
+              <li>C 環：8 → 9 → 11 → 12 → 13 → 14 → 回到 8。</li>
+              <li>D 環：13 → 14 → 15 → 16 → 17 → 回到 13。</li>
+            </ol>
+            <p>再補角甲基：C10 上接 C19，C13 上接 C18；依連接位置辨認，不能按畫面左右決定。膽固醇型側鏈由 C17 接 C20，C20 的甲基是 C21；主段接續 C22 → 23 → 24 → 25，末端兩個甲基為 C26、C27。其他類固醇可能有不同側鏈，不能一律套用 1–29。</p>
+            <p><strong>本工具怎麼做：</strong>在本機用 RDKit 比對固定 27 碳骨架，再套固定定位號；不是按 SMILES 出現次序數碳。只接受程式可匹配的膽固醇型結構：27–29 個碳、恰一個氧、C3 接 OH，其餘僅 C/O；額外碳須接成 C24 → C28（→ C29）。常見雙鍵變體可比對，但這不是通用類固醇編號器，也不驗證完整立體族群；無法匹配就停止，不猜編號。</p>
+            <p>這個模式的固定定位號不能逐字編輯。「調整碳編號」僅適用於成功取得 IUPAC 母體資料後的顯示文字。</p>
+            <p class="sterol-help-source">編號依據：<a href="https://iupac.qmul.ac.uk/steroid/3S01.html" target="_blank" rel="noopener noreferrer">IUPAC–IUB 3S-1.0–1.2 官方骨架圖與規則 ↗</a>。上圖由本工具的 RDKit 繪圖產生。</p>
+          </details></details>
+            <div id="iupacStyleControls" class="style-group" hidden><strong>標號形式</strong><div class="segmented" role="group" aria-label="IUPAC 碳編號樣式"><button type="button" data-iupac-style="numeric" aria-pressed="true">純數字</button><button type="button" data-iupac-style="element" aria-pressed="false">C ＋ 數字旁註</button></div><span id="iupacStyleStatus" class="advanced-numbering-status" hidden>使用中：C1、C2</span></div>
+            <div id="numberingSizeControls" class="style-group"><strong>編號用途</strong><div class="segmented" role="group" aria-label="編號用途預設">
+            <button type="button" data-numbering-size="small" aria-pressed="true" title="小號數字，約元素字高的一半，緊鄰對應原子並避開標記">講義</button>
+            <button type="button" data-numbering-size="medium" aria-pressed="false" title="大號數字，約與元素符號同高，隨字級增加避碰間距">投影片</button>
           </div></div></div>
           </details>
           <input id="bondInput" type="hidden" value="1.4"><output id="bondOutput" hidden>1.4</output><input id="colorInput" type="checkbox" checked hidden><input id="carbonInput" type="checkbox" hidden>
@@ -150,6 +163,7 @@
               </div>
               <label id="highlightTargetLabel" class="highlight-field" hidden><span id="highlightTargetKind">元素</span><select id="highlightTarget" aria-label="標色目標"></select></label>
               <label id="highlightOccurrenceLabel" class="highlight-field" hidden>哪一個 <select id="highlightOccurrence" aria-label="哪一個"></select></label>
+              <div class="segmented highlight-palette" role="group" aria-label="標色色盤" title="切換色盤會同步調整已標色的深淺，保留各處色相"><button type="button" data-highlight-palette="soft" aria-pressed="true">柔和</button><button type="button" data-highlight-palette="deep" aria-pressed="false">深色</button></div>
               <div class="highlight-colors" role="group" aria-label="標色顏色">
                 <button type="button" data-highlight-color="#f5b942" aria-label="黃色" aria-pressed="true" style="--swatch:#f5b942"></button>
                 <button type="button" data-highlight-color="#ef7b85" aria-label="紅色" aria-pressed="false" style="--swatch:#ef7b85"></button>

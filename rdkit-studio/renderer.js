@@ -302,7 +302,7 @@ async function drawMolecule(smiles, options = {}) {
       drawOptions.bonds = [];
       drawOptions.highlightAtomColors = Object.fromEntries(drawOptions.atoms.map(index => [index, [0, 0, 0, 0]]));
     }
-    const numberLabels = options.iupac_style === 'element' && options.iupac_labels
+    const numberLabels = options.iupac_style !== 'combined' && options.iupac_labels
       ? Object.fromEntries(Object.entries(options.iupac_labels).map(([id,text])=>[id, /^C\d+[a-z]?$/.test(text) ? text.slice(1) : text])) : options.iupac_labels;
     const rawSvg = options.iupac_labels ? svgWithNumberLabels(transformed, numberLabels, drawOptions, options.numbering_size, true)
       : sterolLabels ? svgWithSterolNumbers(transformed, sterolLabels, drawOptions, options.numbering_size)

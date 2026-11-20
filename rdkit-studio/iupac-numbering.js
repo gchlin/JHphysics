@@ -80,7 +80,16 @@
     const cache = new Map();
     return async function resolve(rdkit, smiles, {signal} = {}) {
       if (signal?.aborted) throw new DOMException('已取消查詢', 'AbortError');
-      if (cache.has(smiles)) return cache.get(smiles);
+      let identityMol;
+      let cacheKey;
+      try {
+        identityMol = rdkit.get_mol(smiles);
+        if (!identityMol) throw new Error('SMILES 無法解析。');
+        // Canonical isomeric identity includes charge, isotope and stereo. The
+        // cached response retains its own validated processed-index mapping.
+        cacheKey = identityMol.get_smiles();
+      } finally {identityMol?.delete();}
+      if (cache.has(cacheKey)) return cache.get(cacheKey);
       const controller = new AbortController();
       const cancel = () => controller.abort();
       signal?.addEventListener('abort', cancel, {once:true});
@@ -96,7 +105,7 @@
         if (controller.signal.aborted) throw new DOMException('已取消查詢', 'AbortError');
         const result = validate(rdkit, smiles, data);
         if (cache.size >= 30) cache.delete(cache.keys().next().value);
-        cache.set(smiles, result);
+        cache.set(cacheKey, result);
         return result;
       } catch (error) {
         if (signal?.aborted) throw new DOMException('已取消查詢', 'AbortError');

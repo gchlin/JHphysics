@@ -598,9 +598,18 @@ summary:focus-visible,button:focus-visible { outline:2px solid var(--teal); outl
 .numbering-edit-row input,.numbering-edit-row select,.numbering-edit-row button {font:inherit; padding:4px 6px; border:1px solid var(--line); border-radius:4px; background:white; color:var(--ink);}
 .numbering-edit-row input {width:95px;}
 .numbering-edit-hint {font-size:11px;}
-.numbering-more {font-size:12px; color:var(--muted);}
+.numbering-more {font-size:12px; color:var(--muted); min-width:0; max-width:100%;}
 .numbering-more > summary {cursor:pointer; width:fit-content;}
 .numbering-more > .segmented {margin-top:5px;}
+.sterol-help {margin-top:8px; max-width:640px; font-size:12px; line-height:1.65; color:var(--ink);}
+.sterol-help > summary {cursor:pointer; color:var(--teal); width:fit-content;}
+.sterol-help p {margin:8px 0;}
+.sterol-help figure {margin:8px 0;}
+.sterol-help img {display:block; width:100%; height:auto; background:white;}
+.sterol-help figcaption,.sterol-help-source {font-size:11px; color:var(--muted);}
+.sterol-help ol {margin:8px 0; padding-left:22px;}
+.sterol-help a {color:var(--teal);}
+.highlight-tools .highlight-palette button {font-size:11px; padding:4px 7px;}
 .advanced-numbering-status {font-size:11px; color:var(--teal);}
 .preview-stage [data-numbering-atom] {cursor:pointer;}
 .structure-edit-link {border:0; background:none; padding:0; font:inherit; color:var(--teal); cursor:pointer;}

@@ -128,6 +128,11 @@ let highlightCandidates = {elements:[], groups:[]};
 let highlightIdentity = '';
 let highlightHydrogens = '';
 let highlightColor = '#f5b942';
+let highlightPalette = 'soft';
+const highlightPalettes = {
+  soft:['#f5b942','#ef7b85','#6cbbdf','#81c69b'],
+  deep:['#bc810c','#c43d52','#247aa6','#27885d']
+};
 // Committed marks are what the export uses. The selection is the set of marks
 // produced by the current element/group target; it is replaced when the target changes.
 let highlightedAtoms = new Map();
@@ -314,6 +319,26 @@ document.querySelectorAll('[data-highlight-color]').forEach(button => button.add
   highlightColor = button.dataset.highlightColor;
   document.querySelectorAll('[data-highlight-color]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
   recolorSelection();
+  if (parentAtoms.size) parentColor = highlightColor;
+  paintHighlights();
+}));
+document.querySelectorAll('[data-highlight-palette]').forEach(button => button.addEventListener('click', () => {
+  const next = button.dataset.highlightPalette;
+  if (next === highlightPalette || !highlightPalettes[next]) return;
+  const before = highlightPalettes[highlightPalette], after = highlightPalettes[next];
+  const remap = color => {const index=before.indexOf(color);return index<0?color:after[index];};
+  highlightedAtoms.forEach((color,id)=>highlightedAtoms.set(id,remap(color)));
+  highlightedBonds.forEach((color,id)=>highlightedBonds.set(id,remap(color)));
+  highlightColor = remap(highlightColor); parentColor = remap(parentColor);
+  highlightPalette = next;
+  const names=['黃色','紅色','藍色','綠色'];
+  document.querySelectorAll('[data-highlight-color]').forEach((swatch,index)=>{
+    swatch.dataset.highlightColor = after[index];
+    swatch.style.setProperty('--swatch',after[index]);
+    swatch.setAttribute('aria-label',`${names[index]}（${next==='deep'?'深色':'柔和'}）`);
+    swatch.setAttribute('aria-pressed',String(after[index]===highlightColor));
+  });
+  document.querySelectorAll('[data-highlight-palette]').forEach(item=>item.setAttribute('aria-pressed',String(item===button)));
   paintHighlights();
 }));
 eraseHighlightButton.addEventListener('click', () => {removeSelection(); setHighlightMode('direct');});
@@ -379,7 +404,29 @@ let flipY = false;
 let hydrogenMode = 'hetero';
 let stereoMode = 'wedge';
 let numberingMode = 'none';
-let iupacStyle = 'combined';
+let numberingStructureIdentity = '';
+let nonSterolNumberingMode = 'none';
+let autoSterolNumbering = false;
+function detectMoleculeNumbering(rdkit, smiles) {
+  const mol = rdkit.get_mol(smiles);
+  if (!mol) return;
+  try {
+    const identity = mol.get_smiles();
+    if (identity === numberingStructureIdentity) return;
+    if (numberingMode !== 'steroid') nonSterolNumberingMode = numberingMode;
+    // Use exactly the renderer's conservative local skeleton recognition.
+    // Re-detect only on a new chemical identity, preserving same-molecule edits.
+    let supported = false;
+    try {supported = !!sterolAtomLabels(rdkit, mol);} catch { /* Unsupported: never guess. */ }
+    autoSterolNumbering = supported;
+    if (supported) numberingMode = 'steroid';
+    else if (numberingMode === 'steroid') numberingMode = nonSterolNumberingMode;
+    numberingStructureIdentity = identity;
+    document.querySelectorAll('[data-numbering]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.numbering === numberingMode)));
+    updateNumberingControls();
+  } finally {mol.delete();}
+}
+let iupacStyle = 'numeric';
 let numberingSize = 'small';
 let explicitMethyl = false;
 let sizeMode = 'height';
@@ -746,13 +793,18 @@ async function render() {
     setLookupStatus(foundStatus.kind, foundStatus.message);
     stage = 'drawing';
     let structure = candidate.smiles;
+    const numberingRdkit = await rdkitReady;
+    if (sequence !== renderSequence) return false;
+    detectMoleculeNumbering(numberingRdkit, structure);
     if (customNumberingKey && !customNumberingKey.startsWith(structure + '\n')) {
       customNumberingKey = '';
       customNumberingLabels = {};
       numberingEditor.open = false;
     }
     const drawSettings = options();
-    let numberingMessage = '';
+    let numberingMessage = numberingMode === 'steroid'
+      ? autoSterolNumbering ? '已於本機辨認支援的膽固醇型骨架，自動選用固醇編號。' : '固醇固定骨架編號 · 本機辨識'
+      : '';
     if (numberingMode === 'iupac') {
       numberingNotice.hidden = false;
       numberingNotice.textContent = '正在向 OpenClatura 查詢 IUPAC 碳編號…';
@@ -1255,8 +1307,10 @@ document.querySelectorAll('[data-stereo]').forEach(button => button.addEventList
 }));
 function updateNumberingControls() {
   document.querySelector('#iupacStyleControls').hidden = numberingMode !== 'iupac';
+  document.querySelector('#iupacExtraStyleControls').hidden = numberingMode !== 'iupac';
+  document.querySelector('#iupacStyleStatus').hidden = iupacStyle !== 'combined';
   const advancedStatus = document.querySelector('#advancedNumberingStatus');
-  advancedStatus.textContent = numberingMode === 'index' ? '使用中：原子序號' : numberingMode === 'steroid' ? '使用中：類固醇 C 編號' : '';
+  advancedStatus.textContent = numberingMode === 'index' ? '使用中：原子序號' : '';
   advancedStatus.hidden = !advancedStatus.textContent;
   const disabled = numberingMode === 'none';
   document.querySelectorAll('[data-numbering-size]').forEach(button => { button.disabled = disabled; });
@@ -1265,6 +1319,8 @@ function updateNumberingControls() {
 updateNumberingControls();
 document.querySelectorAll('[data-numbering]').forEach(button => button.addEventListener('click', () => {
   numberingMode = button.dataset.numbering;
+  autoSterolNumbering = false;
+  if (numberingMode !== 'steroid') nonSterolNumberingMode = numberingMode;
   document.querySelectorAll('[data-numbering]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
   updateNumberingControls();
   scheduleStyleRender();
@@ -1358,6 +1414,7 @@ document.querySelector('#copyEditSmiles').addEventListener('click', async () => 
 document.querySelectorAll('[data-iupac-style]').forEach(button => button.addEventListener('click', () => {
   iupacStyle = button.dataset.iupacStyle;
   document.querySelectorAll('[data-iupac-style]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+  updateNumberingControls();
   scheduleStyleRender();
 }));
 copySmilesButton.addEventListener('click', async () => {
