@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>OpenClatura API × GitHub Pages 測試台</title>
+<style>
+:root{font-family:system-ui,-apple-system,"Segoe UI","Noto Sans TC",sans-serif;color-scheme:light;--ink:#162235;--muted:#5b6b80;--line:#dce3ec;--bg:#f4f7fb;--panel:#fff;--accent:#1769b6;--soft:#eaf3fc}
+*{box-sizing:border-box}body{background:var(--bg);color:var(--ink);margin:0;line-height:1.55}.wrap{max-width:1160px;margin:auto;padding:30px 18px 60px}header{margin-bottom:24px}h1{font-size:clamp(24px,4vw,35px);margin:0 0 8px;letter-spacing:-.03em}h2{font-size:19px;margin:0 0 14px}p{margin:0;color:var(--muted)}.tag{display:inline-block;background:var(--soft);color:var(--accent);font-size:12px;font-weight:700;padding:4px 10px;border-radius:50px;margin-bottom:10px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:17px}.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;min-width:0;box-shadow:0 4px 20px rgba(18,40,70,.035)}.full{grid-column:1/-1}label{display:block;font-weight:650;font-size:14px;margin:12px 0 6px}input,select,textarea{font:inherit;width:100%;border:1px solid #bdc9d8;border-radius:9px;padding:10px 12px;background:#fff;color:var(--ink)}input:focus,select:focus,textarea:focus{outline:2px solid #a3d0f4;outline-offset:1px}textarea{min-height:80px;resize:vertical}button{border:1px solid var(--accent);background:var(--accent);color:white;font:inherit;font-weight:650;border-radius:10px;padding:10px 15px;cursor:pointer}button:disabled{opacity:.45;cursor:not-allowed}.ghost{color:var(--accent);background:#fff}.buttons{display:flex;flex-wrap:wrap;gap:9px;margin-top:15px}.small{font-size:12px;color:var(--muted);margin-top:8px;word-break:break-word}.status{border-radius:10px;border:1px solid var(--line);background:#f8fafc;padding:13px;font-size:14px;white-space:pre-wrap;word-break:break-word;margin-top:10px}.status.ok{background:#edf9f2;border-color:#b6dfc7;color:#155e36}.status.bad{background:#fff1f0;border-color:#f0bdb7;color:#962f25}.status.warn{background:#fff8e7;border-color:#ecd293;color:#805d0a}.kv{display:grid;grid-template-columns:150px minmax(0,1fr);gap:8px 12px;font-size:14px}.kv dt{color:var(--muted)}.kv dd{margin:0;overflow-wrap:anywhere}pre{padding:14px;margin:0;background:#111c2c;color:#e5f2ff;border-radius:10px;white-space:pre-wrap;overflow-wrap:anywhere;overflow:auto;max-height:550px;font-size:12px;line-height:1.55}#matches{max-height:340px}.pill{display:inline-block;background:#eff2f7;border-radius:6px;padding:2px 6px;font-size:12px}.note{font-size:13px;color:var(--muted);margin-top:10px}.inline{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.inline input[type=checkbox]{width:auto}.summary{margin-bottom:10px;font-size:14px}.links a{color:var(--accent)}.checklist{padding-left:20px;font-size:14px}.checklist li{margin:8px 0}@media(max-width:740px){.grid{grid-template-columns:1fr}.full{grid-column:auto}.card{padding:16px}.kv{grid-template-columns:110px 1fr}}
+</style>
+</head>
+<body>
+<main class="wrap">
+<header>
+  <div class="tag">單檔 HTML · 純前端 · GitHub Pages</div>
+  <h1>OpenClatura API 整合測試台</h1>
+  <p>確認瀏覽器跨網域存取（CORS）、API 回傳內容，以及是否有可用的 IUPAC 原子定位號對照。<strong>本頁不會修改你的 RDKit.js 專案。</strong></p>
+</header>
+<div class="grid">
+<section class="card">
+  <h2>1. 設定與執行</h2>
+  <label for="smiles">SMILES</label>
+  <input id="smiles" value="CC(C)CC" spellcheck="false" autocomplete="off" aria-label="SMILES">
+  <div class="buttons">
+    <button type="button" class="ghost preset" data-smiles="CC(C)CC">2-甲基丁烷</button>
+    <button type="button" class="ghost preset" data-smiles="CCC(C)C">相同分子：不同 SMILES</button>
+    <button type="button" class="ghost preset" data-smiles="CC(O)CC">丁-2-醇</button>
+    <button type="button" class="ghost preset" data-smiles="CC(C)CC(=O)O">4-甲基戊酸</button>
+  </div>
+  <label for="endpoint">端點路徑</label>
+  <select id="endpoint"><option value="describe">/describe（命名與說明）</option><option value="name">/name（命名結果）</option></select>
+  <div class="inline" style="margin-top:12px"><label style="display:flex;align-items:center;gap:7px;margin:0;font-weight:400"><input id="verify" type="checkbox">啟用 verify（預設關閉）</label></div>
+  <div class="buttons">
+    <button id="run" type="button">執行瀏覽器 fetch 測試</button>
+    <button id="copyUrl" type="button" class="ghost">複製 API 網址</button>
+  </div>
+  <div class="small" id="requestUrl"></div>
+</section>
+<section class="card">
+  <h2>2. 測試狀態</h2>
+  <dl class="kv">
+    <dt>目前網站 Origin</dt><dd id="origin">—</dd>
+    <dt>執行環境</dt><dd id="scheme">—</dd>
+    <dt>測試 HTTP 狀態</dt><dd id="http">尚未執行</dd>
+    <dt>耗時</dt><dd id="elapsed">—</dd>
+    <dt>回應 Content-Type</dt><dd id="contentType">—</dd>
+  </dl>
+  <div id="status" class="status" role="status" aria-live="polite">按下「執行瀏覽器 fetch 測試」。請以 GitHub Pages 網址開啟本頁，才能直接檢查實際部署情境。</div>
+  <p class="note">注意：HTTP 200 + 可從 JavaScript 讀到資料，才算通過這次瀏覽器測試。純終端機 HTTP 200 不代表 CORS 成功。若回應被 CORS 擋住，瀏覽器 JS 通常讀不到 HTTP 狀態。</p>
+</section>
+<section class="card full">
+  <h2>3. 定位號與編號資料偵測</h2>
+  <div class="summary" id="matchSummary">尚未取得資料。</div>
+  <pre id="matches">—</pre>
+  <p class="note">自動搜尋欄位名稱包含 <code>locant</code>、<code>number</code>、<code>parent</code>、<code>atom</code>、<code>trace</code>、<code>decision</code> 等的內容，也會掃描文字中的編號描述。<strong>搜尋到關鍵字不代表已取得完整的 atom → locant 映射。</strong></p>
+</section>
+<section class="card full">
+  <h2>4. 原始 JSON 與回傳內容</h2>
+  <div class="buttons" style="margin:0 0 12px">
+    <button type="button" class="ghost" id="copyJson" disabled>複製回應</button>
+    <button type="button" class="ghost" id="downloadJson" disabled>下載回應 JSON／文字</button>
+    <button type="button" class="ghost" id="copyReport" disabled>複製診斷報告</button>
+  </div>
+  <pre id="raw">—</pre>
+</section>
+<section class="card full">
+  <h2>如何判讀</h2>
+  <ol class="checklist">
+    <li><strong>fetch 成功：</strong>可從 GitHub Pages 網頁讀取回應，表示目前測試的 Origin、端點和請求條件下跨網域存取可用。</li>
+    <li><strong>包含 IUPAC 名稱：</strong>證明能命名，但還不能證明可在你自己的分子圖上標注 C1、C2……。</li>
+    <li><strong>包含 atom-to-locant 對照：</strong>需確認原子索引與你原本 RDKit.js 的 atom index 相符；如果 SMILES 在中途被重新解析或正規化，索引未必一致。</li>
+    <li><strong>只有文字描述定位號：</strong>代表仍需要可靠的結構化輸出介面，不能直接把文字當成正式原子映射。</li>
+  </ol>
+  <p class="links small">資料來源：<a href="https://openclatura.org/" target="_blank" rel="noopener noreferrer">OpenClatura</a> · <a href="https://github.com/lamalab-org/openclatura" target="_blank" rel="noopener noreferrer">GitHub 原始碼</a>。本頁是獨立測試工具，不是 OpenClatura 官方介面。</p>
+</section>
+</div>
+</main>
+<script>
+(() => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  let lastText = '', lastMeta = null;
+  const maxChars = 250000;
+  const maxMatchChars = 40000;
+
+  function buildUrl() {
+    const path = $('endpoint').value;
+    const url = new URL('https://openclatura.org/' + path);
+    url.searchParams.set('smiles', $('smiles').value.trim());
+    url.searchParams.set('format', 'json');
+    url.searchParams.set('verify', $('verify').checked ? '1' : '0');
+    return url;
+  }
+  function updateUrl() { $('requestUrl').textContent = buildUrl().toString(); }
+  function setStatus(message, kind = '') {
+    $('status').className = 'status ' + kind;
+    $('status').textContent = message;
+  }
+  function findCandidates(data) {
+    const found = [];
+    const seen = new WeakSet();
+    const keyRegex = /locant|number|parent|atom|trace|decision|mapping|chain|orientation|iupac/i;
+    const textRegex = /atom.{0,50}(?:locant|number)|locant.{0,50}atom|parent numbering|carbon numbering/i;
+    const maxNodes = 12000;
+    let nodes = 0;
+    function visit(value, path, depth) {
+      if (++nodes > maxNodes || depth > 30 || found.length >= 150) return;
+      if (value && typeof value === 'object') {
+        if (seen.has(value)) return;
+        seen.add(value);
+        for (const [k, v] of Object.entries(value)) {
+          const next = path + (Array.isArray(value) ? '[' + k + ']' : '.' + k);
+          if (keyRegex.test(k)) {
+            const snippet = JSON.stringify(v);
+            found.push({path: next, value: typeof snippet === 'string' ? snippet.slice(0,1600) : String(v)});
+          }
+          visit(v, next, depth + 1);
+          if (found.length >= 150) break;
+        }
+      } else if (typeof value === 'string' && textRegex.test(value)) {
+        found.push({path, value: value.slice(0,1600)});
+      }
+    }
+    visit(data, '$', 0);
+    return found;
+  }
+  function copyText(value) {
+    return navigator.clipboard.writeText(value).catch(() => {
+      const el = document.createElement('textarea');
+      el.value = value; el.style.position='fixed'; el.style.opacity='0';
+      document.body.appendChild(el); el.select();
+      const ok = document.execCommand('copy'); el.remove();
+      if (!ok) throw new Error('瀏覽器拒絕複製');
+    });
+  }
+  function clearResults() {
+    $('http').textContent = '等待回應…';
+    $('elapsed').textContent = '—';
+    $('contentType').textContent = '—';
+    $('raw').textContent = '—';
+    $('matches').textContent = '—';
+    $('matchSummary').textContent = '等待回應…';
+    ['copyJson','downloadJson','copyReport'].forEach(id => $(id).disabled = true);
+    lastText = ''; lastMeta = null;
+  }
+  async function run() {
+    const smiles = $('smiles').value.trim();
+    if (!smiles) return setStatus('請先輸入 SMILES。', 'bad');
+    const url = buildUrl();
+    clearResults();
+    $('run').disabled = true;
+    setStatus('正在從瀏覽器發出跨網域 fetch 請求…');
+    const start = performance.now();
+    const ctl = new AbortController();
+    const timeout = setTimeout(() => ctl.abort(), 20000);
+    try {
+      const response = await fetch(url.toString(), {
+        method: 'GET',
+        mode: 'cors',
+        credentials: 'omit',
+        redirect: 'follow',
+        signal: ctl.signal,
+        headers: { Accept: 'application/json' }
+      });
+      const elapsed = Math.round(performance.now() - start);
+      const ctype = response.headers.get('content-type') || '(未提供)';
+      $('http').textContent = `${response.status} ${response.statusText}`;
+      $('elapsed').textContent = elapsed + ' ms';
+      $('contentType').textContent = ctype;
+      const body = await response.text();
+      let data = null;
+      try { data = JSON.parse(body); } catch (_) {}
+      const printable = data === null ? body : JSON.stringify(data, null, 2);
+      lastText = printable;
+      $('raw').textContent = printable.length > maxChars ? printable.slice(0,maxChars) + '\n…（畫面僅顯示前 250,000 字，可下載完整回應）' : printable;
+      const candidates = data === null ? [] : findCandidates(data);
+      $('matchSummary').textContent = data === null
+        ? '回應不是可解析 JSON，請檢查下方原始內容。'
+        : `掃描到 ${candidates.length} 筆可能相關項目（僅為關鍵字偵測，並非 IUPAC 定位號已驗證）。`;
+      const output = candidates.length ? candidates.map(x=>x.path+'\n'+x.value).join('\n\n') : '未偵測到符合條件的欄位；請查看原始回應。';
+      $('matches').textContent = output.length > maxMatchChars ? output.slice(0,maxMatchChars) + '\n…（內容過長已截斷）' : output;
+      lastMeta = {origin:location.origin, endpoint:url.toString(), status:response.status, elapsedMs:elapsed, contentType:ctype, parsedJson:data!==null, candidateCount:candidates.length};
+      ['copyJson','downloadJson','copyReport'].forEach(id => $(id).disabled = false);
+      if (response.ok && data !== null) {
+        setStatus(`✅ 瀏覽器可讀取 API JSON（HTTP ${response.status}）。目前來源的 CORS／瀏覽器讀取測試通過。\n請繼續檢查第 3 區是否真的包含原子索引到 IUPAC 定位號的對照。`, 'ok');
+      } else if (!response.ok) {
+        setStatus(`⚠️ 瀏覽器已讀到 HTTP ${response.status} 回應，但 API 請求未成功；這不是 CORS 被阻擋。請看原始回應。`, 'warn');
+      } else {
+        setStatus('⚠️ HTTP 請求成功，但回應不是有效 JSON。請查看原始內容及 Content-Type。', 'warn');
+      }
+    } catch (error) {
+      $('elapsed').textContent = Math.round(performance.now()-start)+' ms';
+      $('http').textContent = '無法從 JS 讀取回應';
+      $('matchSummary').textContent = '失敗，沒有可分析的 JSON。';
+      setStatus(`❌ fetch 失敗：${error.name}: ${error.message}\n\n可能原因：CORS、網路/DNS、TLS、重新導向、瀏覽器擴充功能或逾時。請開啟 F12 → Console / Network 查看詳細錯誤。單靠這個錯誤無法斷定一定是 CORS。`, 'bad');
+    } finally {
+      clearTimeout(timeout);
+      $('run').disabled = false;
+    }
+  }
+  $('origin').textContent = location.origin;
+  $('scheme').textContent = location.protocol === 'https:' ? 'HTTPS（適合 GitHub Pages）' : (location.protocol === 'file:' ? 'file://（建議改用 GitHub Pages 測）' : location.protocol);
+  document.querySelectorAll('.preset').forEach(btn => btn.addEventListener('click', () => {$('smiles').value=btn.dataset.smiles;updateUrl();}));
+  ['smiles','endpoint','verify'].forEach(id => $(id).addEventListener(id==='smiles'?'input':'change', updateUrl));
+  $('run').addEventListener('click', run);
+  $('copyUrl').addEventListener('click', async()=>{try{await copyText(buildUrl().toString());setStatus('已複製 API URL。');}catch(e){setStatus(e.message,'bad');}});
+  $('copyJson').addEventListener('click', async()=>{try{await copyText(lastText);setStatus('已複製完整回應。','ok');}catch(e){setStatus(e.message,'bad');}});
+  $('copyReport').addEventListener('click', async()=>{
+    try {await copyText('OpenClatura browser test\n'+JSON.stringify(lastMeta,null,2)+'\n\nResponse:\n'+lastText);setStatus('已複製診斷報告（含完整回應）。','ok');}
+    catch(e){setStatus(e.message,'bad');}
+  });
+  $('downloadJson').addEventListener('click',()=>{
+    const data=new Blob([lastText],{type:'application/json;charset=utf-8'});
+    const url=URL.createObjectURL(data);
+    const a=document.createElement('a');a.href=url;a.download='openclatura-response.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  });
+  updateUrl();
+})();
+</script>
+</body>
+</html>
