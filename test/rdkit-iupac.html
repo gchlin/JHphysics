@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RDKit.js × OpenClatura 定位號驗證</title>
+<style>
+:root{font-family:system-ui,-apple-system,"Segoe UI","Noto Sans TC",sans-serif;color:#162235;background:#f3f6fa;line-height:1.55}*{box-sizing:border-box}body{margin:0}.wrap{max-width:1180px;margin:auto;padding:24px 16px 56px}h1{font-size:clamp(24px,4vw,34px);margin:0 0 8px}h2{font-size:19px;margin:0 0 12px}.muted{color:#586a80}.card{background:white;border:1px solid #d9e1eb;border-radius:14px;padding:18px;margin:14px 0;box-shadow:0 3px 18px #182c4610}.status{padding:12px;border-radius:9px;background:#eff4fa;white-space:pre-wrap;word-break:break-word}.status.ok{background:#eaf7ef;color:#155c32}.status.bad{background:#fff0ee;color:#8c291f}.status.warn{background:#fff7e5;color:#745408}button{font:inherit;border:0;border-radius:8px;padding:9px 14px;background:#1769b6;color:white;cursor:pointer}button:disabled{opacity:.55;cursor:wait}.table-wrap{overflow:auto}table{border-collapse:collapse;width:100%;min-width:900px;font-size:14px}th,td{text-align:left;vertical-align:top;border-bottom:1px solid #e4eaf1;padding:10px 8px}th{background:#f7f9fc}.mono,code{font-family:Consolas,monospace;overflow-wrap:anywhere}.result{white-space:pre-wrap;word-break:break-word}.molecule{min-width:180px}.molecule svg{max-width:280px;max-height:180px}.chip{display:inline-block;margin:2px;padding:2px 6px;border-radius:5px;background:#edf3fa;font:12px Consolas,monospace}.small{font-size:13px}.actions{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}.note{background:#fff9e9;padding:12px;border-radius:9px}.pass{color:#14633a}.fail{color:#9a2b21}details{margin-top:8px}pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:320px;overflow:auto;background:#111c2c;color:#e5f2ff;padding:12px;border-radius:8px;font-size:12px}
+</style>
+</head>
+<body>
+<main class="wrap">
+<h1>RDKit.js × OpenClatura：IUPAC 碳定位號驗證</h1>
+<p class="muted">此獨立測試頁不修改 RDKit Studio。它從本頁 Origin 呼叫 OpenClatura，讀取 API 提供的處理後 SMILES 和主體定位號，再以同一處理後 SMILES 建立 RDKit.js 顯示分子。</p>
+<section class="card">
+  <h2>瀏覽器與 RDKit 狀態</h2>
+  <div id="rdkitStatus" class="status">正在載入 RDKit.js / WebAssembly…</div>
+  <p class="small">頁面 Origin：<code id="origin"></code>　RDKit.js：<code>../rdkit-studio/vendor/RDKit_minimal.js</code></p>
+</section>
+<section class="card">
+  <h2>測試案例</h2>
+  <p class="note small">原需求中 <code>CC(C)CC(=O)O</code> 標成 4-methylpentanoic acid，但實際結構是 <strong>3-methylbutanoic acid（3-甲基丁酸）</strong>。表格保留原始輸入並另列正確的 4-methylpentanoic acid SMILES 作對照。</p>
+  <div class="actions"><button id="runAll" type="button" disabled>依序測試全部案例</button></div>
+  <div id="overall" class="status">等待 RDKit.js 載入。</div>
+  <div class="table-wrap"><table><thead><tr><th>輸入 SMILES</th><th>API 名稱／預期名稱</th><th>API 處理後 SMILES</th><th>API 主體定位號 → Atom ID</th><th>原始輸入索引相容性</th><th>圖形預覽</th><th>操作</th></tr></thead><tbody id="cases"></tbody></table></div>
+</section>
+<section class="card">
+  <h2>本頁判讀方式</h2>
+  <ol class="small">
+    <li>API 的 `paragraphs` 會提供 Processed SMILES 與該字串的 Atom IDs；API 定位號索引以這個處理後字串為準。</li>
+    <li>把相同 Processed SMILES 交給 RDKit.js 解析，並檢查原子數、元素及主鏈相鄰關係；標號 SVG 也由這個 RDKit.js 分子產生。</li>
+    <li>若 API 索引不能沿著原始輸入 RDKit 分子的鍵連成主體路徑，頁面會標示原索引不相容，不能直接套在 GUI 原始分子上。</li>
+    <li>只有瀏覽器顯示 HTTP 成功、解析 JSON、定位號表與圖形標號時，該案例才算完整通過。跨網域失敗會保留瀏覽器實際錯誤。</li>
+  </ol>
+  <details><summary>目前案例原始 JSON</summary><pre id="raw">尚無 API 回應。</pre></details>
+</section>
+</main>
+<script src="../rdkit-studio/vendor/RDKit_minimal.js"></script>
+<script src="../rdkit-studio/steroid-numbering.js"></script>
+<script>
+(() => {
+  'use strict';
+  const cases = [
+    {smiles:'CCCC', expected:'butane'},
+    {smiles:'CC(C)CC', expected:'2-methylbutane'},
+    {smiles:'CCC(C)C', expected:'2-methylbutane'},
+    {smiles:'CC(O)CC', expected:'butan-2-ol'},
+    {smiles:'CC=CCC', expected:'pent-2-ene'},
+    {smiles:'CC(C)CC(=O)O', expected:'3-methylbutanoic acid（原需求的預期名稱有誤）'},
+    {smiles:'CCC(C)CC(=O)O', expected:'4-methylpentanoic acid'},
+    {smiles:'C1CCCCC1', expected:'cyclohexane'}
+  ];
+  const tbody = document.querySelector('#cases');
+  const setStatus = (el, text, kind='') => { el.className='status '+kind; el.textContent=text; };
+  const atomInfo = mol => {
+    const data=JSON.parse(mol.get_json()), m=data.molecules?.[0], defaults=data.defaults?.atom||{};
+    const atoms=(m?.atoms||[]).map(a=>({...defaults,...a}));
+    const neighbors=atoms.map(()=>new Set());
+    for(const b of m?.bonds||[]){const [a,c]=b.atoms;neighbors[a].add(c);neighbors[c].add(a);}
+    return {atoms,neighbors};
+  };
+  function getPrimaryParent(data) {
+    const components=(data.substituent_tree||[]).filter(x=>x?.kind==='component'&&x.parent);
+    if(components.length!==1) throw new Error(`目前測試只接受單一主體元件；API 回傳 ${components.length} 個 component。`);
+    return components[0];
+  }
+  function extractProcessedSmiles(data) {
+    const paragraph=(data.paragraphs||[]).find(x=>/^Processed SMILES:/m.test(x));
+    const match=paragraph?.match(/^Processed SMILES:\s*([^\r\n]+)/m);
+    if(!match) throw new Error('API 沒有回傳可辨識的 Processed SMILES 說明。');
+    return match[1].trim();
+  }
+  function extractLabels(component) {
+    const p=component.parent, ids=p.atom_ids_by_locant, symbols=p.atom_symbols_by_locant||{};
+    if(!ids||typeof ids!=='object') throw new Error('缺少 parent.atom_ids_by_locant。');
+    const pairs=Object.entries(ids).sort((a,b)=>Number(a[0])-Number(b[0]));
+    if(!pairs.length||pairs.some(([locant,id])=>!/^\d+$/.test(locant)||!Number.isInteger(Number(id)))) throw new Error('定位號映射格式不完整。');
+    const used=new Set(); const labels={};
+    for(const [locant,idText] of pairs){
+      const id=Number(idText); if(used.has(id)) throw new Error(`Atom ${id} 被多個主體定位號重複使用。`); used.add(id);
+      const symbol=symbols[locant]; if(symbol!=='C') continue;
+      labels[id]=`C${locant}`;
+    }
+    if(!Object.keys(labels).length) throw new Error('主體映射中沒有碳定位號。');
+    return {labels,pairs};
+  }
+  function pathCheck(info,pairs) {
+    const ids=pairs.filter(([locant])=>Number.isInteger(Number(locant))).map(([,id])=>Number(id));
+    if(ids.some(i=>i<0||i>=info.atoms.length)) return {ok:false,reason:'API Atom ID 超出原始 RDKit 原子範圍'};
+    for(let i=1;i<ids.length;i++) if(!info.neighbors[ids[i-1]].has(ids[i])) return {ok:false,reason:`locant ${i}→${i+1} 的 Atom ${ids[i-1]}–${ids[i]} 不是原始分子中的直接鍵`};
+    return {ok:true,reason:'定位號 Atom ID 可在原始分子形成連續路徑'};
+  }
+  async function initRDKit() {
+    if(typeof initRDKitModule!=='function') throw new Error('RDKit.js 檔案未載入。');
+    return initRDKitModule();
+  }
+  function renderSvg(mol, labels) {
+    mol.set_new_coords(true);
+    const options={width:640,height:420,clearBackground:true,addAtomIndices:false,addStereoAnnotation:false};
+    const helperLabels=Object.fromEntries(Object.entries(labels).map(([index,value])=>[index,`X${value}`]));
+    if(typeof svgWithNumberLabels==='function') return svgWithNumberLabels(mol,helperLabels,options,'medium');
+    options.atomLabels=labels;
+    return mol.get_svg_with_highlights(JSON.stringify(options));
+  }
+  async function runCase(item,index,rdkit) {
+    const row=tbody.querySelector(`[data-row="${index}"]`), status=row.querySelector('.result'), preview=row.querySelector('.molecule'), button=row.querySelector('button');
+    button.disabled=true; preview.textContent='繪圖與資料驗證中…'; setStatus(status,'向 OpenClatura 發送瀏覽器 fetch…');
+    let inputMol,processedMol;
+    try {
+      const url=new URL('https://openclatura.org/describe');
+      url.searchParams.set('smiles',item.smiles); url.searchParams.set('format','json'); url.searchParams.set('verify','0');
+      const started=performance.now();
+      const response=await fetch(url,{method:'GET',mode:'cors',credentials:'omit',headers:{Accept:'application/json'}});
+      const body=await response.text();
+      let data; try{data=JSON.parse(body)}catch{throw new Error(`HTTP ${response.status}，但 response.json() 失敗：${body.slice(0,300)}`)}
+      document.querySelector('#raw').textContent=JSON.stringify({input:item.smiles,httpStatus:response.status,data},null,2);
+      if(!response.ok) throw new Error(`HTTP ${response.status}: ${JSON.stringify(data).slice(0,500)}`);
+      const component=getPrimaryParent(data), {labels,pairs}=extractLabels(component), processed=extractProcessedSmiles(data);
+      inputMol=rdkit.get_mol(item.smiles); processedMol=rdkit.get_mol(processed);
+      if(!inputMol||!processedMol) throw new Error('RDKit.js 無法解析輸入或 API Processed SMILES。');
+      const rawInfo=atomInfo(inputMol), processedInfo=atomInfo(processedMol);
+      if(processedInfo.atoms.length!==rawInfo.atoms.length) throw new Error('輸入與 Processed SMILES 的原子數不同，不能直接對應。');
+      for(const [locant,idText] of pairs){const id=Number(idText); if(id<0||id>=processedInfo.atoms.length) throw new Error(`Atom ${id} 超出 Processed SMILES 的原子範圍。`); if(processedInfo.atoms[id].z!==6 && (component.parent.atom_symbols_by_locant||{})[locant]==='C') throw new Error(`locant ${locant} 指向非碳 Atom ${id}。`);}
+      const rawPath=pathCheck(rawInfo,pairs), processedPath=pathCheck(processedInfo,pairs);
+      if(!processedPath.ok) throw new Error(`API 索引與 Processed SMILES RDKit.js 索引不一致：${processedPath.reason}`);
+      const rawIndexCell=row.querySelector('.raw-compat');
+      rawIndexCell.textContent=rawPath.reason; rawIndexCell.className='raw-compat '+(rawPath.ok?'pass':'fail');
+      const svg=renderSvg(processedMol,labels); if(!svg.includes('<svg')) throw new Error('RDKit.js 沒有產生 SVG。');
+      preview.innerHTML=svg;
+      const locants=pairs.map(([locant,id])=>`${locant}→${id}${(component.parent.atom_symbols_by_locant||{})[locant]==='C'?' (C)':''}`).join(' · ');
+      const expectedHit=(data.name||'').toLowerCase().replace(/[‐‑–]/g,'-').includes(item.expected.split('（')[0].toLowerCase().split('（')[0]);
+      const elapsed=Math.round(performance.now()-started);
+      setStatus(status,`HTTP ${response.status}; response.json() 成功; component=${component.name}; parent atoms=${component.parent.parent_length}; Processed SMILES Atom ID 路徑相容; ${elapsed} ms\n主體定位號：${locants}${rawPath.ok?'\n原始輸入索引：此案例剛好相容':'\n原始輸入索引：不可直接使用（需依 API Processed SMILES 重解析後繪圖）'}`, 'ok');
+      row.querySelector('.name').textContent=`${data.name||'(無名稱)'}\n預期：${item.expected}${expectedHit?'':'\n名稱與預期不同，請人工核對'}`;
+      row.querySelector('.processed').textContent=processed;
+      row.querySelector('.mapping').textContent=locants;
+      row.dataset.passed='true'; row.dataset.nameMatches=String(expectedHit);
+    } catch(error) {
+      setStatus(status,`失敗：${error.name}: ${error.message}\n瀏覽器來源：${location.origin}`, 'bad');
+      preview.textContent='未產生標號預覽'; row.dataset.passed='false';
+      row.querySelector('.raw-compat').textContent='無法判定';
+    } finally {inputMol?.delete();processedMol?.delete();button.disabled=false;}
+  }
+  const init=initRDKit();
+  document.querySelector('#origin').textContent=location.origin;
+  cases.forEach((item,index)=>{
+    const tr=document.createElement('tr');tr.dataset.row=String(index);
+    tr.innerHTML=`<td><code class="mono"></code></td><td class="name"></td><td><code class="processed mono">—</code></td><td class="mapping mono">—</td><td class="raw-compat">尚未測試</td><td class="molecule">—</td><td><button type="button">測試此例</button><div class="result small"></div></td>`;
+    tr.querySelector('td code').textContent=item.smiles;tr.querySelector('.name').textContent=`預期：${item.expected}`;
+    tr.querySelector('button').addEventListener('click',async()=>{try{const rdkit=await init;await runCase(item,index,rdkit)}catch(e){setStatus(document.querySelector('#rdkitStatus'),`RDKit 載入失敗：${e.message}`,'bad')}});
+    tbody.append(tr);
+  });
+  init.then(()=>{
+    setStatus(document.querySelector('#rdkitStatus'),'RDKit.js 與 WebAssembly 載入成功。','ok');
+    document.querySelector('#runAll').disabled=false;
+    setStatus(document.querySelector('#overall'),'就緒。可以逐一測試，或依序測試全部案例。');
+  }).catch(e=>{setStatus(document.querySelector('#rdkitStatus'),`RDKit 載入失敗：${e.message}`,'bad');setStatus(document.querySelector('#overall'),'RDKit 未就緒，無法測試。','bad')});
+  document.querySelector('#runAll').addEventListener('click',async event=>{
+    const button=event.currentTarget;button.disabled=true;setStatus(document.querySelector('#overall'),'正在依序呼叫 API，請保持頁面開啟…');
+    try{const rdkit=await init;for(let i=0;i<cases.length;i++)await runCase(cases[i],i,rdkit);const rows=[...tbody.querySelectorAll('tr')],passed=rows.filter(r=>r.dataset.passed==='true').length;setStatus(document.querySelector('#overall'),`完成：${passed}/${cases.length} 例取得 HTTP/JSON、主體定位號及 SVG；${rows.filter(r=>r.dataset.passed==='false').length} 例失敗。名稱預期請依各列結果核對。`,passed===cases.length?'ok':'warn')}catch(e){setStatus(document.querySelector('#overall'),`測試中止：${e.message}`,'bad')}finally{button.disabled=false}
+  });
+})();
+</script>
+</body>
+</html>
