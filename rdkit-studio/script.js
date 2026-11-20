@@ -10,6 +10,23 @@ const smilesRow = document.querySelector('#smilesRow');
 const renderedSmiles = document.querySelector('#renderedSmiles');
 const smilesPreview = document.querySelector('#smilesPreview');
 const copySmilesButton = document.querySelector('#copySmiles');
+const numberingNotice = document.querySelector('#numberingNotice');
+const resolveIupacNumbering = IupacNumbering.createClient({fetchImpl:(...args) => fetch(...args)});
+const numberingEditor = document.querySelector('#numberingEditor');
+const numberingAtom = document.querySelector('#numberingAtom');
+const numberingText = document.querySelector('#numberingText');
+let customNumberingKey = '', defaultNumberingLabels = {}, customNumberingLabels = {};
+function refreshNumberingEditor() {
+  const selected = numberingAtom.value;
+  numberingAtom.textContent = '';
+  Object.entries(defaultNumberingLabels).sort((a,b) => a[1].localeCompare(b[1], 'en', {numeric:true})).forEach(([id,label]) => {
+    const option = document.createElement('option');
+    option.value = id; option.textContent = label;
+    numberingAtom.append(option);
+  });
+  numberingAtom.value = Object.hasOwn(defaultNumberingLabels, selected) ? selected : Object.keys(defaultNumberingLabels)[0] || '';
+  numberingText.value = customNumberingLabels[numberingAtom.value] ?? defaultNumberingLabels[numberingAtom.value] ?? '';
+}
 const historyButton = document.querySelector('#historyButton');
 const historyPanel = document.querySelector('#historyPanel');
 const historyList = document.querySelector('#historyList');
@@ -48,6 +65,13 @@ function closeHistory() {
   historyButton.setAttribute('aria-expanded', 'false');
 }
 function clearRenderedSmiles() {
+  if (parentController) {
+    parentRequest++; parentController.abort(); parentController = null;
+    parentHighlightButton.textContent = parentAtoms.size ? '清除主鏈標色' : '主鏈標色';
+  }
+  numberingEditor.hidden = true;
+  numberingNotice.hidden = true;
+  numberingNotice.textContent = '';
   smilesRow.hidden = true;
   renderedSmiles.value = '';
   smilesPreview.textContent = '';
@@ -110,7 +134,18 @@ let highlightedAtoms = new Map();
 let highlightedBonds = new Map();
 let selectedAtoms = new Set();
 let selectedBonds = new Set();
+const parentHighlightButton = document.querySelector('#parentHighlight');
+let parentAtoms = new Set(), parentBonds = new Set(), parentColor = '#f5b942';
+let parentController = null, parentRequest = 0;
+function clearParentHighlight() {
+  parentRequest++; parentController?.abort(); parentController = null;
+  parentAtoms.clear(); parentBonds.clear();
+  parentHighlightButton.disabled = false;
+  parentHighlightButton.textContent = '主鏈標色';
+  parentHighlightButton.setAttribute('aria-pressed', 'false');
+}
 function resetHighlights() {
+  clearParentHighlight();
   highlightedAtoms.clear(); highlightedBonds.clear(); selectedAtoms.clear(); selectedBonds.clear();
 }
 function reconcileHighlights(identity, hydrogens) {
@@ -207,7 +242,7 @@ function setHighlightActive(active) {
 function paintHighlights() {
   if (!baseSvg) highlightActive = false;
   const selectedCount = selectedAtoms.size + selectedBonds.size;
-  const markCount = highlightedAtoms.size + highlightedBonds.size;
+  const markCount = highlightedAtoms.size + highlightedBonds.size + parentAtoms.size + parentBonds.size;
   highlightToggle.disabled = !baseSvg;
   highlightToggle.setAttribute('aria-pressed', String(highlightActive));
   highlightTools.hidden = !highlightActive;
@@ -216,7 +251,7 @@ function paintHighlights() {
   eraseHighlightButton.disabled = !highlightActive || highlightModeValue === 'direct' || !selectedCount;
   clearHighlightsButton.disabled = !markCount;
   highlightStatus.textContent = !baseSvg ? '請先繪製分子。'
-    : markCount ? `已標色 ${highlightedAtoms.size} 原子、${highlightedBonds.size} 鍵`
+    : markCount ? `已標色 ${new Set([...highlightedAtoms.keys(), ...parentAtoms]).size} 原子、${new Set([...highlightedBonds.keys(), ...parentBonds]).size} 鍵${parentAtoms.size ? '（含 IUPAC 母體主鏈／主環）' : ''}`
     : highlightModeValue === 'direct' ? '點選原子或鍵開始標色'
     : !highlightTarget.value ? '請選擇目標'
     : '此目標沒有可標色的項目';
@@ -226,14 +261,16 @@ function paintHighlights() {
   const bondShapes = [...root.querySelectorAll('path')].filter(node => /\bbond-\d+\b/.test(node.getAttribute('class') || ''));
   const indexOf = (node, kind) => Number(node.getAttribute('class').match(new RegExp(`\\b${kind}-(\\d+)\\b`))[1]);
   atomShapes.forEach(node => {
-    const color = highlightedAtoms.get(indexOf(node, 'atom'));
+    const id = indexOf(node, 'atom');
+    const color = highlightedAtoms.get(id) || (parentAtoms.has(id) ? parentColor : null);
     if (color) node.setAttribute('style', `fill:${color};fill-opacity:0.48;stroke:none`);
   });
   const ns = 'http://www.w3.org/2000/svg';
   const colors = document.createElementNS(ns, 'g');
   colors.setAttribute('data-applied-highlights', 'bonds');
   bondShapes.forEach(node => {
-    const color = highlightedBonds.get(indexOf(node, 'bond'));
+    const id = indexOf(node, 'bond');
+    const color = highlightedBonds.get(id) || (parentBonds.has(id) ? parentColor : null);
     if (!color) return;
     const clone = node.cloneNode(true);
     clone.setAttribute('style', `fill:none;stroke:${color};stroke-opacity:0.55;stroke-width:12;stroke-linecap:round;stroke-linejoin:round`);
@@ -282,6 +319,35 @@ document.querySelectorAll('[data-highlight-color]').forEach(button => button.add
 eraseHighlightButton.addEventListener('click', () => {removeSelection(); setHighlightMode('direct');});
 clearHighlightsButton.addEventListener('click', () => {resetHighlights(); setHighlightMode('direct');});
 highlightToggle.addEventListener('click', () => setHighlightActive(!highlightActive));
+parentHighlightButton.addEventListener('click', async () => {
+  if (parentAtoms.size || parentController) {clearParentHighlight(); paintHighlights(); return;}
+  if (!baseSvg || !renderedSmiles.value) return;
+  const smiles = renderedSmiles.value, sequence = renderSequence, request = ++parentRequest;
+  const controller = new AbortController(); parentController = controller;
+  parentHighlightButton.textContent = '取消主鏈查詢';
+  highlightStatus.textContent = '正在向 OpenClatura 查詢母體主鏈／主環…';
+  try {
+    const rdkit = await rdkitReady;
+    const result = await resolveIupacNumbering(rdkit, smiles, {signal:controller.signal});
+    if (request !== parentRequest || sequence !== renderSequence || smiles !== renderedSmiles.value) return;
+    const parent = IupacNumbering.parentInDrawing(rdkit, smiles, result);
+    parentAtoms = new Set(parent.atoms); parentBonds = new Set(parent.bonds); parentColor = highlightColor;
+    parentHighlightButton.textContent = '清除主鏈標色';
+    parentHighlightButton.setAttribute('aria-pressed', 'true');
+    paintHighlights();
+  } catch (error) {
+    if (request === parentRequest && sequence === renderSequence && !controller.signal.aborted) {
+      parentHighlightButton.textContent = '主鏈標色';
+      toast(`主鏈標色暫不可用：${error.message}`);
+      paintHighlights();
+    }
+  } finally {
+    if (request === parentRequest) {
+      parentController = null;
+      if (!parentAtoms.size) parentHighlightButton.textContent = '主鏈標色';
+    }
+  }
+});
 document.querySelector('#finishHighlight').addEventListener('click', () => setHighlightActive(false));
 document.addEventListener('keydown', event => {
   if (event.key === 'Escape' && highlightActive && !drawer.classList.contains('open')) setHighlightActive(false);
@@ -313,6 +379,7 @@ let flipY = false;
 let hydrogenMode = 'hetero';
 let stereoMode = 'wedge';
 let numberingMode = 'none';
+let iupacStyle = 'combined';
 let numberingSize = 'small';
 let explicitMethyl = false;
 let sizeMode = 'height';
@@ -405,7 +472,8 @@ function options() {
     stereo_bond_mode: stereoMode,
     add_atom_indices: numberingMode === 'index',
     steroid_numbering: numberingMode === 'steroid',
-    numbering_size: numberingSize
+    numbering_size: numberingSize,
+    iupac_style: iupacStyle
   };
 }
 async function refreshTransform() {
@@ -677,10 +745,52 @@ async function render() {
     const foundStatus = candidateLookupStatus(candidate, cachedLookup);
     setLookupStatus(foundStatus.kind, foundStatus.message);
     stage = 'drawing';
-    const structure = candidate.smiles;
+    let structure = candidate.smiles;
+    if (customNumberingKey && !customNumberingKey.startsWith(structure + '\n')) {
+      customNumberingKey = '';
+      customNumberingLabels = {};
+      numberingEditor.open = false;
+    }
+    const drawSettings = options();
+    let numberingMessage = '';
+    if (numberingMode === 'iupac') {
+      numberingNotice.hidden = false;
+      numberingNotice.textContent = '正在向 OpenClatura 查詢 IUPAC 碳編號…';
+      try {
+        const numbered = await resolveIupacNumbering(await rdkitReady, structure, {signal:controller.signal});
+        if (sequence !== renderSequence) return false;
+        if (!Object.keys(numbered.labels).length) throw new Error('這個母體沒有可標示的碳定位號。');
+        structure = numbered.smiles;
+        const numberingKey = candidate.smiles + '\n' + structure;
+        if (customNumberingKey !== numberingKey) {
+          customNumberingLabels = {};
+          numberingEditor.open = false;
+          customNumberingKey = numberingKey;
+        }
+        defaultNumberingLabels = numbered.labels;
+        drawSettings.iupac_labels = {...numbered.labels, ...customNumberingLabels};
+        numberingMessage = `IUPAC 母體碳編號 · OpenClatura${numbered.name ? ' · ' + numbered.name : ''}`;
+        if (Object.keys(customNumberingLabels).length) numberingMessage = '自訂碳編號（依 IUPAC 母體調整） · OpenClatura';
+      } catch (error) {
+        if (sequence !== renderSequence || controller.signal.aborted) return false;
+        numberingMessage = `IUPAC 編號暫不可用：${error.message} 已顯示未編號結構。`;
+      }
+    }
     codeInput.value = itemCode({smiles: structure});
-    const data = await drawMolecule(structure, options());
+    let data;
+    try {
+      data = await drawMolecule(structure, drawSettings);
+    } catch (error) {
+      if (!drawSettings.iupac_labels) throw error;
+      delete drawSettings.iupac_labels;
+      numberingMessage = `IUPAC 標號繪製失敗：${error.message} 已顯示未編號結構。`;
+      data = await drawMolecule(structure, drawSettings);
+    }
     if (sequence !== renderSequence) return false;
+    numberingNotice.textContent = numberingMessage;
+    numberingNotice.hidden = !numberingMessage;
+    numberingEditor.hidden = !drawSettings.iupac_labels;
+    if (drawSettings.iupac_labels) refreshNumberingEditor();
     baseSvg = data.svg;
     const identityMol = (await rdkitReady).get_mol(structure);
     let identity;
@@ -778,6 +888,8 @@ async function pngClipboardItem(blob) {
 let styleTimer = null;
 function scheduleStyleRender() {
   clearTimeout(styleTimer);
+  lookupController?.abort();
+  renderSequence += 1;
   downloadButton.disabled = true;
   copyButton.disabled = true;
   styleTimer = setTimeout(render, 80);
@@ -1142,6 +1254,10 @@ document.querySelectorAll('[data-stereo]').forEach(button => button.addEventList
   scheduleStyleRender();
 }));
 function updateNumberingControls() {
+  document.querySelector('#iupacStyleControls').hidden = numberingMode !== 'iupac';
+  const advancedStatus = document.querySelector('#advancedNumberingStatus');
+  advancedStatus.textContent = numberingMode === 'index' ? '使用中：原子序號' : numberingMode === 'steroid' ? '使用中：類固醇 C 編號' : '';
+  advancedStatus.hidden = !advancedStatus.textContent;
   const disabled = numberingMode === 'none';
   document.querySelectorAll('[data-numbering-size]').forEach(button => { button.disabled = disabled; });
   document.querySelector('#numberingSizeControls').setAttribute('aria-disabled', String(disabled));
@@ -1221,6 +1337,29 @@ document.querySelector('#invertChirality').addEventListener('click', async () =>
     if (await render()) toast('已產生對映異構物；R/S 手性中心已反轉，E/Z 保持不變。');
   } catch (error) { setError(error.message); }
 });
+const structureEditDialog = document.querySelector('#structureEditDialog');
+document.querySelector('#editStructure').addEventListener('click', () => {
+  if (!renderedSmiles.value) return;
+  document.querySelector('#structureEditStatus').textContent = '';
+  structureEditDialog.showModal();
+});
+document.querySelector('#closeStructureEdit').addEventListener('click', () => structureEditDialog.close());
+document.querySelector('#copyEditSmiles').addEventListener('click', async () => {
+  const smiles = renderedSmiles.value;
+  if (!smiles) return;
+  const status = document.querySelector('#structureEditStatus');
+  try {await navigator.clipboard.writeText(smiles); status.textContent = '已複製，可前往 OpenClatura 貼上。';}
+  catch {
+    status.textContent = '無法自動複製，請選取下方 SMILES 手動複製。';
+    const field = document.createElement('textarea'); field.value = smiles; field.readOnly = true;
+    field.setAttribute('aria-label', '目前 SMILES'); status.append(field); field.focus(); field.select();
+  }
+});
+document.querySelectorAll('[data-iupac-style]').forEach(button => button.addEventListener('click', () => {
+  iupacStyle = button.dataset.iupacStyle;
+  document.querySelectorAll('[data-iupac-style]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+  scheduleStyleRender();
+}));
 copySmilesButton.addEventListener('click', async () => {
   if (copySmilesButton.disabled || !lastSvg || !renderedSmiles.value) return;
   const smiles = renderedSmiles.value;
@@ -1234,6 +1373,33 @@ copySmilesButton.addEventListener('click', async () => {
     renderedSmiles.select();
     toast('無法自動複製，已選取 SMILES，請手動複製');
   }
+});
+numberingAtom.addEventListener('change', () => {
+  numberingText.value = customNumberingLabels[numberingAtom.value] ?? defaultNumberingLabels[numberingAtom.value] ?? '';
+});
+document.querySelector('#applyNumbering').addEventListener('click', () => {
+  const id = numberingAtom.value;
+  if (numberingEditor.hidden || !Object.hasOwn(defaultNumberingLabels, id)) return;
+  const value = numberingText.value.trim().slice(0, 12);
+  if (value === defaultNumberingLabels[id]) delete customNumberingLabels[id];
+  else customNumberingLabels[id] = value;
+  return render();
+});
+numberingText.addEventListener('keydown', event => {
+  if (event.key === 'Enter') { event.preventDefault(); document.querySelector('#applyNumbering').click(); }
+});
+document.querySelector('#resetNumbering').addEventListener('click', () => {
+  customNumberingLabels = {};
+  if (!numberingEditor.hidden) return render();
+});
+previewStage.addEventListener('click', event => {
+  const label = event.target.closest('[data-numbering-atom]');
+  if (!label || numberingEditor.hidden || highlightActive) return;
+  numberingEditor.open = true;
+  numberingAtom.value = label.getAttribute('data-numbering-atom');
+  numberingText.value = customNumberingLabels[numberingAtom.value] ?? defaultNumberingLabels[numberingAtom.value] ?? '';
+  numberingText.focus();
+  numberingText.select();
 });
 historyButton.addEventListener('click', () => {
   if (!historyPanel.hidden) return closeHistory();

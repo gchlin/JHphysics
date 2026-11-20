@@ -130,10 +130,8 @@ function drawingOptions(atoms, options) {
   }
   const labels = {};
   atoms.forEach((atom, index) => {
-    const isHetero = atom.z !== 6 && atom.z !== 1;
     const labelCarbon = atom.z === 6 && options.show_carbons;
-    const hideHeteroHydrogen = options.hydrogen_mode === 'implicit' && isHetero && atom.impHs && !atom.chg;
-    if (!(labelCarbon || hideHeteroHydrogen)) return;
+    if (!labelCarbon) return;
     const symbol = elementSymbols[atom.z] || '*';
     const hydrogens = atom.impHs || 0;
     const showHydrogenLabel = !options.show_hydrogens && options.show_carbons;
@@ -141,6 +139,15 @@ function drawingOptions(atoms, options) {
     const chargeLabel = charge ? `${Math.abs(charge) === 1 ? '' : Math.abs(charge)}${charge > 0 ? '+' : '-'}` : '';
     labels[index] = symbol + (showHydrogenLabel && hydrogens ? 'H' + (hydrogens === 1 ? '' : hydrogens) : '') + chargeLabel;
   });
+  if (options.iupac_style === 'element' && options.iupac_labels) {
+    Object.keys(options.iupac_labels).forEach(index => {
+      const atom = atoms[index];
+      if (atom?.z !== 6) return;
+      // Let RDKit retain isotope and formal-charge notation on special carbons.
+      if (atom.chg || atom.isotope) delete labels[index];
+      else labels[index] = 'C';
+    });
+  }
   if (Object.keys(labels).length) details.atomLabels = labels;
   if (!options.use_element_colors) {
     details.atomColourPalette = Object.fromEntries(atoms.map(atom => [atom.z, [0, 0, 0]]));
@@ -295,7 +302,10 @@ async function drawMolecule(smiles, options = {}) {
       drawOptions.bonds = [];
       drawOptions.highlightAtomColors = Object.fromEntries(drawOptions.atoms.map(index => [index, [0, 0, 0, 0]]));
     }
-    const rawSvg = sterolLabels ? svgWithSterolNumbers(transformed, sterolLabels, drawOptions, options.numbering_size)
+    const numberLabels = options.iupac_style === 'element' && options.iupac_labels
+      ? Object.fromEntries(Object.entries(options.iupac_labels).map(([id,text])=>[id, /^C\d+[a-z]?$/.test(text) ? text.slice(1) : text])) : options.iupac_labels;
+    const rawSvg = options.iupac_labels ? svgWithNumberLabels(transformed, numberLabels, drawOptions, options.numbering_size, true)
+      : sterolLabels ? svgWithSterolNumbers(transformed, sterolLabels, drawOptions, options.numbering_size)
       : options.add_atom_indices ? svgWithNumberLabels(transformed, null, drawOptions, options.numbering_size)
       : transformed.get_svg_with_highlights(JSON.stringify(drawOptions));
     if (!rawSvg || !rawSvg.includes('<svg')) throw new Error('無法產生分子結構圖。');

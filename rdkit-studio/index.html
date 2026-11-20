@@ -89,8 +89,7 @@
           <details class="studio-style-section"><summary>原子與基團</summary>
             <div class="compact-controls">
             <div class="style-group" title="試用 (S)-乳酸，比較羥基氫與所有氫原子的顯示方式"><strong>氫原子</strong><div class="segmented" role="group" aria-label="氫原子顯示">
-            <button type="button" data-hydrogens="implicit" aria-pressed="false" title="省略一般氫標示，保留必要資訊">省略</button>
-            <button type="button" data-hydrogens="hetero" aria-pressed="true" title="顯示 OH、NH₂ 等；顯示碳時也標示 CH、CH₂、CH₃">非碳上的氫</button>
+            <button type="button" data-hydrogens="hetero" aria-pressed="true" title="保留 OH、NH₂ 等必要氫標示；碳上的氫依骨架式或碳標籤設定顯示">一般表示</button>
             <button type="button" data-hydrogens="all" aria-pressed="false" title="每個氫都畫成獨立原子與鍵">全部展開</button>
           </div></div>
             <div class="style-group" title="試用苯，比較骨架線與明示 C 原子"><strong>碳原子</strong><div class="segmented" role="group" aria-label="碳原子顯示">
@@ -112,9 +111,13 @@
             <div class="compact-controls">
             <div class="style-group"><strong>編號</strong><div class="segmented" role="group" aria-label="原子編號方式">
             <button type="button" data-numbering="none" aria-pressed="true">不顯示</button>
+            <button type="button" data-numbering="iupac" aria-pressed="false" title="選用時將目前 SMILES 傳送至 OpenClatura，取得母體主鏈／主環碳定位號；成功結果於本頁暫存">IUPAC 碳編號</button>
+          </div><span id="advancedNumberingStatus" class="advanced-numbering-status" role="status" hidden></span></div>
+            <details class="numbering-more"><summary>更多</summary><div class="segmented" role="group" aria-label="其他原子編號方式">
             <button type="button" data-numbering="index" aria-pressed="false" title="從 0 開始，供辨識原子，非命名編號">原子序號</button>
             <button type="button" data-numbering="steroid" aria-pressed="false" title="依類固醇骨架標出 C1–C27；支鏈可標到 C29">類固醇 C 編號</button>
-          </div></div>
+          </div></details>
+            <div id="iupacStyleControls" class="style-group" hidden><strong>母體碳樣式</strong><div class="segmented" role="group" aria-label="IUPAC 碳編號樣式"><button type="button" data-iupac-style="combined" aria-pressed="true">C1、C2</button><button type="button" data-iupac-style="element" aria-pressed="false">C ＋ 數字旁註</button></div></div>
             <div id="numberingSizeControls" class="style-group"><strong>編號大小</strong><div class="segmented" role="group" aria-label="編號文字大小">
             <button type="button" data-numbering-size="small" aria-pressed="true">小</button>
             <button type="button" data-numbering-size="medium" aria-pressed="false" title="與元素符號相同大小">中</button>
@@ -143,6 +146,7 @@
                 <button type="button" data-highlight-mode="direct" aria-pressed="true">點選原子或鍵</button>
                 <button type="button" data-highlight-mode="element" aria-pressed="false">依元素</button>
                 <button type="button" data-highlight-mode="group" aria-pressed="false" disabled>依官能基</button>
+                <button id="parentHighlight" type="button" aria-pressed="false">主鏈標色</button>
               </div>
               <label id="highlightTargetLabel" class="highlight-field" hidden><span id="highlightTargetKind">元素</span><select id="highlightTarget" aria-label="標色目標"></select></label>
               <label id="highlightOccurrenceLabel" class="highlight-field" hidden>哪一個 <select id="highlightOccurrence" aria-label="哪一個"></select></label>
@@ -176,9 +180,22 @@
             <code id="smilesPreview" class="smiles-preview" aria-hidden="true"></code>
             <input id="renderedSmiles" class="sr-only" type="text" readonly aria-label="目前繪製結構的 SMILES" spellcheck="false">
             <button id="copySmiles" type="button" title="複製 SMILES" disabled aria-label="複製目前結構的 SMILES">複製 SMILES</button>
+            <button id="editStructure" class="structure-edit-link" type="button">微調結構 ↗</button>
           </div>
           </div>
             <p id="structureNotice" class="structure-notice" role="status" hidden></p>
+            <p id="numberingNotice" class="numbering-notice" role="status" hidden></p>
+            <details id="numberingEditor" class="numbering-editor" hidden>
+              <summary>調整編號</summary>
+              <div class="numbering-edit-row">
+                <label>碳 <select id="numberingAtom" aria-label="選擇要調整的母體碳"></select></label>
+                <label>顯示 <input id="numberingText" type="text" maxlength="12" size="8" aria-label="自訂碳編號" title="最多 12 個字元；留空可隱藏這個碳的標號"></label>
+                <button id="applyNumbering" type="button">套用</button>
+                <button id="resetNumbering" type="button">還原 IUPAC</button>
+              </div>
+              <span class="numbering-edit-hint">可點圖上的碳編號選取；留空可隱藏。只改顯示文字。</span>
+            </details>
+            <p class="technology-credit">結構繪圖：<a href="https://www.rdkitjs.com/" target="_blank" rel="noopener noreferrer">RDKit.js</a> · IUPAC 編號：<a href="https://openclatura.org/" target="_blank" rel="noopener noreferrer">OpenClatura</a> · <a href="vendor/LICENSE" target="_blank" rel="noopener noreferrer">RDKit 授權</a></p>
           </div>
           <footer class="studio-output" aria-label="尺寸、背景與匯出">
             <button id="styleTab" class="sheet-tab" type="button" aria-expanded="false" aria-controls="styleOptions">樣式</button>
@@ -252,8 +269,15 @@
       </section>
     </aside>
   </div>
+  <dialog id="structureEditDialog" aria-labelledby="structureEditTitle">
+    <h2 id="structureEditTitle">微調結構</h2>
+    <ol><li>複製目前的 SMILES。</li><li>前往 OpenClatura，在新頁面貼上 SMILES 並修改結構。</li><li>複製修改後的 SMILES，回本頁貼入上方輸入框，再按「繪製」。</li></ol>
+    <p id="structureEditStatus" role="status"></p>
+    <div class="structure-edit-actions"><button id="copyEditSmiles" type="button">複製 SMILES</button><a href="https://openclatura.org/" target="_blank" rel="noopener noreferrer">前往 OpenClatura ↗</a><button id="closeStructureEdit" type="button">關閉</button></div>
+  </dialog>
   <script src="vendor/RDKit_minimal.js"></script>
   <script src="steroid-numbering.js"></script>
+  <script src="iupac-numbering.js"></script>
   <script src="highlight-selection.js"></script>
   <script src="renderer.js"></script>
   <script src="name-lookup.js"></script>

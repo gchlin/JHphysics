@@ -2,6 +2,8 @@
 
 此目錄是主網站首頁連結的靜態部署副本。`index.html`、`styles.css`、`script.js`、`name-lookup.js`、`renderer.js`、`compound-aliases.json` 與範例圖檔來自 `../RDKit/RDKit/`；RDKit.js 2025.3.3-1.0.0 的 JavaScript、WebAssembly 和授權文件存放於 `vendor/`。「自動佈局」以「樣式 1／樣式 2」切換 CoordGen 與 RDKit 原生排版；滑過控件可查看乙醚和氫顯示的比較提示。
 
+編號選單提供按需查詢的「IUPAC 母體碳」模式，可微調已標示母體碳的標籤；SMILES 旁的 OpenClatura 連結開啟服務首頁，需手動複製與貼回查詢。整合範圍及尚待瀏覽器驗收項目見 [`../RDKit/OPENCLATURA-IUPAC-TEST-REPORT.md`](../RDKit/OPENCLATURA-IUPAC-TEST-REPORT.md)。
+
 頁面提供旋轉、化學組態保真的鏡射、立體標註、SVG 與 300/600 DPI PNG。立體鍵可選楔形鍵、楔形鍵加文字、文字，或不顯示楔形鍵與文字的一般線條。鏡射前後會核對 RDKit 的 R/S 和 E/Z 標記。ACS 預設僅作樣式參考；芳香環圓圈和 PDF/EPS 尚未實作。形式電荷始終顯示。
 
 編號可選 RDKit 原子索引或膽固醇型固醇的類固醇 C 編號。後者比對碳骨架後標示 C1–C27，支鏈延長時可標至 C29；無法可靠辨認時會顯示錯誤。範例庫有膽固醇、β-穀固醇及麥角固醇。兩種編號都可選文字大小：預設「小」比 RDKit 原生索引字大，「中」與元素符號一樣大，「大」為元素符號的 1.25 倍。編號規則與範例來源見原始專案 `../RDKit/RDKit/README.md`。
@@ -65,3 +67,11 @@ node RDKit/RDKit/tests/smiles-help.test.js
 ```
 
 標色整合測試使用實際隨附 WASM，涵蓋幾何、立體／旋轉／鏡射／編號相容性、重複官能基、套用清除、索引生命週期與匯出隔離；UI DOM double 不代替瀏覽器排版、實際剪貼簿與觸控裝置驗證。
+
+## 結構微調與母體教學
+
+- 「微調結構」會開啟三步提示：複製目前 SMILES、前往 OpenClatura 新頁貼上修改，再複製修改後 SMILES 回本頁輸入框並按「繪製」。
+- 選擇「IUPAC 碳編號」後，可切換「C1、C2」或「C ＋ 數字旁註」。後者只在母體碳顯示 C，保留自訂文字；標準 C1 等標號改顯示數字。
+- 開啟標色工具後按「主鏈標色」，會按需向 OpenClatura 取得並驗證母體主鏈／主環，包含母體內的非碳原子及相連鍵。再按同一按鈕可單獨清除；手動標色優先顯示且會保留。查詢失敗不影響普通繪圖與手動標色。換分子或氫模式時清除標色；目前只支援 API 可完整驗證的單一母體，並需網路服務可用。
+
+IUPAC 原子 ID 注意：API 的 graph ID 可能不同於處理後 SMILES 的 RDKit 解析索引。程式要求完整 atom-id 標記並驗證唯一、全原子對照後才套號；不完整或矛盾資料會安全拒絕。咖啡因已用真實 API 回應及本機 WASM 回歸，顯示 C2、C4、C5、C6、C8（母環的其他定位號由 N 佔用）。
