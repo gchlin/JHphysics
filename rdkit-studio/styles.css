@@ -613,9 +613,19 @@ summary:focus-visible,button:focus-visible { outline:2px solid var(--teal); outl
 .advanced-numbering-status {font-size:11px; color:var(--teal);}
 .preview-stage [data-numbering-atom] {cursor:pointer;}
 .structure-edit-link {border:0; background:none; padding:0; font:inherit; color:var(--teal); cursor:pointer;}
-#structureEditDialog {width:min(460px, calc(100vw - 32px)); box-sizing:border-box; border:1px solid var(--line); border-radius:10px; padding:22px; color:var(--ink); background:white;}
-#structureEditDialog::backdrop {background:#172c4266;}
-#structureEditDialog h2 {margin:0 0 12px; font-size:18px;}
+#structureEditDialog,#aboutDialog {width:min(460px, calc(100vw - 32px)); max-height:calc(100dvh - 32px); overflow-y:auto; box-sizing:border-box; border:1px solid var(--line); border-radius:10px; padding:22px; color:var(--ink); background:white;}
+#structureEditDialog::backdrop,#aboutDialog::backdrop {background:#172c4266;}
+#structureEditDialog h2,#aboutDialog h2 {margin:0 0 12px; font-size:18px;}
+#aboutDialog .technology-credit {font-size:13px; margin-bottom:18px;}
+#aboutDialog button {min-height:44px;}
+.molecule-info-actions {display:flex; align-items:center; flex:none; gap:12px;}
+.rotation-step {display:inline-flex; align-items:center; gap:4px; font-size:11px; white-space:nowrap;}
+.rotation-step select {font:inherit; min-height:28px; background:white; border:1px solid var(--line); border-radius:4px; color:var(--ink);}
+.download-more {min-width:30px; padding-inline:7px;}
+.download-menu {position:fixed; z-index:41; display:flex; flex-direction:column; min-width:160px; max-width:calc(100vw - 16px); padding:5px; border:1px solid var(--line); border-radius:8px; background:white; box-shadow:0 6px 20px #17241d33;}
+.download-menu button {min-height:44px; border:0; border-radius:4px; padding:8px 12px; background:white; color:var(--ink); font:inherit; font-size:13px; text-align:left; cursor:pointer;}
+.download-menu button:hover,.download-menu button:focus-visible {background:#e7f3ef; color:var(--teal);}
+@media(max-width:900px) {.rotation-step select {min-height:44px;}}
 #structureEditDialog ol {padding-left:22px; line-height:1.8; margin:0;}
 #structureEditStatus {font-size:13px; color:var(--muted);}
 #structureEditStatus textarea {display:block; width:100%; box-sizing:border-box; margin-top:8px;}
@@ -643,3 +653,27 @@ button.hint-button[aria-expanded="true"] {background: var(--teal); color: #fff;}
   /* Phone: the 標色 mode control shares its line with the ？ instead of taking a full row. */
   .highlight-tools .highlight-mode {width: auto; flex: 1 1 auto; min-width: 0;}
 }
+/* Progressive controls: keep one visible level, with contextual numbering options. */
+@media (min-width:901px) {
+  .studio-style > .style-title {display:none;}
+  main {height:100dvh;}
+}
+.molecule-summary {display:flex; align-items:center; justify-content:space-between; gap:8px; padding:6px 0;}
+.molecule-summary .meta-identity {display:flex; flex-wrap:wrap; gap:6px 10px; min-width:0;}
+.molecule-disclosure {display:inline-flex; align-items:center; gap:7px; min-height:32px; padding:0; border:0; background:none; color:var(--ink); text-align:left;}
+.disclosure-arrow {font-size:10px; color:var(--muted); flex:none;}
+.molecule-summary .structure-edit-link {flex:none; font-size:12px;}
+#moleculeDetails {padding:6px 0 3px; border-top:1px solid var(--line); max-height:32dvh; overflow-y:auto;}
+.studio-molecule-info #moleculeDetails .meta-row {display:flex; flex-wrap:wrap; white-space:normal; overflow:visible; gap:6px 14px;}
+.studio-molecule-info #moleculeDetails .smiles-row {width:100%; margin:0; flex-wrap:wrap;}
+.studio-molecule-info #moleculeDetails .smiles-preview {flex:1 1 160px; max-width:none; white-space:normal; overflow-wrap:anywhere;}
+.gallery-feature-tag {display:block; margin-top:5px; color:var(--muted); font-size:11px; font-weight:600;}
+.gallery-feature-description {display:block; margin-top:3px; color:var(--muted); font-size:11px; line-height:1.6; white-space:normal;}
+@media(max-width:900px) {
+  .molecule-disclosure,.molecule-summary .formula-copy,.molecule-summary .chirality-action,.molecule-summary .structure-edit-link {min-height:44px;}
+  .molecule-summary {align-items:flex-start;}
+  .studio-preview {overflow-y:auto;}
+}
+#metaProperties {flex-basis:100%; max-width:100%; white-space:normal; overflow-wrap:anywhere;}
+#ringLabelTools {margin:6px 0;} #editRingLabels {border:1px solid var(--line);border-radius:5px;background:white;color:var(--teal);padding:5px 8px;margin-right:8px;} #editRingLabels[aria-pressed="true"] {background:#e7f3ef;} #ringLabelDialog {border:1px solid var(--line);border-radius:10px;max-width:calc(100vw - 32px);padding:22px;} #ringLabelDialog::backdrop {background:#172c4266;} #ringLabelDialog input,#ringLabelDialog button {padding:8px;border:1px solid var(--line);border-radius:5px;} #ringLabelDialog p {font-size:12px;color:var(--muted);}
+body.reaction-view .studio-style-section:not(:first-of-type),body.reaction-view .sterol-help {display:none!important;} body.reaction-view [data-layout],body.reaction-view [data-preset] {opacity:.4;}

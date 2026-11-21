@@ -46,7 +46,7 @@
       }
       const elements = ' X H He Li Be B C N O F Ne Na Mg Al Si P S Cl Ar K Ca Sc Ti V Cr Mn Fe Co Ni Cu Zn Ga Ge As Se Br Kr Rb Sr Y Zr Nb Mo Tc Ru Rh Pd Ag Cd In Sn Sb Te I Xe Cs Ba La Ce Pr Nd Pm Sm Eu Gd Tb Dy Ho Er Tm Yb Lu Hf Ta W Re Os Ir Pt Au Hg Tl Pb Bi Po At Rn Fr Ra Ac Th Pa U Np Pu Am Cm Bk Cf Es Fm Md No Lr Rf Db Sg Bh Hs Mt Ds Rg Cn Nh Fl Mc Lv Ts Og'.trim().split(' ');
       const entries = Object.entries(ids);
-      const used = new Set(), labels = {};
+      const used = new Set(), labels = {}, allLabels = {};
       if (!entries.length || entries.length !== parentAtoms.length)
         throw new Error('母體定位號數量不完整。');
       for (const [locant, id] of entries) {
@@ -59,6 +59,7 @@
         } else if (symbols[locant] !== elements[atoms[id].z]) {
           throw new Error(`OpenClatura 母體定位號 ${locant} 的元素 ${symbols[locant]} 與對應原子 ${elements[atoms[id].z]} 不一致，已停止編號。`);
         }
+        allLabels[id] = `${symbols[locant]}${locant}`;
       }
       const visited = new Set(), queue = [entries[0][1]];
       while (queue.length) {
@@ -73,7 +74,7 @@
         }
       }
       if (visited.size !== used.size) throw new Error('API 母體原子並未形成連通結構。');
-      return {smiles:processed, labels, parentAtoms:[...used], name:typeof data.name === 'string' ? data.name : ''};
+      return {smiles:processed, labels, allLabels, parentAtoms:[...used], name:typeof data.name === 'string' ? data.name : ''};
     } finally { original?.delete(); mol?.delete(); }
   }
   function createClient({fetchImpl = (...args) => fetch(...args), timeoutMs = 20000} = {}) {

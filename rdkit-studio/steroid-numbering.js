@@ -59,7 +59,7 @@ function svgWithNumberLabels(mol, labels, options, size = 'small', keepPrefix = 
   // text against the final drawing (including its R/S and E/Z annotations).
   // This keeps the original molecule and its wedge-bond choices intact.
   const atomIds = Array.from({length:mol.get_num_atoms()}, (_, i)=>i);
-  const geometryOptions = {...options, noFreetype:true, atoms:atomIds,
+  const geometryOptions = {...options, noFreetype:true, standardColoursForHighlightedAtoms:true, atoms:atomIds,
     highlightAtomColors:Object.fromEntries(atomIds.map(i=>[i,[0,0,0,0]]))};
   const positions = mol.get_svg_with_highlights(JSON.stringify({
     ...geometryOptions, addAtomIndices:true, addStereoAnnotation:false

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>RDKit SVG Studio</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=20261121-6">
 </head>
 <body>
   <div id="loadingScreen" class="loading-screen" role="status" aria-live="polite">
@@ -55,13 +55,6 @@
           </section>
           <p id="lookupStatus" class="lookup-hint" role="status" data-kind="idle">等待輸入或選擇範例。</p>
           <textarea id="codeInput" hidden aria-hidden="true"></textarea>
-          <div class="quick-row">
-            <span>快速試用</span>
-            <button type="button" data-code="benzene">苯</button>
-            <button type="button" data-code="caffeine">咖啡因</button>
-            <button type="button" data-name-example="2-acetoxybenzoic acid" title="填入阿斯匹靈的學名：2-acetoxybenzoic acid">阿斯匹靈（學名）</button>
-            <button type="button" data-smiles="C[C@H](O)C(=O)O" data-label="(S)-乳酸">(S)-乳酸</button>
-          </div>
           <div id="errorBox" class="error-box" role="alert"></div>
           <button id="copyUnknownNamePrompt" class="copy-prompt" type="button" hidden>複製這個名稱的 Gemini 查詢提示詞</button>
           <div id="candidateList" class="candidate-list" aria-label="結構候選" hidden></div>
@@ -70,6 +63,10 @@
         <details id="styleOptions" class="style-strip studio-style" aria-label="圖像樣式" open>
           <summary class="style-title">樣式</summary>
           <details class="studio-style-section" open><summary>外觀與線條</summary>
+            <div id="aromaticControls" class="style-group" hidden><strong>芳香環</strong><div class="segmented" role="group" aria-label="芳香鍵表示方式">
+              <button type="button" data-aromatic-style="kekule" aria-pressed="true">交替單雙鍵</button>
+              <button type="button" data-aromatic-style="aromatic" aria-pressed="false" title="以虛線表示芳香鍵；只改畫法，不改變分子結構">芳香鍵虛線</button>
+            </div></div>
             <div class="preset-layout"><div class="style-group" title="標準：彩色骨架；ACS 參考：黑白粗線；教學模式：顯示 C 與 CH₃ 等標籤"><strong>預設</strong><div class="segmented" role="group" aria-label="樣式預設">
             <button type="button" data-preset="standard" aria-pressed="true">標準</button>
             <button type="button" data-preset="acs" aria-pressed="false" title="ACS 圖稿規格的近似預設；請依期刊要求檢查最終輸出">ACS 參考</button>
@@ -87,6 +84,11 @@
           </div></div></div>
           </details>
           <details class="studio-style-section"><summary>原子與基團</summary>
+            <div class="style-group"><strong>基團顯示</strong><div class="segmented" role="group" aria-label="基團縮寫">
+              <button type="button" data-abbreviations="full" aria-pressed="true">完整結構</button>
+              <button type="button" data-abbreviations="common" aria-pressed="false" title="自動縮寫支援的常見基團；編號、標色及立體結構保留完整顯示">常見縮寫</button>
+            </div></div>
+            <p id="abbreviationStatus" class="numbering-notice" role="status" hidden></p>
             <div class="compact-controls">
             <div class="style-group" title="試用 (S)-乳酸，比較羥基氫與所有氫原子的顯示方式"><strong>氫原子</strong><div class="segmented" role="group" aria-label="氫原子顯示">
             <button type="button" data-hydrogens="hetero" aria-pressed="true" title="保留 OH、NH₂ 等必要氫標示；碳上的氫依骨架式或碳標籤設定顯示">一般表示</button>
@@ -103,21 +105,26 @@
           </details>
           <details class="studio-style-section"><summary>立體化學與編號</summary>
             <div class="style-group"><strong>立體鍵</strong><div class="segmented" role="group" aria-label="立體鍵與 R/S、E/Z 標註">
+            <button type="button" data-stereo="plain" aria-pressed="false" title="以一般線條表示鍵，不顯示楔形鍵或立體標註">不標立體</button>
             <button type="button" data-stereo="wedge" aria-pressed="true" title="試用 (S)-乳酸：以實心與虛線楔形鍵表示立體方向">楔形鍵</button>
             <button type="button" data-stereo="both" aria-pressed="false" title="試用 (S)-乳酸：同時顯示楔形鍵與 R/S 標註">楔形＋R/S</button>
             <button type="button" data-stereo="labels" aria-pressed="false" title="試用 (S)-乳酸：以 R/S 文字取代楔形鍵">只標 R/S</button>
-            <button type="button" data-stereo="plain" aria-pressed="false" title="以一般線條表示鍵，不顯示楔形鍵或立體標註">不標立體</button>
           </div></div>
             <div class="compact-controls">
             <div class="style-group"><strong>編號</strong><div class="segmented" role="group" aria-label="原子編號方式">
             <button type="button" data-numbering="none" aria-pressed="true">不顯示</button>
-            <button type="button" data-numbering="iupac" aria-pressed="false" title="選用時將目前 SMILES 傳送至 OpenClatura，取得母體主鏈／主環碳定位號；成功結果於本頁暫存">IUPAC 碳編號</button>
+            <button type="button" data-numbering="iupac" aria-pressed="false" title="選用時將目前 SMILES 傳送至 OpenClatura，取得母體主鏈／主環碳定位號；成功結果於本頁暫存">IUPAC 母體編號</button>
             <button type="button" data-numbering="steroid" aria-pressed="false" title="辨認支援的膽固醇型骨架時自動選取；依固定骨架標出 C1–C27，支鏈可標到 C29">固醇 C 編號</button>
-          </div><span id="advancedNumberingStatus" class="advanced-numbering-status" role="status" hidden></span></div>
-            <details class="numbering-more"><summary>更多</summary><div class="segmented" role="group" aria-label="其他原子編號方式">
             <button type="button" data-numbering="index" aria-pressed="false" title="從 0 開始，供辨識原子，非命名編號">原子序號</button>
-          </div><div id="iupacExtraStyleControls" class="segmented" role="group" aria-label="其他 IUPAC 標號形式" hidden><button type="button" data-iupac-style="combined" aria-pressed="false">C1、C2</button>
-          </div><details class="sterol-help"><summary>固醇編號怎麼標？</summary>
+          </div><span id="advancedNumberingStatus" class="advanced-numbering-status" role="status" hidden></span></div>
+            <div id="iupacStyleControls" class="style-group" hidden><strong>標號形式</strong><div class="segmented" role="group" aria-label="IUPAC 母體編號樣式"><button type="button" data-iupac-style="numeric" aria-pressed="true">純數字</button><button type="button" data-iupac-style="element" aria-pressed="false">元素＋數字旁註</button><span id="iupacExtraStyleControls" hidden><button type="button" data-iupac-style="combined" aria-pressed="false">C1、N1</button></span></div><span id="iupacStyleStatus" class="advanced-numbering-status" hidden>使用中：C1、N1</span></div>
+            <div id="numberingSizeControls" class="style-group"><strong>標記大小</strong><div class="segmented" role="group" aria-label="原子編號與環標記大小">
+            <button type="button" data-numbering-size="small" aria-pressed="true">小</button>
+            <button type="button" data-numbering-size="medium" aria-pressed="false">中</button>
+            <button type="button" data-numbering-size="large" aria-pressed="false">大</button>
+          </div></div></div>
+          </details>
+          <details id="sterolHelp" class="sterol-help" hidden><summary>固醇編號怎麼標？</summary>
             <p>先辨認相連的四個環：A、B、C 是六元環，D 是五元環。下圖以膽固醇為例；含 OH 的六元環是 A，另一端的五元環是 D。先對照環的接點，再沿邊編號，別從任意端點重新數起。</p>
             <figure><img src="sterol-numbering-guide.svg" alt="膽固醇固定碳定位號 1 至 27；可對照下列四環路徑與側鏈" loading="lazy"><figcaption>膽固醇編號示意；旋轉圖或改變 SMILES 順序，定位號不變。</figcaption></figure>
             <ol>
@@ -130,12 +137,6 @@
             <p><strong>本工具怎麼做：</strong>在本機用 RDKit 比對固定 27 碳骨架，再套固定定位號；不是按 SMILES 出現次序數碳。只接受程式可匹配的膽固醇型結構：27–29 個碳、恰一個氧、C3 接 OH，其餘僅 C/O；額外碳須接成 C24 → C28（→ C29）。常見雙鍵變體可比對，但這不是通用類固醇編號器，也不驗證完整立體族群；無法匹配就停止，不猜編號。</p>
             <p>這個模式的固定定位號不能逐字編輯。「調整碳編號」僅適用於成功取得 IUPAC 母體資料後的顯示文字。</p>
             <p class="sterol-help-source">編號依據：<a href="https://iupac.qmul.ac.uk/steroid/3S01.html" target="_blank" rel="noopener noreferrer">IUPAC–IUB 3S-1.0–1.2 官方骨架圖與規則 ↗</a>。上圖由本工具的 RDKit 繪圖產生。</p>
-          </details></details>
-            <div id="iupacStyleControls" class="style-group" hidden><strong>標號形式</strong><div class="segmented" role="group" aria-label="IUPAC 碳編號樣式"><button type="button" data-iupac-style="numeric" aria-pressed="true">純數字</button><button type="button" data-iupac-style="element" aria-pressed="false">C ＋ 數字旁註</button></div><span id="iupacStyleStatus" class="advanced-numbering-status" hidden>使用中：C1、C2</span></div>
-            <div id="numberingSizeControls" class="style-group"><strong>編號用途</strong><div class="segmented" role="group" aria-label="編號用途預設">
-            <button type="button" data-numbering-size="small" aria-pressed="true" title="小號數字，約元素字高的一半，緊鄰對應原子並避開標記">講義</button>
-            <button type="button" data-numbering-size="medium" aria-pressed="false" title="大號數字，約與元素符號同高，隨字級增加避碰間距">投影片</button>
-          </div></div></div>
           </details>
           <input id="bondInput" type="hidden" value="1.4"><output id="bondOutput" hidden>1.4</output><input id="colorInput" type="checkbox" checked hidden><input id="carbonInput" type="checkbox" hidden>
         </details>
@@ -146,8 +147,7 @@
             <div class="canvas-toolbars">
             <div class="transform-toolbar studio-transform" role="group" aria-label="變換與標色">
             <span>變換</span>
-            <button id="rotateLeft" type="button" title="左轉 90°" aria-label="左轉 90°">↺ 90°</button>
-            <button id="rotateRight" type="button" title="右轉 90°" aria-label="右轉 90°">↻ 90°</button>
+            <button id="rotate45" type="button" title="旋轉分子 45°，文字保持正向；連按可累加角度" aria-label="旋轉分子 45°">↻ 45°</button>
             <button id="flipHorizontal" type="button" title="水平鏡射" aria-label="水平鏡射" aria-pressed="false">↔</button>
             <button id="flipVertical" type="button" title="垂直鏡射" aria-label="垂直鏡射" aria-pressed="false">↕</button>
             <button id="resetTransform" type="button" title="重設排版">重設</button>
@@ -183,10 +183,19 @@
             <div id="highlightHint" class="highlight-hint" role="status" hidden><strong>標色中・Esc 完成</strong><span id="highlightStatus"></span></div>
           </div>
           <div class="studio-molecule-info">
-            <div class="meta-row" aria-label="分子資訊">
-            <div class="meta-identity"><strong id="metaName">—</strong><span id="metaStereo" class="stereo-badge" hidden></span><button id="invertChirality" class="chirality-action" type="button" title="產生對映異構物，將所有已指定的 R/S 手性中心反轉；E/Z 不變" disabled>轉為對映異構物</button></div>
-            <button id="copyFormula" class="formula-copy" type="button" title="複製 Word 公式" aria-label="複製 Word 公式" disabled><span id="metaFormula">—</span><span class="formula-copy-label"> 複製公式</span></button>
+            <div class="molecule-summary">
+              <div class="meta-identity">
+                <button id="toggleMoleculeInfo" class="molecule-disclosure" type="button" aria-expanded="false" aria-controls="moleculeDetails" title="展開分子屬性與編號設定"><span class="disclosure-arrow" aria-hidden="true">▶</span><strong id="metaName">—</strong></button>
+                <button id="copyFormula" class="formula-copy" type="button" title="複製 Word 公式" aria-label="複製 Word 公式" disabled><span id="metaFormula">—</span><span class="formula-copy-label"> 複製公式</span></button>
+                <button id="invertChirality" class="chirality-action" type="button" title="產生對映異構物，將所有已指定的 R/S 手性中心反轉；E/Z 不變" disabled hidden>轉為對映異構物</button>
+              </div>
+              <div class="molecule-info-actions"><button id="editStructure" class="structure-edit-link" type="button">微調結構 ↗</button><button id="showAbout" class="structure-edit-link" type="button" aria-haspopup="dialog">關於</button></div>
+            </div>
+            <div id="moleculeDetails" hidden>
+              <div class="meta-row" aria-label="分子屬性">
+              <span id="metaStereo" class="stereo-badge" hidden></span>
             <span id="metaWeight">MW: —</span>
+            <span id="metaProperties" hidden title="依 RDKit 定義計算環數及氫鍵供體／受體；描述目前輸入的質子化與互變異構形式"></span>
             <span id="metaSize">—</span>
             <a id="lookupSource" class="lookup-source" hidden target="_blank" rel="noopener noreferrer">來源</a>
             <div id="smilesRow" class="smiles-row" hidden>
@@ -194,22 +203,22 @@
             <code id="smilesPreview" class="smiles-preview" aria-hidden="true"></code>
             <input id="renderedSmiles" class="sr-only" type="text" readonly aria-label="目前繪製結構的 SMILES" spellcheck="false">
             <button id="copySmiles" type="button" title="複製 SMILES" disabled aria-label="複製目前結構的 SMILES">複製 SMILES</button>
-            <button id="editStructure" class="structure-edit-link" type="button">微調結構 ↗</button>
           </div>
           </div>
             <p id="structureNotice" class="structure-notice" role="status" hidden></p>
             <p id="numberingNotice" class="numbering-notice" role="status" hidden></p>
+            <div id="ringLabelTools" hidden><button id="editRingLabels" type="button" aria-pressed="false">自訂環標記</button><span class="numbering-edit-hint">點環中央設定 1、2 或 A、B；不屬於 IUPAC 原子編號。</span></div>
             <details id="numberingEditor" class="numbering-editor" hidden>
               <summary>調整編號</summary>
               <div class="numbering-edit-row">
-                <label>碳 <select id="numberingAtom" aria-label="選擇要調整的母體碳"></select></label>
-                <label>顯示 <input id="numberingText" type="text" maxlength="12" size="8" aria-label="自訂碳編號" title="最多 12 個字元；留空可隱藏這個碳的標號"></label>
+                <label>原子 <select id="numberingAtom" aria-label="選擇要調整的母體原子"></select></label>
+                <label>顯示 <input id="numberingText" type="text" maxlength="12" size="8" aria-label="自訂母體編號" title="最多 12 個字元；留空可隱藏這個原子的標號"></label>
                 <button id="applyNumbering" type="button">套用</button>
                 <button id="resetNumbering" type="button">還原 IUPAC</button>
               </div>
-              <span class="numbering-edit-hint">可點圖上的碳編號選取；留空可隱藏。只改顯示文字。</span>
+              <span class="numbering-edit-hint">可點圖上的原子編號選取；留空可隱藏。只改顯示文字。</span>
             </details>
-            <p class="technology-credit">結構繪圖：<a href="https://www.rdkitjs.com/" target="_blank" rel="noopener noreferrer">RDKit.js</a> · IUPAC 編號：<a href="https://openclatura.org/" target="_blank" rel="noopener noreferrer">OpenClatura</a> · <a href="vendor/LICENSE" target="_blank" rel="noopener noreferrer">RDKit 授權</a></p>
+            </div>
           </div>
           <footer class="studio-output" aria-label="尺寸、背景與匯出">
             <button id="styleTab" class="sheet-tab" type="button" aria-expanded="false" aria-controls="styleOptions">樣式</button>
@@ -261,6 +270,11 @@
             <div class="export-buttons">
               <button id="copyOutput" class="icon-button" type="button" title="複製 PNG（包含文件尺寸）" aria-label="複製 PNG（包含文件尺寸）" disabled>複製圖片</button>
               <button id="downloadOutput" class="download-button" type="button" title="下載 PNG" aria-label="下載 PNG" disabled>↓ 下載</button>
+              <button id="downloadMore" class="icon-button download-more" type="button" aria-label="其他下載格式" aria-expanded="false" aria-controls="downloadMenu" disabled>▾</button>
+              <div id="downloadMenu" class="download-menu" aria-label="其他下載格式" hidden>
+                <button type="button" data-mol-version="2000">MOL (V2000)</button>
+                <button type="button" data-mol-version="3000">MOL (V3000)</button>
+              </div>
             </div>
           </footer>
         </section>
@@ -283,6 +297,15 @@
       </section>
     </aside>
   </div>
+  <dialog id="aboutDialog" aria-labelledby="aboutTitle">
+    <h2 id="aboutTitle">關於本工具</h2>
+    <p class="technology-credit">結構繪圖：<a href="https://www.rdkitjs.com/" target="_blank" rel="noopener noreferrer">RDKit.js</a> · IUPAC 編號：<a href="https://openclatura.org/" target="_blank" rel="noopener noreferrer">OpenClatura</a> · <a href="vendor/LICENSE" target="_blank" rel="noopener noreferrer">RDKit 授權</a></p>
+    <div class="structure-edit-actions"><button id="closeAbout" type="button" autofocus>關閉</button></div>
+  </dialog>
+  <dialog id="ringLabelDialog" aria-labelledby="ringLabelTitle">
+    <h2 id="ringLabelTitle">自訂環標記</h2>
+    <form method="dialog" id="ringLabelForm"><label>標記 <input id="ringLabelText" maxlength="6" autocomplete="off" placeholder="例如 1 或 A"></label><p>留空可移除標記；最多 6 個字元。</p><button type="submit">套用</button><button type="button" id="cancelRingLabel">取消</button></form>
+  </dialog>
   <dialog id="structureEditDialog" aria-labelledby="structureEditTitle">
     <h2 id="structureEditTitle">微調結構</h2>
     <ol><li>複製目前的 SMILES。</li><li>前往 OpenClatura，在新頁面貼上 SMILES 並修改結構。</li><li>複製修改後的 SMILES，回本頁貼入上方輸入框，再按「繪製」。</li></ol>
@@ -290,12 +313,14 @@
     <div class="structure-edit-actions"><button id="copyEditSmiles" type="button">複製 SMILES</button><a href="https://openclatura.org/" target="_blank" rel="noopener noreferrer">前往 OpenClatura ↗</a><button id="closeStructureEdit" type="button">關閉</button></div>
   </dialog>
   <script src="vendor/RDKit_minimal.js"></script>
-  <script src="steroid-numbering.js"></script>
-  <script src="iupac-numbering.js"></script>
-  <script src="highlight-selection.js"></script>
-  <script src="renderer.js"></script>
-  <script src="name-lookup.js"></script>
-  <script src="history-store.js"></script>
-  <script src="script.js"></script>
+  <script src="steroid-numbering.js?v=20261121-6"></script>
+  <script src="iupac-numbering.js?v=20261121-6"></script>
+  <script src="highlight-selection.js?v=20261121-6"></script>
+  <script src="renderer.js?v=20261121-6"></script>
+  <script src="ring-annotations.js?v=20261121-6"></script>
+  <script src="reaction-renderer.js?v=20261121-6"></script>
+  <script src="name-lookup.js?v=20261121-6"></script>
+  <script src="history-store.js?v=20261121-6"></script>
+  <script src="script.js?v=20261121-6"></script>
 </body>
 </html>

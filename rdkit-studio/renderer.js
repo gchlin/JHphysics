@@ -122,6 +122,8 @@ function drawingOptions(atoms, options) {
     wedgeBonds: options.stereo_bond_mode === 'wedge' || options.stereo_bond_mode === 'both',
     clearBackground: !options.transparent_background
   };
+  details.standardColoursForHighlightedAtoms = true;
+  details.kekulize = options.aromatic_style !== 'aromatic';
   if (options.size_mode === 'bond') {
     const scale = options.scale_percent / 100;
     details.fixedBondLength = STANDARD_BOND_CM * PIXELS_PER_CM * scale;
@@ -167,8 +169,8 @@ function transformedMolblock(molblock, options) {
   const bondCount = Number(lines[3]?.slice(3, 6));
   if (!Number.isInteger(atomCount) || !Number.isInteger(bondCount)) throw new Error('無法處理此分子的座標格式。');
   const radians = rotation * Math.PI / 180;
-  const cos = Math.round(Math.cos(radians));
-  const sin = Math.round(Math.sin(radians));
+  const cos = Math.cos(radians);
+  const sin = Math.sin(radians);
   for (let index = 4; index < 4 + atomCount; index += 1) {
     const line = lines[index];
     const x = Number(line?.slice(0, 10));
@@ -265,7 +267,7 @@ async function drawMolecule(smiles, options = {}) {
     const formula = moleculeFormula(atoms);
     const descriptors = JSON.parse(mol.get_descriptors());
     const stereoTags = JSON.parse(mol.get_stereo_tags());
-    const highlightCandidates = options.interactive_highlights ? {
+    let highlightCandidates = options.interactive_highlights ? {
       elements: HighlightSelection.getElementMatches(mol),
       groups: HighlightSelection.getFunctionalGroupMatches(rdkit, mol)
     } : null;
@@ -294,16 +296,33 @@ async function drawMolecule(smiles, options = {}) {
     if (!transformed || !sameStereo(JSON.parse(mol.get_stereo_tags()), JSON.parse(transformed.get_stereo_tags()))) {
       throw new Error('旋轉或翻轉後立體組態無法驗證，已停止輸出。');
     }
+    let abbreviationStatus = '';
+    let abbreviated = false;
+    if (options.abbreviate_groups) {
+      if (options.steroid_numbering || options.iupac_labels || options.add_atom_indices ||
+          options.show_hydrogens || options.show_carbons || options.preserve_highlights ||
+          stereoTags.CIP_atoms?.length || stereoTags.CIP_bonds?.length) {
+        abbreviationStatus = '為保留編號、標色、立體資訊或完整原子顯示，目前使用完整結構。';
+      } else {
+        const count = transformed.get_num_atoms();
+        transformed.condense_abbreviations(0.4, false);
+        abbreviated = transformed.get_num_atoms() < count;
+        abbreviationStatus = abbreviated ? '已使用常見縮寫；需標色時請切回完整結構。' : '此分子沒有適合自動縮寫的基團。';
+        if (abbreviated) highlightCandidates = {elements:[], groups:[]};
+      }
+    }
+    outputOptions.abbreviated = abbreviated;
+    outputOptions.abbreviation_status = abbreviationStatus;
     const drawOptions = drawingOptions(moleculeAtoms(transformed), outputOptions);
     // Transparent RDKit atom ellipses supply exact hit geometry, including skeletal
     // carbon atoms. They share the final drawing coordinates and survive fitting.
-    if (options.interactive_highlights) {
+    if (options.interactive_highlights && !abbreviated) {
       drawOptions.atoms = Array.from({length: transformed.get_num_atoms()}, (_, index) => index);
       drawOptions.bonds = [];
       drawOptions.highlightAtomColors = Object.fromEntries(drawOptions.atoms.map(index => [index, [0, 0, 0, 0]]));
     }
     const numberLabels = options.iupac_style !== 'combined' && options.iupac_labels
-      ? Object.fromEntries(Object.entries(options.iupac_labels).map(([id,text])=>[id, /^C\d+[a-z]?$/.test(text) ? text.slice(1) : text])) : options.iupac_labels;
+      ? Object.fromEntries(Object.entries(options.iupac_labels).map(([id,text])=>[id, text.replace(/^[A-Z][a-z]?(\d+[a-z]?)$/, '$1')])) : options.iupac_labels;
     const rawSvg = options.iupac_labels ? svgWithNumberLabels(transformed, numberLabels, drawOptions, options.numbering_size, true)
       : sterolLabels ? svgWithSterolNumbers(transformed, sterolLabels, drawOptions, options.numbering_size)
       : options.add_atom_indices ? svgWithNumberLabels(transformed, null, drawOptions, options.numbering_size)
@@ -319,7 +338,10 @@ async function drawMolecule(smiles, options = {}) {
       outputOptions.height_cm = options.size_mode === 'height' ? options.height_cm
         : Math.round(fitted.heightPx / PIXELS_PER_CM * 100) / 100;
     }
-    return {svg: fitted.svg, formula, molecular_weight: descriptors.amw, stereo_tags: stereoTags, smiles, atom_count: mol.get_num_atoms(), highlightCandidates, options: outputOptions};
+    return {svg: fitted.svg, formula, molecular_weight: descriptors.amw,
+      properties:{rings:descriptors.NumRings, aromaticRings:descriptors.NumAromaticRings, donors:descriptors.NumHBD, acceptors:descriptors.NumHBA},
+      ring_atoms:abbreviated ? [] : (JSON.parse(transformed.get_json()).molecules[0].extensions?.find(item=>item.name==='rdkitRepresentation')?.atomRings || []),
+      stereo_tags: stereoTags, smiles, atom_count: mol.get_num_atoms(), highlightCandidates, options: outputOptions};
   } finally {
     if (transformed) transformed.delete();
     mol.delete();

@@ -19,7 +19,7 @@ let customNumberingKey = '', defaultNumberingLabels = {}, customNumberingLabels 
 function refreshNumberingEditor() {
   const selected = numberingAtom.value;
   numberingAtom.textContent = '';
-  Object.entries(defaultNumberingLabels).sort((a,b) => a[1].localeCompare(b[1], 'en', {numeric:true})).forEach(([id,label]) => {
+  Object.entries(defaultNumberingLabels).sort((a,b) => a[1].replace(/^[A-Z][a-z]?/, '').localeCompare(b[1].replace(/^[A-Z][a-z]?/, ''), 'en', {numeric:true})).forEach(([id,label]) => {
     const option = document.createElement('option');
     option.value = id; option.textContent = label;
     numberingAtom.append(option);
@@ -123,6 +123,7 @@ const eraseHighlightButton = document.querySelector('#eraseHighlight');
 const clearHighlightsButton = document.querySelector('#clearHighlights');
 const highlightModeButtons = document.querySelectorAll('[data-highlight-mode]');
 let highlightActive = false;
+let ringAtoms = [], ringLabels = {}, ringIdentity = '', ringEditMode = false;
 let highlightModeValue = 'direct';
 let highlightCandidates = {elements:[], groups:[]};
 let highlightIdentity = '';
@@ -240,15 +241,17 @@ function setHighlightMode(mode) {
   paintHighlights();
 }
 function setHighlightActive(active) {
-  highlightActive = active && !!baseSvg;
+  if (active) {ringEditMode=false; document.querySelector('#editRingLabels').setAttribute('aria-pressed','false');}
+  highlightActive = active && !!baseSvg && !lastRenderOptions?.abbreviated && !lastRenderOptions?.reaction;
   if (highlightActive) paintHighlights();
   else setHighlightMode('direct');
 }
 function paintHighlights() {
+  updateNumberingControls();
   if (!baseSvg) highlightActive = false;
   const selectedCount = selectedAtoms.size + selectedBonds.size;
   const markCount = highlightedAtoms.size + highlightedBonds.size + parentAtoms.size + parentBonds.size;
-  highlightToggle.disabled = !baseSvg;
+  highlightToggle.disabled = !baseSvg || !!lastRenderOptions?.abbreviated || !!lastRenderOptions?.reaction;
   highlightToggle.setAttribute('aria-pressed', String(highlightActive));
   highlightTools.hidden = !highlightActive;
   highlightHint.hidden = !highlightActive;
@@ -282,8 +285,10 @@ function paintHighlights() {
     colors.append(clone);
   });
   if (bondShapes[0]) root.insertBefore(colors, bondShapes[0]);
+  if (typeof RingAnnotations !== 'undefined') RingAnnotations.addLabels(root, ringAtoms, ringLabels, numberingSize);
   // Freeze the export before adding selection previews and input targets.
   lastSvg = new XMLSerializer().serializeToString(root);
+  if (ringEditMode && typeof RingAnnotations !== 'undefined') RingAnnotations.addTargets(root,ringAtoms);
   if (highlightActive) {
     const overlay = document.createElementNS(ns, 'g');
     overlay.setAttribute('data-highlight-overlay', 'true');
@@ -402,6 +407,8 @@ let rotation = 0;
 let flipX = false;
 let flipY = false;
 let hydrogenMode = 'hetero';
+let abbreviateGroups = false;
+let aromaticStyle = 'kekule';
 let stereoMode = 'wedge';
 let numberingMode = 'none';
 let numberingStructureIdentity = '';
@@ -432,7 +439,7 @@ let explicitMethyl = false;
 let sizeMode = 'height';
 let gallery = [];
 let selectedSubject = '\u5168\u90e8';
-let selectedCategory = '\u5168\u90e8';
+let selectedCategory = '★ 熱門範例';
 let selectedName = '';
 let catalog = [];
 let catalogConcepts = [];
@@ -501,6 +508,9 @@ function options() {
     throw new Error('鍵長比例請設定為 20% 至 300%。');
   return {
     interactive_highlights: true,
+    abbreviate_groups: abbreviateGroups,
+    aromatic_style: aromaticStyle,
+    preserve_highlights: highlightActive || ringEditMode || !!Object.keys(ringLabels).length || !!(highlightedAtoms.size || highlightedBonds.size || parentAtoms.size || parentBonds.size),
     size_mode: sizeMode,
     height_cm: heightCm,
     scale_percent: scalePercent,
@@ -563,16 +573,21 @@ function clearPreview(message = '輸入結構或選擇範例後按下編譯。')
   lastFormula = '';
   lastSmiles = '';
   lastRenderOptions = null;
+  ringAtoms=[]; ringLabels={}; ringIdentity=''; ringEditMode=false;
+  document.querySelector('#ringLabelTools').hidden=true;
   previewStage.innerHTML = `<div class="empty-state"><strong>等待選擇結構</strong><p>${escapeHTML(message)}</p></div>`;
   document.querySelector('#metaName').textContent = '—';
   setStereoBadge('');
   document.querySelector('#metaFormula').textContent = '—';
   document.querySelector('#metaWeight').textContent = 'MW: —';
+  document.querySelector('#metaProperties').hidden = true;
+  document.querySelector('#aromaticControls').hidden = true;
   document.querySelector('#metaSize').textContent = '—';
   downloadButton.disabled = true;
   copyButton.disabled = true;
   document.querySelector('#copyFormula').disabled = true;
   document.querySelector('#invertChirality').disabled = true;
+  document.querySelector('#invertChirality').hidden = true;
 }
 function escapeHTML(value) {
   return String(value).replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
@@ -745,6 +760,39 @@ function invertedName(name) {
   return name.replace(/^\((R|S)\)/, (_, sense) => sense === 'R' ? '(S)' : '(R)')
     .replace(/^([LD])-/, (_, sense) => sense === 'L' ? 'D-' : 'L-');
 }
+function setReactionView(active) {
+  document.body.classList.toggle('reaction-view',active);
+  document.querySelectorAll('[data-layout], [data-preset], #rotate45, #flipHorizontal, #flipVertical, #resetTransform, #editStructure, [data-size-mode="bond"]').forEach(button=>{button.disabled=active;});
+  document.querySelector('#copyFormula').hidden=active;
+  document.querySelector('#metaWeight').hidden=active;
+}
+async function renderReactionView(raw, sequence) {
+  // Reaction depiction is intentionally limited to colour, line width and output size.
+  sizeMode='height';
+  document.querySelectorAll('[data-size-mode]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.sizeMode==='height')));
+  document.querySelector('#heightControls').hidden=false;
+  document.querySelector('#bondControls').hidden=true;
+  const data=await drawReaction(raw,{...options(),size_mode:'height',reaction:true});
+  if(sequence!==renderSequence) return false;
+  setReactionView(true);
+  resetHighlights();highlightActive=false;ringAtoms=[];ringLabels={};ringEditMode=false;
+  baseSvg=data.svg;lastRenderOptions=data.options;lastFormula='';lastSmiles=raw;
+  paintHighlights();
+  previewStage.classList.toggle('transparent',data.options.transparent_background);
+  const example=ReactionExamples.items.find(item=>item.reaction_smiles===raw);
+  document.querySelector('#metaName').textContent=example?.name || selectedName || '自訂反應式';
+  setStereoBadge('');
+  document.querySelector('#invertChirality').hidden=true;
+  document.querySelector('#aromaticControls').hidden=true;
+  document.querySelector('#ringLabelTools').hidden=true;
+  document.querySelector('#metaProperties').textContent=example ? `${example.description} 條件：${example.conditions}` : '依輸入內容繪製反應式；不預測產物。';
+  document.querySelector('#metaProperties').hidden=false;
+  document.querySelector('#metaSize').textContent=`輸出 ${data.options.width_cm.toFixed(2)} × ${data.options.height_cm.toFixed(2)} cm`;
+  renderedSmiles.value=raw;smilesPreview.textContent=raw;smilesRow.hidden=false;copySmilesButton.disabled=false;
+  copyButton.disabled=false;downloadButton.disabled=false;syncDownloadMenu();
+  setLookupStatus('local','反應式：可調整顏色、鍵線、尺寸與背景；條件見下方展開資訊。');
+  return true;
+}
 async function render() {
   lookupController?.abort();
   lookupController = new AbortController();
@@ -765,6 +813,8 @@ async function render() {
     if (!structureInput.value.trim()) throw new Error('\u8acb\u5148\u8f38\u5165\u5316\u5b78\u5f0f\u6216\u4fd7\u540d');
     stage = 'settings';
     options(); // Reject invalid drawing settings before sending a name query.
+    if (structureInput.value.includes('>')) return await renderReactionView(structureInput.value.trim(),sequence);
+    setReactionView(false);
     stage = 'resolving';
     setLookupStatus('resolving', '正在確認輸入…');
     const candidates = await resolveCandidates(structureInput.value, {
@@ -807,11 +857,12 @@ async function render() {
       : '';
     if (numberingMode === 'iupac') {
       numberingNotice.hidden = false;
-      numberingNotice.textContent = '正在向 OpenClatura 查詢 IUPAC 碳編號…';
+      numberingNotice.textContent = '正在向 OpenClatura 查詢 IUPAC 母體編號…';
       try {
         const numbered = await resolveIupacNumbering(await rdkitReady, structure, {signal:controller.signal});
         if (sequence !== renderSequence) return false;
-        if (!Object.keys(numbered.labels).length) throw new Error('這個母體沒有可標示的碳定位號。');
+        const parentLabels = numbered.allLabels || numbered.labels;
+        if (!Object.keys(parentLabels).length) throw new Error('這個母體沒有可標示的定位號。');
         structure = numbered.smiles;
         const numberingKey = candidate.smiles + '\n' + structure;
         if (customNumberingKey !== numberingKey) {
@@ -819,10 +870,10 @@ async function render() {
           numberingEditor.open = false;
           customNumberingKey = numberingKey;
         }
-        defaultNumberingLabels = numbered.labels;
-        drawSettings.iupac_labels = {...numbered.labels, ...customNumberingLabels};
-        numberingMessage = `IUPAC 母體碳編號 · OpenClatura${numbered.name ? ' · ' + numbered.name : ''}`;
-        if (Object.keys(customNumberingLabels).length) numberingMessage = '自訂碳編號（依 IUPAC 母體調整） · OpenClatura';
+        defaultNumberingLabels = parentLabels;
+        drawSettings.iupac_labels = {...parentLabels, ...customNumberingLabels};
+        numberingMessage = `IUPAC 母體編號 · OpenClatura${numbered.name ? ' · ' + numbered.name : ''}`;
+        if (Object.keys(customNumberingLabels).length) numberingMessage = '自訂母體編號（依 IUPAC 母體調整） · OpenClatura';
       } catch (error) {
         if (sequence !== renderSequence || controller.signal.aborted) return false;
         numberingMessage = `IUPAC 編號暫不可用：${error.message} 已顯示未編號結構。`;
@@ -844,6 +895,10 @@ async function render() {
     numberingEditor.hidden = !drawSettings.iupac_labels;
     if (drawSettings.iupac_labels) refreshNumberingEditor();
     baseSvg = data.svg;
+    if (ringIdentity !== structure) {ringLabels={};ringEditMode=false;ringIdentity=structure;}
+    ringAtoms = data.ring_atoms || [];
+    document.querySelector('#ringLabelTools').hidden = !ringAtoms.length;
+    document.querySelector('#editRingLabels').setAttribute('aria-pressed',String(ringEditMode));
     const identityMol = (await rdkitReady).get_mol(structure);
     let identity;
     // Canonical SMILES alone is insufficient: equivalent input SMILES can have
@@ -859,10 +914,13 @@ async function render() {
     lastFormula = data.formula || data.smiles;
     lastSmiles = structure;
     renderedSmiles.value = lastSmiles;
-    smilesPreview.textContent = lastSmiles.length > 25 ? `${lastSmiles.slice(0, 24)}…` : lastSmiles;
+    smilesPreview.textContent = lastSmiles;
     smilesRow.hidden = false;
     copySmilesButton.disabled = false;
     lastRenderOptions = data.options;
+    const abbreviationStatus = document.querySelector('#abbreviationStatus');
+    abbreviationStatus.textContent = data.options.abbreviation_status || '';
+    abbreviationStatus.hidden = !abbreviationStatus.textContent;
     paintHighlights();
     previewStage.classList.toggle('transparent', data.options.transparent_background);
     document.querySelector('#flipHorizontal').setAttribute('aria-pressed', String(flipX));
@@ -873,11 +931,18 @@ async function render() {
     document.querySelector('#metaFormula').innerHTML = formulaMarkup(data.formula);
     document.querySelector('#metaWeight').textContent = Number.isFinite(data.molecular_weight)
       ? `MW: ${data.molecular_weight.toFixed(2)} g/mol` : 'MW: —';
+    const properties = data.properties;
+    const propertyLine = document.querySelector('#metaProperties');
+    propertyLine.textContent = properties ? `環數 ${properties.rings}（芳香環 ${properties.aromaticRings}） · 氫鍵供體 ${properties.donors} · 氫鍵受體 ${properties.acceptors}` : '';
+    propertyLine.hidden = !properties;
+    document.querySelector('#aromaticControls').hidden = !(properties?.aromaticRings > 0);
     document.querySelector('#metaSize').textContent = `輸出 ${data.options.width_cm.toFixed(2)} × ${data.options.height_cm.toFixed(2)} cm`;
     downloadButton.disabled = false;
+    syncDownloadMenu();
     copyButton.disabled = false;
     document.querySelector('#copyFormula').disabled = false;
     document.querySelector('#invertChirality').disabled = !(data.stereo_tags.CIP_atoms?.length && /\[[^\]]*@@?[^\]]*\]/.test(structure));
+    document.querySelector('#invertChirality').hidden = document.querySelector('#invertChirality').disabled;
     unknownNamePromptButton.hidden = true;
     structureNotice.textContent = '';
     structureNotice.hidden = true;
@@ -961,7 +1026,7 @@ function hydrateThumbnails(root) {
         const smiles = node.dataset.thumbSmiles;
         try {
           if (!thumbnailCache.has(smiles)) {
-            const data = await drawMolecule(smiles, {width:220, height:150, transparent_background:true, use_element_colors:true});
+            const data = await (smiles.includes('>') ? drawReaction : drawMolecule)(smiles, {width:220, height:180, transparent_background:true, use_element_colors:true});
             thumbnailCache.set(smiles, data.svg);
           }
           if (node.isConnected) node.innerHTML = thumbnailCache.get(smiles);
@@ -975,8 +1040,9 @@ function hydrateThumbnails(root) {
 function renderGallery() {
   const visible = gallery.filter(item =>
     (selectedSubject === '\u5168\u90e8' || item.subject === selectedSubject) &&
-    (selectedCategory === '\u5168\u90e8' || item.category === selectedCategory)
+    (selectedCategory === '★ 熱門範例' ? item.featured === true : selectedCategory === '\u5168\u90e8' || item.category === selectedCategory)
   );
+  if (selectedCategory === '★ 熱門範例') visible.sort((a, b) => a.featuredOrder - b.featuredOrder);
   document.querySelector('#galleryGrid').innerHTML = visible.map(item => {
     const image = item.file
       ? '<img src="' + escapeHTML(item.file) + '" alt="' + escapeHTML(item.name) + '" loading="lazy">'
@@ -984,6 +1050,7 @@ function renderGallery() {
     return '<article class="gallery-card" data-smiles="' + escapeHTML(item.smiles) + '">' +
       '<div class="gallery-image">' + image + '</div>' +
       '<div class="card-topline"><div><div class="gallery-name">' + escapeHTML(item.name) + '</div><div class="gallery-en">' + escapeHTML(item.english) + '</div></div></div>' +
+      (item.featureTag ? '<div class="gallery-feature-tag">' + escapeHTML(item.featureTag) + '</div><p class="gallery-feature-description">' + escapeHTML(item.featureDescription || '') + '</p>' : '') +
       '<div class="card-meta"><span>' + escapeHTML(item.subject) + '</span><span>' + escapeHTML(item.category) + '</span></div>' +
       '</article>';
   }).join('');
@@ -998,9 +1065,8 @@ function renderGallery() {
 
 }
 function renderCategoryFilter() {
-  const categories = ['\u5168\u90e8', ...new Set(
-    gallery.filter(item => selectedSubject === '\u5168\u90e8' || item.subject === selectedSubject).map(item => item.category)
-  )];
+  const subjectItems = gallery.filter(item => selectedSubject === '\u5168\u90e8' || item.subject === selectedSubject);
+  const categories = [...(subjectItems.some(item => item.featured) ? ['★ 熱門範例'] : []), '\u5168\u90e8', ...new Set(subjectItems.map(item => item.category))];
   if (!categories.includes(selectedCategory)) selectedCategory = '\u5168\u90e8';
   document.querySelector('#categoryFilter').innerHTML = categories.map(category =>
     '<button class="filter-button ' + (category === selectedCategory ? 'active' : '') + '" data-category="' + escapeHTML(category) + '">' +
@@ -1019,6 +1085,7 @@ async function loadGallery() {
     if (!response.ok) throw new Error('gallery fetch failed');
     const data = await response.json();
     gallery = Array.isArray(data) ? data : [];
+    if (typeof ReactionExamples !== 'undefined') gallery.push(...ReactionExamples.items.map(item=>({name:item.name,english:'Reaction',smiles:item.reaction_smiles,subject:'有機',category:'常見反應',featureTag:item.category,featureDescription:item.description})));
     renderCategoryFilter();
     renderGallery();
   } catch (error) {
@@ -1059,6 +1126,7 @@ structureInput.addEventListener('input', () => {
   copyButton.disabled = true;
   document.querySelector('#copyFormula').disabled = true;
   document.querySelector('#invertChirality').disabled = true;
+  document.querySelector('#invertChirality').hidden = true;
 });
 structureInput.addEventListener('keydown', event => {
   if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
@@ -1295,6 +1363,16 @@ document.querySelectorAll('[data-hydrogens]').forEach(button => button.addEventL
   document.querySelectorAll('[data-hydrogens]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
   scheduleStyleRender();
 }));
+document.querySelectorAll('[data-abbreviations]').forEach(button => button.addEventListener('click', () => {
+  abbreviateGroups = button.dataset.abbreviations === 'common';
+  document.querySelectorAll('[data-abbreviations]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+  scheduleStyleRender();
+}));
+document.querySelectorAll('[data-aromatic-style]').forEach(button => button.addEventListener('click', () => {
+  aromaticStyle = button.dataset.aromaticStyle;
+  document.querySelectorAll('[data-aromatic-style]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+  scheduleStyleRender();
+}));
 document.querySelectorAll('[data-carbons]').forEach(button => button.addEventListener('click', () => {
   document.querySelector('#carbonInput').checked = button.dataset.carbons === 'show';
   document.querySelectorAll('[data-carbons]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
@@ -1312,9 +1390,11 @@ function updateNumberingControls() {
   const advancedStatus = document.querySelector('#advancedNumberingStatus');
   advancedStatus.textContent = numberingMode === 'index' ? '使用中：原子序號' : '';
   advancedStatus.hidden = !advancedStatus.textContent;
-  const disabled = numberingMode === 'none';
+  const disabled = numberingMode === 'none' && !Object.keys(ringLabels).length;
   document.querySelectorAll('[data-numbering-size]').forEach(button => { button.disabled = disabled; });
   document.querySelector('#numberingSizeControls').setAttribute('aria-disabled', String(disabled));
+  document.querySelector('#numberingSizeControls').hidden = disabled;
+  document.querySelector('#sterolHelp').hidden = numberingMode !== 'steroid';
 }
 updateNumberingControls();
 document.querySelectorAll('[data-numbering]').forEach(button => button.addEventListener('click', () => {
@@ -1326,7 +1406,7 @@ document.querySelectorAll('[data-numbering]').forEach(button => button.addEventL
   scheduleStyleRender();
 }));
 document.querySelectorAll('[data-numbering-size]').forEach(button => button.addEventListener('click', () => {
-  if (button.disabled || numberingMode === 'none') return;
+  if (button.disabled) return;
   numberingSize = button.dataset.numberingSize;
   document.querySelectorAll('[data-numbering-size]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
   scheduleStyleRender();
@@ -1352,8 +1432,7 @@ document.querySelectorAll('[data-preset]').forEach(button => button.addEventList
   document.querySelectorAll('[data-preset]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
   scheduleStyleRender();
 }));
-document.querySelector('#rotateLeft').addEventListener('click', () => { rotation = (rotation + 270) % 360; refreshTransform(); });
-document.querySelector('#rotateRight').addEventListener('click', () => { rotation = (rotation + 90) % 360; refreshTransform(); });
+document.querySelector('#rotate45').addEventListener('click', () => { rotation = (rotation + 45) % 360; refreshTransform(); });
 document.querySelector('#flipHorizontal').addEventListener('click', async () => {
   flipX = !flipX;
   if (await refreshTransform()) toast(flipX ? '已水平翻轉；已驗證分子組態不變。' : '已取消水平翻轉。');
@@ -1394,6 +1473,35 @@ document.querySelector('#invertChirality').addEventListener('click', async () =>
   } catch (error) { setError(error.message); }
 });
 const structureEditDialog = document.querySelector('#structureEditDialog');
+const aboutDialog = document.querySelector('#aboutDialog');
+const ringLabelDialog = document.querySelector('#ringLabelDialog');
+let selectedRing = '';
+document.querySelector('#editRingLabels').addEventListener('click', () => {
+  ringEditMode=!ringEditMode;
+  if (ringEditMode) {highlightActive=false;toast('點環中央設定標記；再按「自訂環標記」完成。');}
+  document.querySelector('#editRingLabels').setAttribute('aria-pressed',String(ringEditMode));
+  paintHighlights();
+});
+function openRingLabel(event) {
+  if(event.type==='keydown' && !['Enter',' '].includes(event.key)) return;
+  const target=event.target.closest('[data-ring-target]');
+  if(!ringEditMode || !target) return;
+  event.preventDefault();
+  selectedRing=target.getAttribute('data-ring-target');
+  document.querySelector('#ringLabelText').value=ringLabels[selectedRing] || '';
+  ringLabelDialog.showModal();document.querySelector('#ringLabelText').focus();
+}
+previewStage.addEventListener('click',openRingLabel);
+previewStage.addEventListener('keydown',openRingLabel);
+document.querySelector('#ringLabelForm').addEventListener('submit',event=>{
+  event.preventDefault();
+  const label=document.querySelector('#ringLabelText').value.trim().slice(0,6);
+  if(label) ringLabels[selectedRing]=label;else delete ringLabels[selectedRing];
+  ringLabelDialog.close();paintHighlights();document.querySelector('#editRingLabels').focus();
+});
+document.querySelector('#cancelRingLabel').addEventListener('click',()=>ringLabelDialog.close());
+document.querySelector('#showAbout').addEventListener('click', () => aboutDialog.showModal());
+document.querySelector('#closeAbout').addEventListener('click', () => aboutDialog.close());
 document.querySelector('#editStructure').addEventListener('click', () => {
   if (!renderedSmiles.value) return;
   document.querySelector('#structureEditStatus').textContent = '';
@@ -1452,6 +1560,7 @@ document.querySelector('#resetNumbering').addEventListener('click', () => {
 previewStage.addEventListener('click', event => {
   const label = event.target.closest('[data-numbering-atom]');
   if (!label || numberingEditor.hidden || highlightActive) return;
+  setMoleculeInfoExpanded(true);
   numberingEditor.open = true;
   numberingAtom.value = label.getAttribute('data-numbering-atom');
   numberingText.value = customNumberingLabels[numberingAtom.value] ?? defaultNumberingLabels[numberingAtom.value] ?? '';
@@ -1498,6 +1607,77 @@ document.querySelector('#copyFormula').addEventListener('click', async () => {
     try { await navigator.clipboard.writeText(mathml); toast('Word 公式已複製，可直接貼上'); }
     catch { toast('瀏覽器無法複製公式'); }
   }
+});
+const downloadMore = document.querySelector('#downloadMore');
+const downloadMenu = document.querySelector('#downloadMenu');
+function closeDownloadMenu() {
+  downloadMenu.hidden = true;
+  downloadMore.setAttribute('aria-expanded', 'false');
+}
+function syncDownloadMenu() {
+  downloadMore.disabled = downloadButton.disabled || !!lastRenderOptions?.reaction;
+  if (downloadMore.disabled) closeDownloadMenu();
+}
+new MutationObserver(syncDownloadMenu).observe(downloadButton, {attributes:true, attributeFilter:['disabled']});
+syncDownloadMenu();
+downloadMore.addEventListener('click', () => {
+  if (!downloadMenu.hidden) { closeDownloadMenu(); return; }
+  if (downloadMore.disabled) return;
+  downloadMenu.hidden = false;
+  downloadMore.setAttribute('aria-expanded', 'true');
+  const rect = downloadMore.getBoundingClientRect();
+  downloadMenu.style.left = `${Math.max(8, Math.min(rect.right - downloadMenu.offsetWidth, innerWidth - downloadMenu.offsetWidth - 8))}px`;
+  downloadMenu.style.top = `${Math.max(8, rect.top - downloadMenu.offsetHeight - 6)}px`;
+  downloadMenu.querySelector('button').focus();
+});
+document.addEventListener('click', event => {
+  if (!downloadMenu.contains(event.target) && !downloadMore.contains(event.target)) closeDownloadMenu();
+});
+document.addEventListener('keydown', event => {
+  if (event.key !== 'Escape' || downloadMenu.hidden) return;
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  closeDownloadMenu();
+  downloadMore.focus();
+}, true);
+window.addEventListener('resize', closeDownloadMenu);
+document.addEventListener('scroll', closeDownloadMenu, true);
+async function moleculeMolblock(smiles, options, version) {
+  const rdkit = await rdkitReady;
+  let original, transformed, restored;
+  try {
+    original = rdkit.get_mol(smiles);
+    if (!original) throw new Error('無法讀取目前分子。');
+    const stereo = JSON.parse(original.get_stereo_tags());
+    original.set_new_coords(!!options.use_coordgen);
+    transformed = rdkit.get_mol(transformedMolblock(original.get_molblock(), options));
+    if (!transformed || !sameStereo(stereo, JSON.parse(transformed.get_stereo_tags())))
+      throw new Error('座標變換後立體配置不一致，已停止 MOL 匯出。');
+    const block = version === '3000' ? transformed.get_v3Kmolblock() : transformed.get_molblock();
+    restored = rdkit.get_mol(block);
+    if (!restored || !sameStereo(stereo, JSON.parse(restored.get_stereo_tags())))
+      throw new Error('MOL 重新讀取後立體配置不一致，已停止匯出。');
+    return block;
+  } finally {
+    restored?.delete();
+    transformed?.delete();
+    original?.delete();
+  }
+}
+downloadMenu.addEventListener('click', async event => {
+  const button = event.target.closest('[data-mol-version]');
+  if (!button || downloadButton.disabled || !lastSmiles || !lastRenderOptions) return;
+  const smiles = lastSmiles, options = {...lastRenderOptions}, filename = lastFormula || smiles;
+  closeDownloadMenu();
+  downloadMore.focus();
+  try {
+    const block = await moleculeMolblock(smiles, options, button.dataset.molVersion);
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(new Blob([block], {type:'chemical/x-mdl-molfile'}));
+    link.download = safeFilename(filename, 'mol');
+    link.click();
+    URL.revokeObjectURL(link.href);
+  } catch (error) { toast(error.message || '無法產生 MOL'); }
 });
 let outputFormat = 'png';
 function updateFormatLabels() {
@@ -1586,6 +1766,9 @@ function closeDrawer() {
   document.body.classList.remove('drawer-open');
 }
 function openDrawer() {
+  selectedSubject = '\u5168\u90e8';
+  selectedCategory = '★ 熱門範例';
+  document.querySelectorAll('[data-subject]').forEach(item => item.classList.toggle('active', item.dataset.subject === selectedSubject));
   renderCategoryFilter();
   renderGallery();
   drawer.classList.add('open');
@@ -1651,3 +1834,15 @@ document.querySelector('#dpiInput').value = '300';
 updateFormatLabels();
 checkHealth();
 loadGallery();
+
+// One disclosure reveals properties and all custom numbering controls.
+function setMoleculeInfoExpanded(expanded) {
+  const toggle = document.querySelector('#toggleMoleculeInfo');
+  toggle.setAttribute('aria-expanded', String(expanded));
+  toggle.title = expanded ? '收合分子屬性與編號設定' : '展開分子屬性與編號設定';
+  toggle.querySelector('.disclosure-arrow').textContent = expanded ? '▼' : '▶';
+  document.querySelector('#moleculeDetails').hidden = !expanded;
+}
+document.querySelector('#toggleMoleculeInfo').addEventListener('click', () => {
+  setMoleculeInfoExpanded(document.querySelector('#moleculeDetails').hidden);
+});
