@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <link rel="stylesheet" href="chapter3.css">
+</head>
+<body class="chapter-page sim-page">
+  <div class="sim-shell">
+    <main class="sim-card sim-main">
+      <div class="sim-title-row"><span id="exampleLabel" class="example-label">範例</span><h1 id="pageTitle"></h1></div>
+      <p id="pageSubtitle" class="sim-subtitle"></p>
+      <div class="canvas-wrap"><canvas id="simCanvas" aria-label="牛頓第二運動定律範例動畫"></canvas></div>
+      <div class="sim-controls"><button id="playButton" class="primary">▶ 播放</button><button id="resetButton">↻ 重置</button><label class="speed-control">速度<select id="speedSelect"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option></select></label></div>
+    </main>
+    <aside class="sim-side">
+      <section class="side-box"><h2>解題關係</h2><div id="formulaBox" class="equation"></div><ul id="resultList" class="result-list"></ul></section>
+      <section class="side-box"><h2>操作提示</h2><p id="tipText" class="tip"></p></section>
+      <section class="side-box sim-nav"><a href="example2.html">← 上一題</a><br><a href="index.html">回範例列表</a><br><a href="example4.html">下一題：阿特伍機 →</a></section>
+    </aside>
+  </div>
+  <script>window.CHAPTER3_CONFIG={number:3,title:'等加速度車內的擺錘',subtitle:'車廂向右等加速度前進，擺線與鉛直線夾角為 θ；觀察張力與重力分量如何平衡。',formula:'T sinθ = ma<br>T cosθ = mg',results:['車的加速度：<strong>a = g tanθ</strong>','擺線張力：<strong>T = m√(g²+a²)</strong>','本動畫以 θ = 37°、g = 10 m/s² 示意'],tip:'播放時車廂向右循環移動，擺錘向左傾斜；箭頭標示張力 T、重力 mg 與車的加速度 a。'};</script>
+  <script src="chapter3.js"></script>
+</body>
+</html>

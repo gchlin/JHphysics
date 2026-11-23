@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <link rel="stylesheet" href="chapter3.css">
+</head>
+<body class="chapter-page sim-page">
+  <div class="sim-shell">
+    <main class="sim-card sim-main">
+      <div class="sim-title-row"><span id="exampleLabel" class="example-label">範例</span><h1 id="pageTitle"></h1></div>
+      <p id="pageSubtitle" class="sim-subtitle"></p>
+      <div class="canvas-wrap"><canvas id="simCanvas" aria-label="牛頓第二運動定律範例動畫"></canvas></div>
+      <div class="sim-controls"><button id="playButton" class="primary">▶ 播放</button><button id="resetButton">↻ 重置</button><label class="speed-control">速度<select id="speedSelect"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option></select></label></div>
+    </main>
+    <aside class="sim-side">
+      <section class="side-box"><h2>解題關係</h2><div id="formulaBox" class="equation"></div><ul id="resultList" class="result-list"></ul></section>
+      <section class="side-box"><h2>操作提示</h2><p id="tipText" class="tip"></p></section>
+      <section class="side-box sim-nav"><a href="example5.html">← 上一題</a><br><a href="index.html">回範例列表</a><br><a href="example7.html">下一題：可移動斜面 →</a></section>
+    </aside>
+  </div>
+  <script>window.CHAPTER3_CONFIG={number:6,title:'連結體',subtitle:'2 kg、3 kg、1 kg 三物體相互接觸，左右分別受 10 N 與 4 N 水平力。',formula:'10 − 4 = (2+3+1)a<br>a = 1 m/s²',results:['B 物體所受合力：<strong>3 N</strong>','BC 間作用力：<strong>5 N</strong>','三物體加速度相同，皆向右'],tip:'播放時三個方塊保持接觸並一起向右；外力用紅、藍箭頭表示，BC 接觸力以紅色箭頭標出。'};</script>
+  <script src="chapter3.js"></script>
+</body>
+</html>

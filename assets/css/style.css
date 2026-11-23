@@ -1,28 +1,53 @@
-
-:root{--bg:#0b0f16;--fg:#e6edf3;--muted:#9fb0c3;--card:#121a26;--line:#223046;--link:#5aa9e6}
+:root{--bg:#f7f4ec;--fg:#243443;--muted:#617283;--card:#fffdf8;--line:#d9e1e4;--link:#116b86}
 *{box-sizing:border-box}
 body{font-family:"Microsoft JhengHei","PingFang TC",system-ui,sans-serif;margin:0;background:var(--bg);color:var(--fg)}
-.wrap{max-width:1100px;margin:0 auto;padding:24px}
+.wrap{max-width:1100px;margin:0 auto;padding:20px 24px}
 h1,h2{margin:0 0 12px}
 p{color:var(--muted)}
 a{color:var(--link);text-decoration:none}
 a:hover{text-decoration:underline}
-.table{width:100%;border-collapse:collapse;margin:16px 0}
-.table th,.table td{border:1px solid var(--line);padding:10px;text-align:center}
-.table th{background:#0f1722;color:#cbd5e1}
+a:focus-visible{outline:2px solid #168599;outline-offset:3px}
+.table-wrap{width:100%;overflow-x:auto}
+.table-wrap .table:not(.home-table){min-width:560px}
+.table{width:100%;border-collapse:collapse;margin:14px 0;background:var(--card);font-size:14px}
+.table th,.table td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:middle;line-height:1.45}
+.table th{background:#e9f1f2;color:#334e5d;font-weight:700}
+.table img{display:block;max-width:80px;max-height:58px;object-fit:contain}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
-.subject-layout{display:grid;grid-template-columns:minmax(280px,0.9fr) minmax(0,1.5fr);gap:24px;align-items:start;margin-top:26px}
-.subject{min-width:0}
-.subject h2{font-size:20px;color:#cbd5e1;padding-bottom:8px;border-bottom:1px solid var(--line)}
-.physics-grid{grid-template-columns:1fr}
-.chemistry-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
-.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;gap:10px;align-items:center}
-.card img{width:84px;height:84px;border-radius:10px;background:#0f1722;border:1px solid var(--line);object-fit:cover}
-.card p{margin:8px 0 0;font-size:13px;line-height:1.55}
+.site-header{display:flex;align-items:baseline;gap:14px;padding:4px 0 10px;border-bottom:1px solid var(--line);white-space:nowrap;overflow-x:auto}
+.site-header h1{font-size:28px;letter-spacing:-.03em;margin:0;color:#203f50}
+.eyebrow{color:#147985;font-size:13px;font-weight:700}
+.intro{padding-left:14px;border-left:1px solid var(--line);font-size:13px;color:var(--muted)}
+.contact-link{margin-left:auto;font-size:13px;white-space:nowrap}
+.home-table{min-width:720px;margin:8px 0;font-size:13px}
+.home-table th,.home-table td{padding:6px 9px;line-height:1.35}
+.home-table thead th{font-size:12px;white-space:nowrap}
+.home-table tbody th[scope="rowgroup"]{font-size:14px;white-space:nowrap;vertical-align:top}
+.home-table tbody tr:nth-child(7) th,.home-table tbody tr:nth-child(7) td,.home-table tbody tr:nth-child(10) th,.home-table tbody tr:nth-child(10) td{border-top:2px solid #a4c4c8}
+.status-note{color:#9a5a13;font-weight:600}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px;display:flex;gap:9px;align-items:center;min-height:78px}
+.card img{width:56px;height:56px;flex:none;border-radius:9px;background:#eef3f2;border:1px solid var(--line);object-fit:cover}
+.card p{margin:4px 0 0;font-size:12px;line-height:1.35}
 .planned-card{min-height:108px;border-style:dashed}
 .planned-label{margin-top:6px;color:var(--muted);font-size:13px}
-.badge{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:2px 8px;color:#cbd5e1;font-size:12px}
-.breadcrumb{font-size:14px;color:#9fb0c3;margin:10px 0}
-footer{margin-top:24px;color:#9fb0c3;font-size:12px}
-@media (max-width:760px){.subject-layout{grid-template-columns:1fr;gap:8px}}
-@media (max-width:480px){.chemistry-grid{grid-template-columns:1fr}}
+.badge{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:2px 8px;color:#455c69;font-size:12px}
+.breadcrumb{font-size:13px;color:var(--muted);margin:4px 0 12px}
+.chapter-nav{display:flex;flex-wrap:wrap;gap:8px 16px;padding:8px 0 12px;border-bottom:1px solid var(--line);font-size:13px}
+.volume-section{scroll-margin-top:12px;padding-top:18px}
+.volume-section+ .volume-section{margin-top:8px;border-top:1px solid var(--line)}
+.volume-section h2{font-size:21px;margin:0 0 4px}
+.volume-section p{font-size:13px;margin:0}
+.volume-section .table{margin:10px 0 16px}
+footer{margin-top:14px;color:var(--muted);font-size:12px}
+@media (max-width:700px){
+  .wrap{padding:12px}
+  .site-header{gap:9px;padding-bottom:8px}
+  .site-header h1{font-size:23px}
+  .eyebrow,.intro,.contact-link{font-size:11px}
+  .intro{padding-left:9px}
+  .home-table{font-size:12px}
+  .home-table th,.home-table td{padding:5px 7px}
+  .table{font-size:12px}
+  .table th,.table td{padding:6px}
+  .table img{max-width:52px;max-height:44px}
+}

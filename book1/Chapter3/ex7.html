@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8"><title>範例 7：光滑可移動斜面</title>
+<style>
+    body { background: #2c2c2c; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; overflow: hidden; font-family: "Times New Roman", serif; }
+    canvas { background: #F6F2E9; border: 2px solid #555; }
+    .panel { background: #E2DAC3; border: 2px solid #a89f91; padding: 10px; margin-top: 10px; width: 780px; display: flex; gap: 15px; align-items: center; justify-content: center; }
+    button, input { font-family: inherit; font-size: 14px; cursor: pointer; }
+    button { background: #d4cbb3; border: 1px solid #8c816d; padding: 4px 10px; }
+    .slider-group { display: flex; align-items: center; gap: 5px; font-weight: bold; font-size: 14px; }
+</style>
+</head>
+<body>
+    <canvas id="c" width="800" height="450"></canvas>
+    <div class="panel">
+        <button id="btnPlay">播放/暫停</button> <button id="btnReset">重置</button>
+        <div class="slider-group">水平推力 F: <input type="range" id="pushF" min="0" max="400" step="10" value="200"> <span id="vF">200 N</span></div>
+    </div>
+<script>
+    const c = document.getElementById('c'), ctx = c.getContext('2d'), dpr = window.devicePixelRatio || 1;
+    c.width = 800 * dpr; c.height = 450 * dpr; ctx.scale(dpr, dpr); c.style.width = '800px'; c.style.height = '450px';
+
+    let playing = false, vX = 0, X = 150, rel_v = 0, rel_s = 0;
+    const M = 14, m = 6, g = 10;
+    
+    document.getElementById('pushF').oninput = (e) => { document.getElementById('vF').innerText = e.target.value + " N"; if(!playing) draw(); };
+
+    function reset() { X = 150; vX = 0; rel_s = 0; rel_v = 0; playing = false; draw(); }
+    function drawVec(x, y, dx, dy, col, lbl) {
+        ctx.strokeStyle=ctx.fillStyle=col; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+dx, y+dy); ctx.stroke();
+        let a = Math.atan2(dy, dx); ctx.beginPath(); ctx.moveTo(x+dx, y+dy); ctx.lineTo(x+dx-8*Math.cos(a-0.5), y+dy-8*Math.sin(a-0.5)); ctx.lineTo(x+dx-8*Math.cos(a+0.5), y+dy-8*Math.sin(a+0.5)); ctx.fill();
+        ctx.font="italic 16px serif"; ctx.fillText(lbl, x+dx+5, y+dy+5);
+    }
+
+    function update(dt) {
+        let F = parseFloat(document.getElementById('pushF').value);
+        let a_w = (F - 30) / 17; // a = (F - mg sinθ cosθ) / (M + m sin²θ)
+        let a_rel = (10 - a_w) / Math.SQRT2; // g sinθ - a_w cosθ
+        
+        vX += a_w * dt; X += vX * dt;
+        rel_v += a_rel * dt; rel_s += rel_v * dt;
+        if(X > 600 || rel_s > 140 || rel_s < -140) playing = false;
+    }
+
+    function draw() {
+        ctx.fillStyle = '#F6F2E9'; ctx.fillRect(0, 0, 800, 450);
+        let F = parseFloat(document.getElementById('pushF').value);
+        let a_w = (F - 30) / 17;
+        
+        let camOffset = Math.max(0, X - 300); ctx.save(); ctx.translate(-camOffset, 0);
+        ctx.fillStyle = '#bbb'; ctx.fillRect(0, 350, 2000, 100);
+        
+        ctx.fillStyle = '#c7ebd1'; ctx.beginPath(); // 繪製直角在左下的斜面
+        ctx.moveTo(X, 350); ctx.lineTo(X, 150); ctx.lineTo(X + 200, 350); ctx.closePath(); ctx.fill(); ctx.stroke();
+        
+        let bx = X + 100 + rel_s * Math.cos(Math.PI/4);
+        let by = 250 + rel_s * Math.sin(Math.PI/4);
+        
+        ctx.save(); ctx.translate(bx, by); ctx.rotate(Math.PI/4); ctx.fillStyle='#d9d2c5'; ctx.fillRect(-20, -40, 40, 40); ctx.strokeRect(-20, -40, 40, 40); ctx.restore();
+
+        drawVec(X-60, 250, 60, 0, '#d62728', 'F'); 
+        drawVec(bx, by-20, 0, m*g*1.2, '#1f77b4', 'mg'); // 重力
+        ctx.restore();
+        
+        ctx.fillStyle = '#333'; ctx.font = '18px serif';
+        ctx.fillText(`斜面絕對加速度 a = ${a_w.toFixed(2)} m/s²`, 20, 30);
+    }
+
+    let lastTime = 0;
+    function loop(time) { let dt = (time - lastTime)/1000; lastTime = time; if(playing) update(dt); draw(); requestAnimationFrame(loop); }
+    document.getElementById('btnPlay').onclick = () => { playing = !playing; lastTime = performance.now(); };
+    document.getElementById('btnReset').onclick = reset;
+    reset(); requestAnimationFrame(loop);
+</script>
+</body>
+</html>

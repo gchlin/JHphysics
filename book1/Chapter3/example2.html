@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <link rel="stylesheet" href="chapter3.css">
+</head>
+<body class="chapter-page sim-page">
+  <div class="sim-shell">
+    <main class="sim-card sim-main">
+      <div class="sim-title-row"><span id="exampleLabel" class="example-label">範例</span><h1 id="pageTitle"></h1></div>
+      <p id="pageSubtitle" class="sim-subtitle"></p>
+      <div class="canvas-wrap"><canvas id="simCanvas" aria-label="牛頓第二運動定律範例動畫"></canvas></div>
+      <div class="sim-controls"><button id="playButton" class="primary">▶ 播放</button><button id="resetButton">↻ 重置</button><label class="speed-control">速度<select id="speedSelect"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option></select></label></div>
+    </main>
+    <aside class="sim-side">
+      <section class="side-box"><h2>解題關係</h2><div id="formulaBox" class="equation"></div><ul id="resultList" class="result-list"></ul></section>
+      <section class="side-box"><h2>操作提示</h2><p id="tipText" class="tip"></p></section>
+      <section class="side-box sim-nav"><a href="example1.html">← 上一題</a><br><a href="index.html">回範例列表</a><br><a href="example3.html">下一題：車內擺錘 →</a></section>
+    </aside>
+  </div>
+  <script>window.CHAPTER3_CONFIG={number:2,title:'單一物體受力（二維）',subtitle:'40 kg 木塊在光滑水平面上受 200 N、仰角 37° 的拉力，將外力分解並觀察木塊加速。',formula:'Fₓ = F cos37° = 160 N<br>Fᵧ = F sin37° = 120 N',results:['水平加速度：<strong>a = 4 m/s²</strong>','正向力：<strong>N = 280 N</strong>','重力取 g = 10 m/s²，sin37° = 3/5'],tip:'播放時木塊會向右運動；紅色箭頭顯示拉力及其水平、鉛直分量，藍色箭頭顯示正向力與重力。'};</script>
+  <script src="chapter3.js"></script>
+</body>
+</html>

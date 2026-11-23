@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <link rel="stylesheet" href="chapter3.css">
+</head>
+<body class="chapter-page sim-page">
+  <div class="sim-shell single-sim">
+    <main class="sim-card sim-main">
+      <div class="sim-title-row"><span id="exampleLabel" class="example-label">範例</span><h1 id="pageTitle"></h1></div>
+      <p id="pageSubtitle" class="sim-subtitle"></p>
+      <div class="canvas-wrap"><canvas id="simCanvas" aria-label="阿特伍機質量模型動畫"></canvas></div>
+      <div class="sim-controls ex4-controls"><button id="playButton" class="primary">▶ 播放</button><button id="resetButton">↻ 重置</button><label class="mass-control">A 質量 <input id="massAInput" type="number" min="1" max="20" step="1" value="6" inputmode="numeric"> kg</label><label class="mass-control">B 質量 <input id="massBInput" type="number" min="1" max="20" step="1" value="4" inputmode="numeric"> kg</label><label class="speed-control">速度<select id="speedSelect"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option></select></label></div>
+      <p id="simStatus" class="sim-status" aria-live="polite"></p>
+      <p class="sim-caption">調整整數質量後按重置，再播放觀察運動方向與是否平衡。</p>
+    </main>
+  </div>
+  <script>window.CHAPTER3_CONFIG={number:4,title:'阿特伍機',subtitle:'依照參考圖重現固定支架、定滑輪、同一條細繩與兩端物體；播放時觀察 A、B 的反向運動。'};</script>
+  <script src="chapter3.js"></script>
+</body>
+</html>

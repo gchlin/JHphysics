@@ -1,0 +1,219 @@
+:root {
+  --ink: #203040;
+  --muted: #64748b;
+  --paper: #fffaf0;
+  --panel: #ffffff;
+  --line: #e6d8c5;
+  --accent: #d85d45;
+  --accent-2: #1b8f9b;
+  --blue: #2563eb;
+  --shadow: 0 14px 36px rgba(74, 51, 31, 0.12);
+}
+
+* { box-sizing: border-box; }
+html, body { min-height: 100%; margin: 0; }
+body {
+  background: #f6efe2;
+  color: var(--ink);
+  font-family: "Microsoft JhengHei", "PingFang TC", system-ui, sans-serif;
+}
+a { color: #116b86; text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.chapter-page {
+  min-height: 100dvh;
+  padding: 18px;
+}
+.chapter-shell {
+  width: min(1180px, 100%);
+  margin: 0 auto;
+}
+.chapter-kicker {
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  margin-bottom: 6px;
+}
+.chapter-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.chapter-heading h1 { margin: 0; font-size: clamp(25px, 4vw, 42px); line-height: 1.1; }
+.chapter-heading p { margin: 0; max-width: 640px; color: var(--muted); line-height: 1.7; }
+.back-link { font-size: 14px; font-weight: 700; white-space: nowrap; }
+
+.example-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(255px, 1fr));
+  gap: 14px;
+}
+.example-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 206px;
+  padding: 17px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, .84);
+  box-shadow: 0 8px 22px rgba(74, 51, 31, .06);
+}
+.example-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 32px;
+  border-radius: 10px;
+  background: #f4a49a;
+  color: #54261e;
+  font-weight: 900;
+}
+.example-card h2 { margin: 14px 0 7px; font-size: 20px; }
+.example-card p { margin: 0; color: var(--muted); line-height: 1.6; }
+.example-card .card-link { margin-top: auto; padding-top: 14px; font-weight: 800; }
+.tag-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.tag { border: 1px solid #d3e2e5; border-radius: 999px; padding: 3px 8px; color: #28717b; background: #f2fbfa; font-size: 12px; }
+.chapter-note {
+  margin-top: 18px;
+  padding: 12px 14px;
+  border-left: 4px solid var(--accent-2);
+  border-radius: 8px;
+  background: rgba(255,255,255,.65);
+  color: #506070;
+  line-height: 1.65;
+  font-size: 14px;
+}
+
+.sim-page { overflow: hidden; }
+.sim-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 238px;
+  gap: 12px;
+  width: min(1180px, 100%);
+  height: calc(100dvh - 36px);
+  min-height: 430px;
+  margin: 0 auto;
+}
+.single-sim { grid-template-columns: minmax(0, 1fr); }
+.sim-card {
+  min-width: 0;
+  min-height: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--paper);
+  box-shadow: var(--shadow);
+}
+.sim-main { display: flex; flex-direction: column; gap: 10px; }
+.sim-title-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.sim-title-row h1 { margin: 0; font-size: clamp(20px, 3vw, 30px); }
+.sim-title-row .example-label { color: var(--accent); font-weight: 900; white-space: nowrap; }
+.sim-subtitle { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.55; }
+.canvas-wrap {
+  display: grid;
+  place-items: center;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid #e5d7c7;
+  border-radius: 14px;
+  background: #fffdf7;
+}
+#simCanvas { display: block; max-width: 100%; max-height: 100%; }
+.sim-controls {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 10px;
+  border: 1px solid #eadfce;
+  border-radius: 12px;
+  background: #fff;
+}
+.sim-caption {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+  text-align: center;
+}
+.ex4-controls { display: flex; flex-wrap: wrap; align-items: center; }
+.mass-control {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 13px;
+  white-space: nowrap;
+}
+.mass-control input {
+  width: 58px;
+  min-height: 36px;
+  padding: 5px 7px;
+  border: 1px solid #cbd5df;
+  border-radius: 9px;
+  color: var(--ink);
+  font: inherit;
+}
+.ex4-controls .speed-control { margin-left: auto; }
+.sim-status {
+  margin: 0;
+  color: #126a75;
+  font-size: 14px;
+  font-weight: 800;
+  text-align: center;
+}
+button, select {
+  min-height: 36px;
+  border: 1px solid #cbd5df;
+  border-radius: 9px;
+  background: white;
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+button { padding: 6px 13px; font-weight: 800; }
+button.primary { border-color: #147985; background: #147985; color: white; }
+button:hover { filter: brightness(.97); }
+select { padding: 5px 8px; }
+.speed-control { display: flex; align-items: center; justify-content: end; gap: 7px; color: var(--muted); font-size: 13px; }
+
+.sim-side {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  min-height: 0;
+}
+.side-box { padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: rgba(255,255,255,.86); }
+.side-box h2 { margin: 0 0 9px; font-size: 16px; }
+.equation { margin: 8px 0; padding: 8px 9px; border-radius: 9px; background: #f8f3ea; color: #4f2d26; font-family: Georgia, "Times New Roman", serif; font-size: 16px; line-height: 1.45; }
+.result-list { margin: 0; padding-left: 18px; color: #445568; font-size: 14px; line-height: 1.65; }
+.result-list strong { color: #126a75; }
+.tip { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.65; }
+.sim-nav { margin-top: auto; font-size: 13px; line-height: 1.7; }
+.sim-nav a { display: inline-block; margin-right: 6px; }
+
+@media (max-width: 850px) {
+  .sim-shell { grid-template-columns: minmax(0, 1fr) 190px; gap: 8px; }
+  .sim-card { padding: 8px; }
+  .sim-controls { grid-template-columns: auto auto; }
+  .speed-control { grid-column: 1 / -1; justify-content: start; }
+}
+@media (max-width: 640px) {
+  .chapter-page { padding: 10px; }
+  .sim-page { padding: 6px; }
+  .sim-shell { display: flex; flex-direction: column; height: calc(100dvh - 12px); min-height: 0; }
+  .sim-main { min-height: 0; flex: 1 1 auto; }
+  .sim-side { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: auto; max-height: 36%; }
+  .sim-side .sim-nav { display: none; }
+  .ex4-controls .speed-control { margin-left: 0; }
+  .side-box { padding: 10px; }
+  .side-box h2 { font-size: 14px; }
+  .equation, .result-list, .tip { font-size: 12px; }
+}
