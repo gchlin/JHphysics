@@ -3,107 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>物理教學網站 | 首頁</title>
+  <title>ChaHer｜理科互動教學</title>
   <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
   <div class="wrap">
-    <h1>物理教學網站</h1>
-    <p>課程簡介：依學科領域整理教學資源與互動模擬。</p>
+    <header class="site-header">
+      <h1>ChaHer</h1>
+      <span class="eyebrow">互動教學與學習資源</span>
+      <span class="intro">物理、化學與地球科學的互動教學資源。</span>
+      <a class="contact-link" href="mailto:chaher@gmail.com">mail: chaher@gmail.com</a>
+    </header>
 
-    <div class="subject-layout">
-    <section class="subject" aria-labelledby="physics-title">
-      <h2 id="physics-title">物理</h2>
-      <div class="grid physics-grid">
+    <main class="table-wrap">
+      <table class="table home-table">
+        <thead>
+          <tr><th scope="col">科目</th><th scope="col">類別</th><th scope="col">項目</th><th scope="col">內容</th><th scope="col">備註</th></tr>
+        </thead>
+        <tbody>
+          <tr><th scope="rowgroup" rowspan="6">物理</th><td rowspan="4">力學</td><td><a href="book1/index.html#chapter3">第一冊 第三章：牛頓第二運動定律</a></td><td>受力、加速度與滑輪範例</td><td class="status-note">本機可用，尚未上線</td></tr>
+          <tr><td><a href="book2/index.html#chapter1">第二冊 第一章：靜力平衡</a></td><td>合力與力矩平衡</td><td></td></tr>
+          <tr><td><a href="book2/index.html#chapter2">第二冊 第二章：動量與角動量</a></td><td>碰撞與角動量守恆</td><td></td></tr>
+          <tr><td><a href="book2/index.html#chapter3">第二冊 第三章：碰撞</a></td><td>彈性與非彈性碰撞例題</td><td></td></tr>
+          <tr><td>熱學</td><td><a href="book2/index.html#chapter4">第二冊 第四章：氣體動力論</a></td><td>理想氣體速率分布</td><td></td></tr>
+          <tr><td>波動</td><td><a href="book3_wave/index.html#chapter1">第三冊 第一章：波的基本性質</a></td><td>波的疊加、駐波與外部資源</td><td>含外部資源連結</td></tr>
+          <tr><th scope="rowgroup" rowspan="3">化學</th><td rowspan="3">教學工具</td><td><a href="rdkit-studio/">RDKit 分子結構工作室</a></td><td>輸入 SMILES，建立分子結構</td><td></td></tr>
+          <tr><td><a href="chemistry-tools/">ChemDOC 化學教學工具</a></td><td>化學教學資源與文件工具</td><td></td></tr>
+          <tr><td><a href="chemistry-tools/flowchart.html">化學實驗流程圖工具</a></td><td>編輯並匯出實驗流程圖</td><td></td></tr>
+          <tr><th scope="rowgroup">地球科學</th><td>天文</td><td><a href="earth/diurnal_motion.html">天球週日運動｜3D 互動教學動畫</a></td><td>星空、地球自轉與北極星仰角</td><td></td></tr>
+        </tbody>
+      </table>
+    </main>
 
-      <!-- 第一冊 -->
-      <div class="card">
-        <img src="assets/images/beam.svg" alt="第一冊縮圖">
-        <div>
-          <div class="badge">第一冊</div>
-          <div><a href="book1/Chapter3/index.html">第三章：牛頓第二運動定律</a></div>
-        </div>
-      </div>
-
-      <!-- 第二冊 -->
-      <div class="card">
-        <img src="assets/images/pendulum.svg" alt="第二冊縮圖">
-        <div>
-          <div class="badge">第二冊</div>
-          <div><a href="book2/chapter1/index.html">第一章：靜力平衡</a></div>
-          <div><a href="book2/chapter2/index.html">第二章：動量與角動量</a></div>
-          <div><a href="book2/Chapter3/index.html">第三章：碰撞</a></div>
-          <div><a href="book2/Chapter4/index.html">第四章：氣體動力論</a></div>
-        </div>
-      </div>
-
-      <!-- 第三冊 -->
-      <div class="card">
-        <img src="assets/images/wave.svg" alt="第三冊縮圖">
-        <div>
-          <div class="badge">第三冊</div>
-          <div><a href="book3_wave/chapter1/index.html">第一章：波的性質</a></div>
-        </div>
-      </div>
-
-      <div class="card planned-card">
-        <img src="assets/images/beam.svg" alt="物理課程圖示">
-        <div>
-          <div class="badge">第四冊</div>
-          <div class="planned-label">內容準備中</div>
-        </div>
-      </div>
-
-      <div class="card planned-card">
-        <img src="assets/images/pendulum.svg" alt="物理課程圖示">
-        <div>
-          <div class="badge">第五冊</div>
-          <div class="planned-label">內容準備中</div>
-        </div>
-      </div>
-
-    </div>
-    </section>
-
-    <section class="subject" aria-labelledby="chemistry-title">
-      <h2 id="chemistry-title">化學</h2>
-      <div class="grid chemistry-grid">
-        <!-- RDKit molecular structure studio -->
-        <div class="card">
-          <img src="assets/images/molecule.svg" alt="分子結構示意圖">
-          <div>
-            <div class="badge">化學工具</div>
-            <div><a href="rdkit-studio/">RDKit 分子結構繪圖</a></div>
-            <p>輸入 SMILES 或常見化學名稱，在瀏覽器中產生分子結構圖；可調整樣式、瀏覽範例，並複製或下載 PNG、SVG。</p>
-          </div>
-        </div>
-
-        <!-- ChemDOC chemistry teaching assistant -->
-        <div class="card">
-          <img src="assets/images/flask.svg" alt="化學燒瓶圖示">
-          <div>
-            <div class="badge">化學教學工具</div>
-            <div><a href="chemistry-tools/">ChemDOC 化學反應式速查</a></div>
-            <p>查找 108 課綱化學反應式，依類別篩選並複製 Word 方程式、LaTeX 或含上下標文字。</p>
-          </div>
-        </div>
-
-        <!-- Standalone chemistry lab flowchart builder -->
-        <div class="card">
-          <img src="assets/images/flowchart.svg" alt="實驗流程圖示意圖">
-          <div>
-            <div class="badge">化學教學工具</div>
-            <div><a href="chemistry-tools/flowchart.html">實驗流程圖生成器</a></div>
-            <p>編輯實驗步驟、器材與反應條件，並輸出可用於講義或簡報的流程圖。</p>
-          </div>
-        </div>
-      </div>
-    </section>
-    </div>
-
-    <footer>© 2025 物理教學網站</footer>
+    <footer>© 2026 ChaHer · <a href="mailto:chaher@gmail.com">mail: chaher@gmail.com</a></footer>
   </div>
-
   <script src="assets/js/site.js"></script>
 </body>
 </html>
