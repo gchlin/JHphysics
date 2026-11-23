@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>拋體運動 - 16:9 課本標準演示器</title>
+    <style>
+        :root {
+            --bg-paper: #f6f2e9;
+            --grid-line: #e2dac3;
+            --ink-main: #1a1a1a;
+            --ink-muted: #555555;
+            --border-dark: #2c2c2c;
+            --accent-red: #c62828;
+            --accent-blue: #1565c0;
+            --accent-green: #2e7d32;
+            --accent-orange: #d84315;
+            --accent-purple: #6a1b9a;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            margin: 0;
+            padding: 12px;
+            background-color: var(--bg-paper);
+            color: var(--ink-main);
+            font-family: Georgia, "Times New Roman", "標楷體", serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        /* 標頭與標題 */
+        header {
+            width: 100%;
+            max-width: 1400px;
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 8px;
+            border-bottom: 2px solid var(--border-dark);
+            padding-bottom: 4px;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 22px;
+            letter-spacing: 1px;
+            font-weight: bold;
+        }
+
+        .subtitle {
+            font-size: 15px;
+            font-weight: bold;
+            color: var(--ink-muted);
+        }
+
+        /* 主佈局：左邊欄控制區 + 右邊 16:9 畫布 */
+        .main-container {
+            width: 100%;
+            max-width: 1400px;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+
+        /* 左側控制面板 */
+        .sidebar {
+            width: 320px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .panel-box {
+            background: rgba(255, 255, 255, 0.75);
+            border: 2px solid var(--border-dark);
+            border-radius: 4px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .panel-title {
+            font-size: 15px;
+            font-weight: bold;
+            border-bottom: 1px solid var(--border-dark);
+            padding-bottom: 4px;
+            margin-bottom: 2px;
+        }
+
+        /* 模式按鈕 */
+        .mode-btn {
+            width: 100%;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: bold;
+            padding: 8px 10px;
+            background-color: #efead8;
+            border: 2px solid var(--border-dark);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            text-align: left;
+        }
+
+        .mode-btn.active {
+            background-color: var(--border-dark);
+            color: #ffffff;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        /* 操作按鈕 */
+        .action-btn {
+            font-family: inherit;
+            font-size: 15px;
+            font-weight: bold;
+            padding: 8px 12px;
+            background-color: #efead8;
+            border: 2px solid var(--border-dark);
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            width: 100%;
+        }
+
+        .action-btn:active {
+            transform: translateY(1px);
+        }
+
+        .action-btn.primary {
+            background-color: #2e7d32;
+            color: white;
+        }
+
+        .action-btn.danger {
+            background-color: #c62828;
+            color: white;
+        }
+
+        /* 勾選項目 */
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            padding: 6px 8px;
+            background: #ffffff;
+            border: 1px solid var(--border-dark);
+            border-radius: 4px;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: var(--border-dark);
+        }
+
+        /* 右側 16:9 畫布容器 (Viewbox: 1200 x 675) */
+        .canvas-container {
+            flex-grow: 1;
+            aspect-ratio: 16 / 9;
+            position: relative;
+            border: 3px solid var(--border-dark);
+            background-color: var(--bg-paper);
+            box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.2);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .text-math {
+            font-family: Georgia, "Times New Roman", serif;
+            font-style: italic;
+        }
+
+        .axis-label {
+            font-size: 18px;
+            font-weight: bold;
+            fill: var(--ink-main);
+        }
+
+        .tick-label {
+            font-size: 13px;
+            fill: var(--ink-muted);
+            font-family: sans-serif;
+        }
+
+        .toast-msg {
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(198, 40, 40, 0.9);
+            color: white;
+            padding: 8px 16px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 4px;
+            display: none;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>拋體運動之雙軸分解與軌跡比較演示圖</h1>
+        <div class="subtitle">[ 16:9 大螢幕白板版 · 歷史軌跡比對 ]</div>
+    </header>
+
+    <div class="main-container">
+        <!-- 左側面板 (放置所有控制按鈕與選項) -->
+        <div class="sidebar">
+            <!-- 模式選擇 -->
+            <div class="panel-box">
+                <div class="panel-title">選擇物理模式</div>
+                <button class="mode-btn active" id="btnMode1">模式 1：相同初速 v₀</button>
+                <button class="mode-btn" id="btnMode2">模式 2：相同 vy₀</button>
+                <button class="mode-btn" id="btnMode3">模式 3：相同 vx₀</button>
+            </div>
+
+            <!-- 控制動作 -->
+            <div class="panel-box">
+                <div class="panel-title">模擬控制</div>
+                <button class="action-btn primary" id="btnLaunch">🚀 發射勾選軌跡</button>
+                <button class="action-btn" id="btnPause">⏸ 暫停 / 播放</button>
+                <button class="action-btn danger" id="btnReset">🗑️ 清除所有軌跡</button>
+            </div>
+
+            <!-- 速度分量顯示 -->
+            <div class="panel-box">
+                <div class="panel-title">速度向量顯示</div>
+                <label class="checkbox-item" style="color: var(--accent-blue);">
+                    <input type="checkbox" id="chkVx" checked> 顯示 vx (水平速度)
+                </label>
+                <label class="checkbox-item" style="color: var(--accent-red);">
+                    <input type="checkbox" id="chkVy" checked> 顯示 vy (垂直速度)
+                </label>
+            </div>
+
+            <!-- 軌跡勾選面板 -->
+            <div class="panel-box">
+                <div class="panel-title" style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>軌跡選擇</span>
+                    <button id="btnSelectAll" style="font-size: 12px; cursor: pointer;">全選/取消</button>
+                </div>
+                <div class="checkbox-group" id="checkboxGroup">
+                    <!-- Dynamic Checkboxes -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 右側 16:9 SVG 畫布 (1200 x 675) -->
+        <div class="canvas-container">
+            <div class="toast-msg" id="toastMsg">請至少勾選一條軌跡！</div>
+            <svg id="simSvg" viewBox="0 0 1200 675" preserveAspectRatio="xMidYMid meet">
+                <defs>
+                    <pattern id="gridPattern" width="25" height="25" patternUnits="userSpaceOnUse">
+                        <path d="M 25 0 L 0 0 0 25" fill="none" stroke="#e2dac3" stroke-width="1" />
+                    </pattern>
+
+                    <!-- 水平分量 Vx (海藍) -->
+                    <marker id="arrow-vx" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
+                        <path d="M 0 1 L 10 5 L 0 9 z" fill="#1565c0" />
+                    </marker>
+                    <!-- 垂直分量 Vy (深紅) -->
+                    <marker id="arrow-vy" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
+                        <path d="M 0 1 L 10 5 L 0 9 z" fill="#c62828" />
+                    </marker>
+                    <!-- 座標軸箭頭 -->
+                    <marker id="arrow-axis" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
+                        <path d="M 0 1 L 10 5 L 0 9 z" fill="#1a1a1a" />
+                    </marker>
+                </defs>
+
+                <!-- 背景與網格 -->
+                <rect width="1200" height="675" fill="var(--bg-paper)" />
+                <rect width="1200" height="675" fill="url(#gridPattern)" />
+
+                <!-- 動態座標刻度網線層 -->
+                <g id="layerGridTicks"></g>
+
+                <!-- X, Y 座標軸 (原點在 80, 600) -->
+                <g id="layerAxes">
+                    <line id="axisX" x1="80" y1="600" x2="1150" y2="600" stroke="#1a1a1a" stroke-width="2.5" marker-end="url(#arrow-axis)" />
+                    <text x="1160" y="605" class="axis-label text-math">x</text>
+                    
+                    <line id="axisY" x1="80" y1="600" x2="80" y2="30" stroke="#1a1a1a" stroke-width="2.5" marker-end="url(#arrow-axis)" />
+                    <text x="75" y="22" class="axis-label text-math">y</text>
+
+                    <text x="60" y="622" class="axis-label text-math">O</text>
+                </g>
+
+                <!-- 歷史軌跡層 (累計不去除) -->
+                <g id="layerPaths"></g>
+
+                <!-- 速度向量層 -->
+                <g id="layerVectors"></g>
+
+                <!-- 小球層 -->
+                <g id="layerBalls"></g>
+
+                <!-- 落點標記層 -->
+                <g id="layerBadges"></g>
+
+                <!-- 頂部數據狀態 -->
+                <g id="layerHUD" transform="translate(100, 20)">
+                    <rect x="0" y="0" width="850" height="32" rx="4" fill="rgba(255,255,255,0.85)" stroke="#1a1a1a" stroke-width="1.5" />
+                    <text id="hudText" x="15" y="21" font-size="15" font-weight="bold" fill="#1a1a1a">
+                        模擬狀態：準備發射 | 時間 t = 0.00 s
+                    </text>
+                </g>
+            </svg>
+        </div>
+    </div>
+
+    <script>
+        const g = 9.81;
+        const originX = 80;   // 原點 SVG X
+        const originY = 600;  // 原點 SVG Y
+        const ballRadius = 10;
+
+        let worldScale = 8.0; 
+        let currentMode = '1';
+        let isRunning = false;
+        let simTime = 0;
+        let animationFrame = null;
+        let activeLaunchItems = []; // 當前正在運行的發射項
+
+        const MODES_CONFIG = {
+            '1': {
+                name: '模式 1：相同初速 v₀ = 30 m/s',
+                items: [
+                    { id: 'm1_15', label: '15° (餘角 75°)', angle: 15, v0: 30, color: '#c62828', dash: '6,4' },
+                    { id: 'm1_30', label: '30° (餘角 60°)', angle: 30, v0: 30, color: '#1565c0', dash: 'none' },
+                    { id: 'm1_45', label: '45° (最大射程)', angle: 45, v0: 30, color: '#2e7d32', dash: 'none' },
+                    { id: 'm1_60', label: '60° (餘角 30°)', angle: 60, v0: 30, color: '#1565c0', dash: '6,4' },
+                    { id: 'm1_75', label: '75° (餘角 15°)', angle: 75, v0: 30, color: '#c62828', dash: 'none' }
+                ]
+            },
+            '2': {
+                name: '模式 2：相同 vy₀ = 24.5 m/s',
+                items: [
+                    { id: 'm2_1', label: 'vx0 = 10.0 m/s', angle: 67.8, v0: 26.5, color: '#1565c0', dash: 'none' },
+                    { id: 'm2_2', label: 'vx0 = 20.0 m/s', angle: 50.8, v0: 31.6, color: '#2e7d32', dash: 'none' },
+                    { id: 'm2_3', label: 'vx0 = 30.0 m/s', angle: 39.2, v0: 38.7, color: '#d84315', dash: 'none' },
+                    { id: 'm2_4', label: 'vx0 = 40.0 m/s', angle: 31.5, v0: 47.0, color: '#c62828', dash: 'none' }
+                ]
+            },
+            '3': {
+                name: '模式 3：相同 vx₀ = 15.0 m/s',
+                items: [
+                    { id: 'm3_1', label: 'vy0 = 12.0 m/s', angle: 38.7, v0: 19.2, color: '#1565c0', dash: 'none' },
+                    { id: 'm3_2', label: 'vy0 = 20.0 m/s', angle: 53.1, v0: 25.0, color: '#2e7d32', dash: 'none' },
+                    { id: 'm3_3', label: 'vy0 = 28.0 m/s', angle: 61.8, v0: 31.8, color: '#d84315', dash: 'none' },
+                    { id: 'm3_4', label: 'vy0 = 36.0 m/s', angle: 67.4, v0: 39.0, color: '#6a1b9a', dash: 'none' }
+                ]
+            }
+        };
+
+        const layerPaths = document.getElementById('layerPaths');
+        const layerVectors = document.getElementById('layerVectors');
+        const layerBalls = document.getElementById('layerBalls');
+        const layerBadges = document.getElementById('layerBadges');
+        const layerGridTicks = document.getElementById('layerGridTicks');
+        const checkboxGroup = document.getElementById('checkboxGroup');
+        const chkVx = document.getElementById('chkVx');
+        const chkVy = document.getElementById('chkVy');
+        const hudText = document.getElementById('hudText');
+        const toastMsg = document.getElementById('toastMsg');
+
+        function initMode(modeKey) {
+            currentMode = modeKey;
+            checkboxGroup.innerHTML = '';
+            const config = MODES_CONFIG[modeKey];
+
+            config.items.forEach((item, idx) => {
+                const label = document.createElement('label');
+                label.className = 'checkbox-item';
+                label.style.color = item.color;
+                label.innerHTML = `
+                    <input type="checkbox" id="chk_${item.id}" value="${idx}" checked>
+                    ${item.label}
+                `;
+                checkboxGroup.appendChild(label);
+            });
+
+            calculateAutoFitScale();
+        }
+
+        function getSelectedItems() {
+            const config = MODES_CONFIG[currentMode];
+            const selected = [];
+            config.items.forEach((item) => {
+                const chk = document.getElementById(`chk_${item.id}`);
+                if (chk && chk.checked) {
+                    selected.push(item);
+                }
+            });
+            return selected;
+        }
+
+        // 計算緊密尺度：最大高度 y 剛好佔據畫布高度 80%
+        function calculateAutoFitScale() {
+            const selected = getSelectedItems();
+            if (selected.length === 0) {
+                worldScale = 8.0;
+                updateGridAndTicks(100, 50);
+                return;
+            }
+
+            let maxR = 0;
+            let maxH = 0;
+
+            selected.forEach(item => {
+                const rad = item.angle * Math.PI / 180;
+                const vx = item.v0 * Math.cos(rad);
+                const vy = item.v0 * Math.sin(rad);
+
+                const R = (2 * vx * vy) / g;
+                const H = (vy * vy) / (2 * g);
+
+                if (R > maxR) maxR = R;
+                if (H > maxH) maxH = H;
+            });
+
+            const availWidth = 1150 - originX;   // 1070 px
+            const availHeight = originY - 40;    // 560 px
+
+            // y 軸顯示最大高度的 80% (即 H_max 佔據 80% 可用高度)
+            const scaleY = (availHeight * 0.80) / maxH;
+            
+            // x 軸留出適當空間
+            const scaleX = availWidth / (maxR * 1.12);
+
+            // 為維持 1:1 等比例不變形，取極致緊密值
+            worldScale = Math.min(scaleX, scaleY);
+
+            updateGridAndTicks(maxR, maxH);
+        }
+
+        function updateGridAndTicks(maxR, maxH) {
+            layerGridTicks.innerHTML = '';
+
+            let step = 10;
+            if (maxR > 150) step = 25;
+            else if (maxR < 50) step = 5;
+
+            // X 軸刻度
+            for (let xMeters = step; xMeters * worldScale < (1150 - originX); xMeters += step) {
+                const px = originX + xMeters * worldScale;
+
+                const gridLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                gridLine.setAttribute('x1', px);
+                gridLine.setAttribute('y1', originY);
+                gridLine.setAttribute('x2', px);
+                gridLine.setAttribute('y2', 30);
+                gridLine.setAttribute('stroke', '#e2dac3');
+                gridLine.setAttribute('stroke-dasharray', '2,2');
+                layerGridTicks.appendChild(gridLine);
+
+                const tick = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                tick.setAttribute('x1', px);
+                tick.setAttribute('y1', originY);
+                tick.setAttribute('x2', px);
+                tick.setAttribute('y2', originY + 5);
+                tick.setAttribute('stroke', '#1a1a1a');
+                tick.setAttribute('stroke-width', '1.5');
+                layerGridTicks.appendChild(tick);
+
+                const txt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                txt.setAttribute('x', px);
+                txt.setAttribute('y', originY + 20);
+                txt.setAttribute('text-anchor', 'middle');
+                txt.setAttribute('class', 'tick-label');
+                txt.textContent = `${xMeters}m`;
+                layerGridTicks.appendChild(txt);
+            }
+
+            // Y 軸刻度
+            for (let yMeters = step; yMeters * worldScale < (originY - 30); yMeters += step) {
+                const py = originY - yMeters * worldScale;
+
+                const gridLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                gridLine.setAttribute('x1', originX);
+                gridLine.setAttribute('y1', py);
+                gridLine.setAttribute('x2', 1150);
+                gridLine.setAttribute('y2', py);
+                gridLine.setAttribute('stroke', '#e2dac3');
+                gridLine.setAttribute('stroke-dasharray', '2,2');
+                layerGridTicks.appendChild(gridLine);
+
+                const tick = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                tick.setAttribute('x1', originX - 5);
+                tick.setAttribute('y1', py);
+                tick.setAttribute('x2', originX);
+                tick.setAttribute('y2', py);
+                tick.setAttribute('stroke', '#1a1a1a');
+                tick.setAttribute('stroke-width', '1.5');
+                layerGridTicks.appendChild(tick);
+
+                const txt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                txt.setAttribute('x', originX - 10);
+                txt.setAttribute('y', py + 4);
+                txt.setAttribute('text-anchor', 'end');
+                txt.setAttribute('class', 'tick-label');
+                txt.textContent = `${yMeters}m`;
+                layerGridTicks.appendChild(txt);
+            }
+        }
+
+        // 發射新軌跡 (不清除過往軌跡)
+        function startLaunch() {
+            const selected = getSelectedItems();
+            if (selected.length === 0) {
+                showToast("請至少勾選一條軌跡！");
+                return;
+            }
+
+            calculateAutoFitScale();
+
+            // 為本次發射建立獨一無二的軌跡 Path
+            const launchTimestamp = Date.now();
+            activeLaunchItems = selected.map(item => {
+                const pathId = `path_${item.id}_${launchTimestamp}`;
+                const pathEl = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                pathEl.setAttribute('id', pathId);
+                pathEl.setAttribute('fill', 'none');
+                pathEl.setAttribute('stroke', item.color);
+                pathEl.setAttribute('stroke-width', '3');
+                if (item.dash !== 'none') {
+                    pathEl.setAttribute('stroke-dasharray', item.dash);
+                }
+                layerPaths.appendChild(pathEl);
+
+                return {
+                    ...item,
+                    pathEl: pathEl,
+                    pathPoints: [],
+                    landed: false
+                };
+            });
+
+            simTime = 0;
+            isRunning = true;
+            if (animationFrame) cancelAnimationFrame(animationFrame);
+            animateStep();
+        }
+
+        // 清除所有畫布上的軌跡與標記
+        function clearAllTracks() {
+            isRunning = false;
+            simTime = 0;
+            if (animationFrame) cancelAnimationFrame(animationFrame);
+
+            layerPaths.innerHTML = '';
+            layerVectors.innerHTML = '';
+            layerBalls.innerHTML = '';
+            layerBadges.innerHTML = '';
+
+            hudText.textContent = `模擬狀態：所有軌跡已清空 | 待命發射`;
+        }
+
+        function animateStep() {
+            if (activeLaunchItems.length === 0) return;
+
+            layerVectors.innerHTML = '';
+            layerBalls.innerHTML = '';
+
+            let allFinished = true;
+
+            activeLaunchItems.forEach(item => {
+                const rad = item.angle * Math.PI / 180;
+                const vx = item.v0 * Math.cos(rad);
+                const vy0 = item.v0 * Math.sin(rad);
+                const tTotal = (2 * vy0) / g;
+
+                const t = Math.min(simTime, tTotal);
+                if (t < tTotal) allFinished = false;
+
+                const currX = vx * t;
+                const currY = Math.max(0, vy0 * t - 0.5 * g * t * t);
+
+                const px = originX + currX * worldScale;
+                const py = originY - currY * worldScale;
+
+                // 1. 繪製軌跡
+                if (t <= tTotal) {
+                    item.pathPoints.push(`${px.toFixed(1)},${py.toFixed(1)}`);
+                    item.pathEl.setAttribute('d', `M ${item.pathPoints.join(' L ')}`);
+                }
+
+                // 2. 繪製動態小球
+                const ball = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                ball.setAttribute('cx', px);
+                ball.setAttribute('cy', py);
+                ball.setAttribute('r', ballRadius);
+                ball.setAttribute('fill', item.color);
+                ball.setAttribute('stroke', '#1a1a1a');
+                ball.setAttribute('stroke-width', '1.5');
+                layerBalls.appendChild(ball);
+
+                // 3. 分別控制 vx, vy 向量顯示
+                if (t < tTotal) {
+                    const vecScale = 1.8;
+                    const currVy = vy0 - g * t;
+
+                    const vxPx = vx * vecScale;
+                    const vyPx = -currVy * vecScale;
+
+                    // 水平分量 Vx
+                    if (chkVx.checked) {
+                        const lineVx = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                        lineVx.setAttribute('x1', px);
+                        lineVx.setAttribute('y1', py);
+                        lineVx.setAttribute('x2', px + vxPx);
+                        lineVx.setAttribute('y2', py);
+                        lineVx.setAttribute('stroke', '#1565c0');
+                        lineVx.setAttribute('stroke-width', '2.5');
+                        lineVx.setAttribute('marker-end', 'url(#arrow-vx)');
+                        layerVectors.appendChild(lineVx);
+                    }
+
+                    // 垂直分量 Vy
+                    if (chkVy.checked && Math.abs(currVy) > 0.4) {
+                        const lineVy = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                        lineVy.setAttribute('x1', px);
+                        lineVy.setAttribute('y1', py);
+                        lineVy.setAttribute('x2', px);
+                        lineVy.setAttribute('y2', py + vyPx);
+                        lineVy.setAttribute('stroke', '#c62828');
+                        lineVy.setAttribute('stroke-width', '2.5');
+                        lineVy.setAttribute('marker-end', 'url(#arrow-vy)');
+                        layerVectors.appendChild(lineVy);
+                    }
+                }
+
+                // 4. 落地標記
+                if (t >= tTotal && !item.landed) {
+                    item.landed = true;
+                    drawLandingBadge(px, originY, item, currX);
+                }
+            });
+
+            hudText.textContent = `飛行時間 t = ${simTime.toFixed(2)} s | Y軸80%極致緊密 | ${allFinished ? '著地完成 (軌跡已保留)' : '演示進行中...'}`;
+
+            if (isRunning && !allFinished) {
+                simTime += 0.025;
+                animationFrame = requestAnimationFrame(animateStep);
+            } else if (allFinished) {
+                isRunning = false;
+            }
+        }
+
+        function drawLandingBadge(x, y, item, distance) {
+            const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+
+            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            text.setAttribute('x', x);
+            text.setAttribute('y', y + 22);
+            text.setAttribute('fill', item.color);
+            text.setAttribute('font-size', '13');
+            text.setAttribute('font-weight', 'bold');
+            text.setAttribute('text-anchor', 'middle');
+            text.textContent = `▲ ${item.angle}° (${distance.toFixed(1)}m)`;
+
+            group.appendChild(text);
+            layerBadges.appendChild(group);
+        }
+
+        function showToast(msg) {
+            toastMsg.textContent = msg;
+            toastMsg.style.display = 'block';
+            setTimeout(() => { toastMsg.style.display = 'none'; }, 2000);
+        }
+
+        // 事件綁定
+        document.getElementById('btnMode1').addEventListener('click', (e) => {
+            switchModeBtn(e.target);
+            initMode('1');
+        });
+        document.getElementById('btnMode2').addEventListener('click', (e) => {
+            switchModeBtn(e.target);
+            initMode('2');
+        });
+        document.getElementById('btnMode3').addEventListener('click', (e) => {
+            switchModeBtn(e.target);
+            initMode('3');
+        });
+
+        function switchModeBtn(target) {
+            document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+            target.classList.add('active');
+        }
+
+        document.getElementById('btnLaunch').addEventListener('click', () => {
+            startLaunch();
+        });
+
+        document.getElementById('btnPause').addEventListener('click', () => {
+            if (activeLaunchItems.length === 0) return;
+            isRunning = !isRunning;
+            if (isRunning) animateStep();
+        });
+
+        document.getElementById('btnReset').addEventListener('click', () => {
+            clearAllTracks();
+        });
+
+        document.getElementById('btnSelectAll').addEventListener('click', () => {
+            const chks = checkboxGroup.querySelectorAll('input[type="checkbox"]');
+            const allChecked = Array.from(chks).every(c => c.checked);
+            chks.forEach(c => c.checked = !allChecked);
+        });
+
+        // 預設載入模式 1
+        initMode('1');
+    </script>
+</body>
+</html>
