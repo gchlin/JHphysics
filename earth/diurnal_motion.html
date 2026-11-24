@@ -84,12 +84,16 @@
       </button>
     </div>
 
-    <!-- 第二層：北極星方位顯示 & 地球顯示尺度（全階段 1~5 皆可雙向切換） -->
-    <div class="flex items-center justify-end gap-1.5">
+    <!-- 第二層：北極星方位、星座與地球尺度（全階段皆可切換） -->
+    <div class="flex flex-wrap max-w-[calc(100vw-2rem)] items-center justify-end gap-1.5">
       <button id="polarisRayBtn" onclick="togglePolarisRay()" title="開啟後顯示北極星方向光束，演示無窮遠平行星光與極星仰角原理"
               class="glass-panel hover:bg-sky-500/25 border border-slate-700 bg-slate-900/75 text-slate-300 text-xs font-semibold px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-lg">
         <span id="polarisRayDot" class="w-2 h-2 rounded-full bg-slate-500 transition-colors"></span>
         <span id="polarisRayText">北極星方位顯示：關</span>
+      </button>
+      <button id="constellationBtn" onclick="toggleConstellations()" title="各階段皆可開關星座，星座隨天球座標旋轉"
+              class="glass-panel border border-sky-400/50 bg-sky-500/20 text-sky-200 text-xs font-semibold px-3 py-1.5 rounded-xl transition cursor-pointer shadow-lg" aria-pressed="true">
+        <span id="constellationText">星座顯示：開</span>
       </button>
       <button id="earthScaleBtn" onclick="toggleEarthScale()" title="階段 1～5 任一步驟皆可隨時切換接近實際尺度與誇張地球尺度"
               class="glass-panel hover:bg-sky-500/25 border border-sky-400/50 bg-sky-500/20 text-sky-200 text-xs font-semibold px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-lg">
@@ -174,11 +178,12 @@
     <!-- 階段 1 專屬：地球顯示尺度切換（靠右緊緻） -->
     <div id="scaleSubBar" class="glass-panel border border-sky-500/30 rounded-xl px-3.5 py-2 w-fit max-w-full self-end flex flex-wrap items-center justify-end gap-2 text-xs shadow-lg">
       <div class="flex items-center text-sky-300 font-medium">
-        <span>地球顯示尺度：</span>
+        <span>初始模型：</span>
       </div>
       <div class="flex flex-wrap items-center gap-1.5">
-        <button onclick="setEarthScale(true)" id="scale-step-actual" class="scale-step-btn px-2.5 py-1 rounded-lg border transition cursor-pointer">接近實際尺度</button>
-        <button onclick="setEarthScale(false)" id="scale-step-exaggerated" class="scale-step-btn px-2.5 py-1 rounded-lg border transition cursor-pointer">誇張地球尺度</button>
+        <button onclick="setIntroStep(1)" id="intro-step-1" class="scale-step-btn px-2.5 py-1 rounded-lg border transition cursor-pointer">1-1 星座初始情況</button>
+        <button onclick="setIntroStep(2)" id="intro-step-2" class="scale-step-btn px-2.5 py-1 rounded-lg border transition cursor-pointer">1-2 簡化恆星</button>
+        <button onclick="setIntroStep(3)" id="intro-step-3" class="scale-step-btn px-2.5 py-1 rounded-lg border transition cursor-pointer">1-3 誇大地球尺寸</button>
       </div>
     </div>
 
@@ -188,10 +193,11 @@
         <span>座標同步程度：</span>
       </div>
       <div class="flex flex-wrap items-center gap-1.5">
-        <button onclick="setChaseStep(0)" id="chase-step-0" class="chase-btn px-2.5 py-1 rounded-lg border transition cursor-pointer">0% 未同步</button>
-        <button onclick="setChaseStep(1)" id="chase-step-1" class="chase-btn px-2.5 py-1 rounded-lg border transition cursor-pointer">30% 同步</button>
-        <button onclick="setChaseStep(2)" id="chase-step-2" class="chase-btn px-2.5 py-1 rounded-lg border transition cursor-pointer">70% 同步</button>
-        <button onclick="setChaseStep(3)" id="chase-step-3" class="chase-btn px-2.5 py-1 rounded-lg border transition cursor-pointer">100% 同步</button>
+        <button onclick="setChaseStep(0, true)" id="chase-intro" class="chase-btn px-2.5 py-1 rounded-lg border transition cursor-pointer">2-1 顯示星座</button>
+        <button onclick="setChaseStep(0)" id="chase-step-0" class="chase-btn px-2.5 py-1 rounded-lg border transition cursor-pointer">2-2 0% 未同步</button>
+        <button onclick="setChaseStep(1)" id="chase-step-1" class="chase-btn px-2.5 py-1 rounded-lg border transition cursor-pointer">2-3 30% 同步</button>
+        <button onclick="setChaseStep(2)" id="chase-step-2" class="chase-btn px-2.5 py-1 rounded-lg border transition cursor-pointer">2-4 70% 同步</button>
+        <button onclick="setChaseStep(3)" id="chase-step-3" class="chase-btn px-2.5 py-1 rounded-lg border transition cursor-pointer">2-5 100% 同步</button>
       </div>
     </div>
 
@@ -260,6 +266,7 @@
 
     // 階段 2：座標同步程度控制 (0: 0% 未同步, 1: 30% 同步, 2: 70% 同步, 3: 100% 同步)
     let chaseStep = 0;
+    let syncIntro = false;
     let targetChaseRatio = 0.0;
     let currentChaseRatio = 0.0;
 
@@ -299,11 +306,16 @@
     // 地球尺度縮放狀態（true = 接近實際尺度, false = 誇張地球尺度；Stage 1 預設接近實際尺度，全階段皆可切換）
     let isEarthTiny = true;
     let earthTinyProgress = 1.0;
+    let introStep = 1;
+    let constellationOpacity = 1;
+    let constellationsEnabled = true;
 
-    // PPT 簡報筆與鍵盤左右鍵順序清單（共 14 個停靠點）
+    // PPT 簡報筆與鍵盤左右鍵順序清單（共 16 個停靠點）
     const SLIDE_SEQUENCE = [
-      { stage: 1, chaseStep: 0, cutawayStep: 0, earthTiny: true,  label: "stage1-actual" },
-      { stage: 1, chaseStep: 0, cutawayStep: 0, earthTiny: false, label: "stage1-exaggerated" },
+      { stage: 1, introStep: 1, chaseStep: 0, cutawayStep: 0, earthTiny: true,  label: "stage1-constellations" },
+      { stage: 1, introStep: 2, chaseStep: 0, cutawayStep: 0, earthTiny: true,  label: "stage1-stars" },
+      { stage: 1, introStep: 3, chaseStep: 0, cutawayStep: 0, earthTiny: false, label: "stage1-exaggerated" },
+      { stage: 2, syncIntro: true, chaseStep: 0, cutawayStep: 0, earthTiny: false, label: "stage2-constellations" },
       { stage: 2, chaseStep: 0, cutawayStep: 0, earthTiny: false, label: "stage2-0" },
       { stage: 2, chaseStep: 1, cutawayStep: 0, earthTiny: false, label: "stage2-30" },
       { stage: 2, chaseStep: 2, cutawayStep: 0, earthTiny: false, label: "stage2-70" },
@@ -371,6 +383,20 @@
       { key: "northStar",   lat: 62,  color: "#38BDF8", rgb: "56, 189, 248",  initLon: 28,  shortName: "北天星 (+62°)" },
       { key: "equatorStar", lat: 0,   color: "#FACC15", rgb: "250, 204, 21",  initLon: 112, shortName: "天赤道 (0°)" },
       { key: "southStar",   lat: -32, color: "#FB7185", rgb: "251, 113, 133", initLon: 205, shortName: "南天星 (-32°)" }
+    ];
+
+    // 星座連線依赤經／赤緯定位，資料來源：
+    // https://github.com/ofrohn/d3-celestial/blob/master/data/constellations.lines.json
+    const constellations = [
+      {"name":"大熊座（北斗）","points":[[57.0326,-176.1435],[61.751,165.932],[56.3824,165.4603],[53.6948,178.4577],[55.9598,-166.4927],[54.9254,-159.0186],[49.3133,-153.1148],[47.7794,176.5126],[33.0943,169.6197],[31.5308,169.5468],[44.4985,167.4159],[41.4995,155.5823],[42.9144,154.2741],[63.0619,142.8821],[60.7182,127.5661],[59.0387,147.7473],[54.0643,148.0265],[51.6773,143.2143],[48.0418,134.8019],[47.1565,135.9064]],"edges":[[0,1],[1,2],[2,3],[3,0],[0,4],[4,5],[5,6],[3,7],[7,8],[8,9],[7,10],[10,11],[10,12],[1,13],[13,14],[14,15],[15,2],[2,16],[16,17],[17,18],[19,17]]},
+      {"name":"仙后座","points":[[63.6701,28.5989],[60.2353,21.454],[60.7167,14.1772],[56.5373,10.1268],[59.1498,2.2945]],"edges":[[0,1],[1,2],[2,3],[3,4]]},
+      {"name":"獵戶座","points":[[14.7685,91.893],[20.2762,88.5958],[20.1385,90.9799],[14.2088,92.985],[9.6473,90.5958],[7.4071,88.7929],[6.3497,81.2828],[10.1508,73.7239],[1.714,74.6371],[2.4407,73.5629],[5.6051,72.8015],[6.9613,72.46],[8.9002,72.653],[13.5145,74.0928],[15.4041,76.1423],[15.5972,77.4248],[-8.2016,78.6345],[-2.3971,81.1192],[-0.2991,83.0017],[9.9342,83.7845],[-1.9426,85.1897],[-9.6696,86.9391],[-1.2019,84.0534]],"edges":[[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[8,9],[9,10],[10,11],[11,12],[12,7],[7,13],[13,14],[14,15],[16,17],[17,18],[18,6],[6,19],[19,5],[5,20],[20,21],[20,22],[22,18]]},
+      {"name":"南十字座","points":[[-59.6888,-168.0697],[-58.7489,-176.2137],[-63.0991,-173.3504],[-57.1132,-172.2085]],"edges":[[0,1],[2,3]]},
+      {"name":"獅子座","points":[[11.9672,152.093],[16.7627,151.8331],[19.8415,154.9931],[20.5237,168.5271],[14.5721,177.2649],[15.4296,168.56],[23.4173,154.1726],[26.007,148.1909],[23.7743,146.4628]],"edges":[[0,1],[1,2],[2,3],[3,4],[4,5],[5,0],[2,6],[6,7],[7,8]]},
+      {"name":"天蠍座","points":[[-26.1141,-120.287],[-22.6217,-119.9166],[-19.8055,-118.6407],[-25.5928,-114.7028],[-26.432,-112.6481],[-28.216,-111.0294],[-34.2932,-107.4591],[-38.0474,-107.0324],[-42.3613,-106.3541],[-43.2392,-101.9617],[-42.9978,-95.6703],[-40.127,-93.1038],[-39.03,-94.378],[-37.1038,-96.5978]],"edges":[[0,1],[1,2],[1,3],[3,4],[4,5],[5,6],[6,7],[7,8],[8,9],[9,10],[10,11],[11,12],[12,13]]},
+      {"name":"天鵝座","points":[[30.2269,-41.7659],[33.9703,-48.4472],[40.2567,-54.4429],[45.1308,-63.7563],[51.7298,-67.5735],[53.3685,-70.7243],[45.2803,-49.642],[35.0834,-60.9235],[27.9597,-67.3197]],"edges":[[0,1],[1,2],[2,3],[3,4],[4,5],[6,2],[2,7],[7,8]]},
+      {"name":"金牛座","points":[[21.1425,84.4112],[16.5093,68.9802],[15.8709,67.1656],[15.6276,64.9483],[17.5425,65.7337],[19.1804,67.1542],[28.6075,81.573],[12.4903,60.1701],[9.7327,51.7923],[5.9893,60.7891],[9.0289,51.2033],[0.4017,54.2183]],"edges":[[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[3,7],[7,8],[8,9],[8,10],[10,11]]},
+      {"name":"天琴座","points":[[37.6051,-78.8068],[39.6127,-78.9051],[38.7837,-80.7653],[36.8986,-76.3738],[32.6896,-75.2641],[33.3627,-77.48]],"edges":[[0,1],[1,2],[2,0],[0,3],[3,4],[4,5],[5,0]]}
     ];
 
     // =========================================================================
@@ -576,20 +602,32 @@
     // =========================================================================
     function getTeacherCaption() {
       if (stage === 1) {
+        if (introStep === 1) {
+          return {
+            badge: "階段 1-1 / 5",
+            desc: "較接近實際情況的星空中，許多恆星構成熟悉的星座；相較於遙遠的恆星，地球微小得像一個點。接下來將星空簡化，再放大地球，逐步觀察周日運動。"
+          };
+        }
         if (isEarthTiny) {
           return {
-            badge: "階段 1 / 5",
-            desc: "從宇宙視角觀察，天球遠比地球龐大得多。在接近實際尺度下，地球原本就只是一個微小的點，並沿著傾斜的自轉軸持續自轉。"
+            badge: "階段 1-2 / 5",
+            desc: "將星座簡化為北天、天赤道與南天的三顆代表性恆星，接續追蹤它們的運動。地球仍維持接近實際尺度的微小點。"
           };
         }
         return {
-          badge: "階段 1 / 5",
+          badge: "階段 1-3 / 5",
           desc: "為了看清楚自轉軸傾角、所在緯度與地表觀察者的位置，這裡刻意放大地球為誇張地球尺度（僅為教學標示方便，非真實比例）。"
         };
       }
       if (stage === 2) {
+        if (syncIntro) {
+          return {
+            badge: "階段 2-1 / 5",
+            desc: "先重新顯示星座，對照三顆代表性恆星在天球上的位置。此時觀察座標尚未與地球自轉同步；接下來逐步提高同步程度，觀察星座與恆星如何一起轉動。"
+          };
+        }
         return {
-          badge: "階段 2 / 5",
+          badge: `階段 2-${chaseStep + 2} / 5`,
           desc: "一般課本常直接切換視角，容易讓人難以想像轉換過程；這裡我們逐步將觀察座標與地球自轉同步。隨著比例提高，視角會漸漸跟上地球，當達到 100% 同步時，畫面就完全成為地表觀察者所看到的樣子了。"
         };
       }
@@ -653,7 +691,15 @@
       }
 
       stage = requestedStage;
-      setChaseStep(slideObj.chaseStep);
+      if (stage === 1) {
+        introStep = slideObj.introStep;
+        constellationsEnabled = introStep === 1;
+      } else if (stage === 2 && (previousStage !== 2 || slideObj.syncIntro)) {
+        constellationsEnabled = true;
+      } else if (stage === 3 && previousStage !== 3) {
+        constellationsEnabled = false;
+      }
+      setChaseStep(slideObj.chaseStep, slideObj.syncIntro);
       cutawayStep = slideObj.cutawayStep;
       isEarthTiny = slideObj.earthTiny;
 
@@ -685,7 +731,7 @@
 
     function prevSlide() {
       if (reverseMode && stage === 5) {
-        goToSlide(12); // 階段 4
+        goToSlide(SLIDE_SEQUENCE.findIndex(s => s.stage === 4));
         return;
       }
       if (currentSlideIndex > 0) {
@@ -699,8 +745,8 @@
         const s = SLIDE_SEQUENCE[i];
         if (s.stage === stage) {
           bestIdx = i;
-          if (stage === 1 && s.earthTiny === isEarthTiny) break;
-          if (stage === 2 && s.chaseStep === chaseStep) break;
+          if (stage === 1 && s.introStep === introStep) break;
+          if (stage === 2 && s.chaseStep === chaseStep && Boolean(s.syncIntro) === syncIntro) break;
           if (stage === 3 && s.cutawayStep === cutawayStep) break;
         }
       }
@@ -712,16 +758,33 @@
       updatePolarisRayButton();
     }
 
+    function toggleConstellations() {
+      constellationsEnabled = !constellationsEnabled;
+      updateConstellationButton();
+    }
+
+    function updateConstellationButton() {
+      const btn = document.getElementById("constellationBtn");
+      btn.setAttribute("aria-pressed", String(constellationsEnabled));
+      btn.className = constellationsEnabled
+        ? "glass-panel border border-sky-400/50 bg-sky-500/20 text-sky-200 text-xs font-semibold px-3 py-1.5 rounded-xl transition cursor-pointer shadow-lg"
+        : "glass-panel hover:bg-sky-500/25 border border-slate-700 bg-slate-900/75 text-slate-300 text-xs font-semibold px-3 py-1.5 rounded-xl transition cursor-pointer shadow-lg";
+      document.getElementById("constellationText").textContent = `星座顯示：${constellationsEnabled ? "開" : "關"}`;
+    }
+
     function setEarthScale(actualScale) {
       isEarthTiny = Boolean(actualScale);
+      if (stage === 1) introStep = isEarthTiny ? (introStep === 1 ? 1 : 2) : 3;
       syncSlideIndexToCurrentState();
       updateUI();
     }
 
     function toggleEarthScale() {
-      isEarthTiny = !isEarthTiny;
-      syncSlideIndexToCurrentState();
-      updateUI();
+      setEarthScale(!isEarthTiny);
+    }
+
+    function setIntroStep(step) {
+      goToSlide(SLIDE_SEQUENCE.findIndex(s => s.stage === 1 && s.introStep === step));
     }
 
     function updateEarthScaleButtonUI() {
@@ -737,13 +800,10 @@
         }
       }
 
-      const actualBtn = document.getElementById("scale-step-actual");
-      const exagBtn = document.getElementById("scale-step-exaggerated");
-      if (actualBtn && exagBtn) {
-        actualBtn.className = isEarthTiny
-          ? "scale-step-btn px-2.5 py-1 rounded-lg border border-sky-400 bg-sky-500/25 text-sky-200 font-semibold transition cursor-pointer shadow"
-          : "scale-step-btn px-2.5 py-1 rounded-lg border border-slate-700 bg-slate-800/70 text-slate-300 hover:bg-slate-700 transition cursor-pointer";
-        exagBtn.className = !isEarthTiny
+      for (let i = 1; i <= 3; i++) {
+        const btn = document.getElementById(`intro-step-${i}`);
+        if (!btn) continue;
+        btn.className = introStep === i
           ? "scale-step-btn px-2.5 py-1 rounded-lg border border-sky-400 bg-sky-500/25 text-sky-200 font-semibold transition cursor-pointer shadow"
           : "scale-step-btn px-2.5 py-1 rounded-lg border border-slate-700 bg-slate-800/70 text-slate-300 hover:bg-slate-700 transition cursor-pointer";
       }
@@ -818,16 +878,21 @@
         inverseAzimuthActive = true;
       }
       stage = requestedStage;
+      if (stage !== 1 && previousStage === 1) constellationsEnabled = false;
       if (stage === 1) {
+        introStep = 1;
+        constellationsEnabled = true;
         setChaseStep(0);
         cutawayStep = 0;
         isEarthTiny = true;
         inverseAzimuthActive = false;
       } else if (stage === 2) {
-        setChaseStep(0);
+        constellationsEnabled = true;
+        setChaseStep(0, true);
         isEarthTiny = false;
         inverseAzimuthActive = false;
       } else if (stage === 3) {
+        constellationsEnabled = false;
         setChaseStep(3);
         if (previousStage < 3) {
           cutawayStep = 1;
@@ -992,6 +1057,7 @@
 
       updateReverseModeButton();
       updateEarthScaleButtonUI();
+      updateConstellationButton();
 
       const prevBtn = document.getElementById("prevSlideBtn");
       const nextBtn = document.getElementById("nextSlideBtn");
@@ -1032,13 +1098,19 @@
     // =========================================================================
     // 座標同步程度、緯度控制、鍵盤簡報筆快捷鍵與畫布互動
     // =========================================================================
-    function setChaseStep(step) {
+    function setChaseStep(step, showIntro = false) {
       chaseStep = Math.max(0, Math.min(3, step));
+      syncIntro = Boolean(showIntro);
+      if (stage === 2 && syncIntro) constellationsEnabled = true;
       targetChaseRatio = CHASE_RATIOS[chaseStep];
+      const introBtn = document.getElementById("chase-intro");
+      introBtn.className = syncIntro
+        ? "chase-btn px-2.5 py-1 rounded-lg border border-amber-400 bg-amber-500/25 text-amber-200 font-semibold transition cursor-pointer shadow"
+        : "chase-btn px-2.5 py-1 rounded-lg border border-slate-700 bg-slate-800/70 text-slate-300 hover:bg-slate-700 transition cursor-pointer";
       for (let i = 0; i <= 3; i++) {
         const btn = document.getElementById(`chase-step-${i}`);
         if (!btn) continue;
-        btn.className = i === chaseStep
+        btn.className = !syncIntro && i === chaseStep
           ? "chase-btn px-2.5 py-1 rounded-lg border border-amber-400 bg-amber-500/25 text-amber-200 font-semibold transition cursor-pointer shadow"
           : "chase-btn px-2.5 py-1 rounded-lg border border-slate-700 bg-slate-800/70 text-slate-300 hover:bg-slate-700 transition cursor-pointer";
       }
@@ -1087,7 +1159,7 @@
         skyAngle = 0;
       } else if (stage === 2) {
         zoomInProgress = 0;
-        setChaseStep(0);
+        setChaseStep(0, syncIntro);
         currentChaseRatio = 0;
         syncSlideIndexToCurrentState();
       } else if (stage === 3) {
@@ -1615,6 +1687,10 @@
       const dt = Math.min(0.05, (now - lastTime) / 1000);
       lastTime = now;
 
+      // 模型切換的淡出淡入獨立於時間暫停，方便暫停時逐步講解。
+      const constellationTarget = constellationsEnabled ? 1 : 0;
+      constellationOpacity = lerp(constellationOpacity, constellationTarget, 1 - Math.exp(-5 * dt));
+
       // 1. 狀態平滑過渡計算
       if (!isPaused) {
         currentLat = lerp(currentLat, targetLat, 1 - Math.exp(-6 * dt));
@@ -1858,7 +1934,8 @@
         ctx.restore();
       }
 
-      if (assists.celestialGrid) {
+      function drawCelestialGrid(isFrontLayer) {
+        if (!assists.celestialGrid) return;
         const eqSteps = 96;
         for (let i = 0; i < eqSteps; i++) {
           const a0 = (i / eqSteps) * TWO_PI;
@@ -1874,6 +1951,7 @@
           if (vis <= 0.012) continue;
 
           const pr0 = project(p0), pr1 = project(p1), prm = project(pm);
+          if ((prm.z >= 0) !== isFrontLayer) continue;
           const depth = prm.z >= 0 ? 1.0 : 0.28;
           ctx.strokeStyle = `rgba(250, 204, 21, ${(0.32 * depth * vis).toFixed(3)})`;
           ctx.lineWidth = 1.35;
@@ -1900,7 +1978,9 @@
             if (vis <= 0.012) continue;
 
             const pr0 = project(p0), pr1 = project(p1), prm = project(pm);
-            const depth = prm.z >= 0 ? 1.0 : 0.24;
+            if ((prm.z >= 0) !== isFrontLayer) continue;
+            // Step 2 前後透明度差由 0.152 增為 0.1824（+20%）。
+            const depth = prm.z >= 0 ? (stage === 2 ? 1.076 : 1.0) : (stage === 2 ? 0.164 : 0.24);
             ctx.strokeStyle = `rgba(148, 163, 184, ${(0.20 * depth * vis).toFixed(3)})`;
             ctx.lineWidth = 0.95;
             ctx.beginPath();
@@ -1910,6 +1990,9 @@
           }
         }
       }
+
+      drawCelestialGrid(false);
+      drawConstellations(false);
 
       // =========================================================================
       // 5. 彗星掃尾漸暗星軌繪製
@@ -2380,6 +2463,10 @@
       }
 
       // =========================================================================
+      // 天球前半球位於地球之前；後半球已在地球本體之前繪製。
+      // =========================================================================
+      drawCelestialGrid(true);
+
       // 8.5.【地球前景圖層】：小圓盤邊緣 / 平面與天球相交的大圓邊線（3-5 亮出）+ 四方位
       // =========================================================================
       if (horizonPlaneCache) {
@@ -2571,15 +2658,63 @@
       // =========================================================================
       drawCometTrails(true);
 
+      function drawConstellations(isFrontLayer) {
+        if (constellationOpacity < 0.005) return;
+        constellations.forEach(group => {
+          const worldPoints = group.points.map(([lat, lon]) => sphToCart(R_cel, lat, lon * DEG - skyAngle));
+          const points = worldPoints.map(project);
+          const visibility = p => isAboveCuttingPlane(p) ? 1 : lerp(1, backHemiAlpha, easeIntersection);
+          ctx.save();
+          ctx.globalAlpha = constellationOpacity;
+          ctx.lineWidth = 1.5;
+          group.edges.forEach(([a, b]) => {
+            // 沿球面細分，避免連線穿過球內；每段分別判斷深度及地平面。
+            const onArc = t => {
+              const p = {x: lerp(worldPoints[a].x, worldPoints[b].x, t), y: lerp(worldPoints[a].y, worldPoints[b].y, t), z: lerp(worldPoints[a].z, worldPoints[b].z, t)};
+              const scale = R_cel / Math.hypot(p.x, p.y, p.z);
+              return {x: p.x * scale, y: p.y * scale, z: p.z * scale};
+            };
+            for (let i = 0; i < 8; i++) {
+              const middle = onArc((i + 0.5) / 8);
+              const front = project(middle).z >= 0;
+              if (front !== isFrontLayer) continue;
+              const p0 = project(onArc(i / 8)), p1 = project(onArc((i + 1) / 8));
+              ctx.strokeStyle = `rgba(203, 213, 225, ${(front ? 0.7 : 0.22) * visibility(middle)})`;
+              ctx.beginPath();
+              ctx.moveTo(p0.sx, p0.sy);
+              ctx.lineTo(p1.sx, p1.sy);
+              ctx.stroke();
+            }
+          });
+          points.forEach((p, i) => {
+            if ((p.z >= 0) !== isFrontLayer) return;
+            ctx.fillStyle = `rgba(248, 250, 252, ${(p.z >= 0 ? 1 : 0.4) * visibility(worldPoints[i])})`;
+            ctx.beginPath();
+            ctx.arc(p.sx, p.sy, p.z >= 0 ? 3.2 : 2.2, 0, TWO_PI);
+            ctx.fill();
+          });
+          const anchor = points[0];
+          if ((anchor.z >= 0) === isFrontLayer) {
+            ctx.globalAlpha = constellationOpacity * (anchor.z >= 0 ? 1 : 0.5) * visibility(worldPoints[0]);
+            drawCleanText(group.name, anchor.sx, anchor.sy - 16, "#e2e8f0");
+          }
+          ctx.restore();
+        });
+      }
+
+      drawConstellations(true);
+
       indicatorStars.forEach(star => {
+        const indicatorOpacity = stage === 1 ? 1 - constellationOpacity : 1;
+        if (indicatorOpacity < 0.005) return;
         const headLon = star.initLon * DEG - skyAngle;
         const pSurf3D = sphToCart(R_cel, star.lat, headLon);
         const pSurf2D = project(pSurf3D);
 
         const aboveHorizon = isAboveCuttingPlane(pSurf3D);
-        let starAlpha = 1.0;
+        let starAlpha = indicatorOpacity;
         if (easeIntersection > 0 && !aboveHorizon) {
-          starAlpha = lerp(1.0, backHemiAlpha, easeIntersection);
+          starAlpha *= lerp(1.0, backHemiAlpha, easeIntersection);
         }
 
         const isClassLabelEnabled = starLabelToggles[star.key];
